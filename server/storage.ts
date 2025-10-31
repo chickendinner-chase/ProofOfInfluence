@@ -12,7 +12,7 @@ import {
   type InsertLink,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -125,7 +125,7 @@ export class DatabaseStorage implements IStorage {
   async incrementProfileViews(userId: string): Promise<void> {
     await db
       .update(profiles)
-      .set({ totalViews: db.raw(`total_views + 1`) })
+      .set({ totalViews: sql`${profiles.totalViews} + 1` })
       .where(eq(profiles.userId, userId));
   }
 
@@ -163,7 +163,7 @@ export class DatabaseStorage implements IStorage {
   async incrementLinkClicks(linkId: string): Promise<void> {
     await db
       .update(links)
-      .set({ clicks: db.raw(`clicks + 1`) })
+      .set({ clicks: sql`${links.clicks} + 1` })
       .where(eq(links.id, linkId));
   }
 

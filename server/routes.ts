@@ -130,6 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const links = await storage.getVisibleLinks(user.id);
+      console.log('[DEBUG] Public profile - user.id:', user.id, 'links found:', links.length, 'links:', JSON.stringify(links));
       
       // Increment profile views
       await storage.incrementProfileViews(user.id);
