@@ -38,6 +38,12 @@ export const profiles = pgTable("profiles", {
   name: text("name").notNull(),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
+  // Social media links
+  googleUrl: text("google_url"),
+  twitterUrl: text("twitter_url"),
+  weiboUrl: text("weibo_url"),
+  xiaohongshuUrl: text("xiaohongshu_url"),
+  // Visibility and analytics
   isPublic: boolean("is_public").default(true).notNull(),
   totalViews: integer("total_views").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
