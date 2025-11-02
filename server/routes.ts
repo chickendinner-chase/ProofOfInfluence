@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertProfileSchema, insertLinkSchema } from "@shared/schema";
+import { stripe } from "./stripe";
 
 // Extend Express Request to include user
 declare global {
@@ -262,6 +263,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Stripe payment routes
+  app.post("/api/create-checkout-session", async (req, res) => {
+    try {
+      const { amount, purpose } = req.body;
+
+      // Validate amount
+      if (!amount || amount < 1 || amount > 10000) {
+        return res.status(400).json({ message: "Invalid amount. Must be between $1 and $10,000" });
+      }
+
+      // Validate purpose
+      if (!purpose || typeof purpose !== 'string') {
+        return res.status(400).json({ message: "Payment purpose is required" });
+      }
+
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5173';
+
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: purpose,
+              description: `ProofOfInfluence - ${purpose}`,
+            },
+            unit_amount: Math.round(amount * 100), // Convert to cents
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
     }
   });
 

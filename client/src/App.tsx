@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import PublicProfile from "@/pages/PublicProfile";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,6 +28,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={isAuthenticated ? Dashboard : Landing} />
+      <Route path="/payment-success" component={PaymentSuccess} />
       <Route path="/:username" component={PublicProfile} />
       <Route component={NotFound} />
     </Switch>

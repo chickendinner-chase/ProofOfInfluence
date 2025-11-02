@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Wallet, Link as LinkIcon, Sparkles, Github } from "lucide-react";
 import { SiGoogle, SiX } from "react-icons/si";
 import ThemeToggle from "@/components/ThemeToggle";
+import StripePayment from "@/components/StripePayment";
 
 export default function Landing() {
   const handleLogin = () => {
@@ -26,23 +27,21 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <Button 
-              onClick={handleLogin} 
-              size="lg" 
-              className="text-base font-semibold px-8 py-6"
-              data-testid="button-login"
-            >
-              <SiGoogle className="mr-2 h-5 w-5" />
-              Sign in with Google
-            </Button>
+          {/* Stripe Payment Component */}
+          <StripePayment />
+
+          {/* Alternative: Sign in with Google */}
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">
+              Already have an account?
+            </p>
             <Button 
               variant="outline" 
-              size="lg" 
-              className="text-base font-semibold px-8 py-6"
               onClick={handleLogin}
+              data-testid="button-login"
             >
-              Get Started Free
+              <SiGoogle className="mr-2 h-4 w-4" />
+              Sign in with Google
             </Button>
           </div>
 

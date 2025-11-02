@@ -6,6 +6,7 @@ ProofOfInfluence 提供一个类似 Linktree 的个人链接聚合页面，并�
 
 ## ✨ 核心功能
 - 🔐 **双重认证**：支持 Google OAuth 与 MetaMask Web3 钱包绑定。
+- 💳 **Stripe支付**：灵活定价，支持代币购买、会员订阅、打赏等多种支付场景。
 - 🔗 **链接聚合**：集中展示创作者的社交账号、作品与重要入口。
 - 📊 **数据分析**：跟踪页面浏览量与链接点击表现。
 - 💰 **空投资格**：连接钱包即可同步空投白名单状态。
@@ -46,11 +47,15 @@ npm install
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/database
 SESSION_SECRET=your-random-secret-here
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+BASE_URL=http://localhost:5173
 PORT=5000
 NODE_ENV=development
 ```
 
-更多环境说明见 [docs/ENV_SETUP.md](docs/ENV_SETUP.md)。
+**Stripe支付配置**：参考 [docs/STRIPE_SETUP.md](docs/STRIPE_SETUP.md) 获取详细设置指南。  
+**其他环境变量**：见 [STRIPE_ENV_TEMPLATE.md](STRIPE_ENV_TEMPLATE.md)。
 
 ### 4. 初始化数据库
 ```bash
@@ -83,10 +88,10 @@ ProofOfInfluence/
 ```
 
 ## 📖 文档
-- [docs/QUICK_START.md](docs/QUICK_START.md)：10 分钟完成本地环境搭建。
-- [docs/PROJECT.md](docs/PROJECT.md)：架构、API 与数据模型详解。
-- [docs/ENV_SETUP.md](docs/ENV_SETUP.md)：环境变量与部署配置。
-- [collaboration/README.md](collaboration/README.md)：精简版 AI 协作流程备忘。
+- [docs/STRIPE_SETUP.md](docs/STRIPE_SETUP.md)：💳 Stripe支付集成完整指南
+- [STRIPE_ENV_TEMPLATE.md](STRIPE_ENV_TEMPLATE.md)：环境变量模板
+- [docs/PROJECT.md](docs/PROJECT.md)：架构、API 与数据模型详解
+- [collaboration/README.md](collaboration/README.md)：精简版 AI 协作流程备忘
 
 ## 🎯 路线图
 ### ✅ MVP
