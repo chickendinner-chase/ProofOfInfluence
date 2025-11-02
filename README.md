@@ -1,51 +1,30 @@
 # ProofOfInfluence
 
-> Web3-enabled link-in-bio platform - 用影响力证明你的价值
+> Web3-enabled Link-in-bio 平台，用影响力证明你的价值。
 
-一个类似 Linktree 的个人链接展示平台，集成 Web3 钱包功能，为内容创作者提供影响力数据追踪和空投资格验证。
-
-## 🤝 AI协作开发
-
-本项目采用 **ChatGPT + Cursor + Replit + 人工** 四方协作模式开发，实现 3-5倍 的开发效率提升。
-
-📋 **开始协作**: [collaboration/](collaboration/) - AI协作开发系统文档
-
----
+ProofOfInfluence 提供一个类似 Linktree 的个人链接聚合页面，并强化了 Web3 钱包验证与影响力数据展示功能。项目现在聚焦在交付稳定的 Link Bio 核心体验，同时保留一个轻量的 AI 协作流程，方便团队在需要时快速协同。
 
 ## ✨ 核心功能
-
-- 🔐 **双重认证**: Google OAuth + MetaMask Web3 钱包
-- 🔗 **链接聚合**: 在一个页面展示所有重要链接
-- 📊 **数据分析**: 实时追踪页面浏览量和链接点击数
-- 💰 **空投资格**: 连接钱包自动获得空投资格
-- 🎨 **自定义设计**: 支持明暗主题，响应式设计
-- 🚀 **一键部署**: Replit 自动部署，零配置上线
-
----
+- 🔐 **双重认证**：支持 Google OAuth 与 MetaMask Web3 钱包绑定。
+- 🔗 **链接聚合**：集中展示创作者的社交账号、作品与重要入口。
+- 📊 **数据分析**：跟踪页面浏览量与链接点击表现。
+- 💰 **空投资格**：连接钱包即可同步空投白名单状态。
+- 🎨 **自定义主题**：内建明暗主题，支持移动端自适应。
 
 ## 🛠️ 技术栈
-
 ### 前端
-- **React 18** + **TypeScript** - 类型安全的组件化开发
-- **Vite** - 极速构建工具
-- **TailwindCSS** + **Shadcn UI** - 现代化 UI 组件库
-- **TanStack Query** - 强大的服务器状态管理
-- **Wouter** - 轻量级路由
+- **React 18** + **TypeScript**
+- **Vite** 构建工具
+- **TailwindCSS** 与 **Shadcn UI** 组件库
+- **TanStack Query** 处理服务器状态
+- **Wouter** 轻量路由
 
 ### 后端
-- **Express** + **TypeScript** - RESTful API 服务
-- **Drizzle ORM** - 类型安全的数据库 ORM
-- **PostgreSQL (Neon)** - Serverless 数据库
-- **Replit Auth** - 基于 OpenID Connect 的认证
-
-### Web3
-- **MetaMask** - 浏览器钱包集成
-- **ethers.js** - 以太坊交互（计划中）
-
----
+- **Express** + **TypeScript** REST API
+- **Drizzle ORM**（PostgreSQL）
+- **Replit Auth** 以及计划中的 Web3 扩展
 
 ## 🚀 快速开始
-
 ### 前置要求
 - Node.js 20+
 - PostgreSQL 数据库（推荐 Neon）
@@ -63,7 +42,7 @@ npm install
 ```
 
 ### 3. 配置环境变量
-创建 `.env.local` 文件：
+在根目录创建 `.env.local`：
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/database
 SESSION_SECRET=your-random-secret-here
@@ -71,7 +50,7 @@ PORT=5000
 NODE_ENV=development
 ```
 
-> 详细配置说明见 [docs/QUICK_START.md](docs/QUICK_START.md)
+更多环境说明见 [docs/ENV_SETUP.md](docs/ENV_SETUP.md)。
 
 ### 4. 初始化数据库
 ```bash
@@ -82,226 +61,53 @@ npm run db:push
 ```bash
 npm run dev
 ```
-
-访问 http://localhost:5173 🎉
-
----
+访问 http://localhost:5173 查看效果。
 
 ## 📁 项目结构
-
 ```
 ProofOfInfluence/
 ├── client/                 # 前端代码
 │   └── src/
-│       ├── components/     # React 组件
-│       │   ├── ui/        # Shadcn UI 基础组件
-│       │   └── *.tsx      # 业务组件
-│       ├── pages/         # 页面组件
-│       │   ├── Landing.tsx      # 落地页
-│       │   ├── Dashboard.tsx    # 用户仪表板
-│       │   └── PublicProfile.tsx # 公开资料页
-│       └── hooks/         # 自定义 Hooks
-├── server/                # 后端代码
-│   ├── index.ts          # Express 服务器入口
-│   ├── routes.ts         # API 路由定义
-│   ├── storage.ts        # 数据库抽象层
-│   └── replitAuth.ts     # 认证逻辑
-├── shared/
-│   └── schema.ts         # 数据库 Schema 和类型定义
-├── .cursorrules          # Cursor AI 开发规则
-├── WORKFLOW.md           # 开发工作流文档
-└── docs/                 # 项目文档
+│       ├── components/     # 组件与 UI
+│       ├── pages/          # 页面模块（Landing、Dashboard、PublicProfile）
+│       └── hooks/          # 自定义 Hooks
+├── server/                 # 后端服务
+│   ├── index.ts            # Express 入口
+│   ├── routes.ts           # API 路由
+│   ├── storage.ts          # 数据持久化
+│   └── replitAuth.ts       # Replit 登录整合
+├── shared/                 # 前后端共享类型
+│   └── schema.ts
+├── docs/                   # 使用与开发文档
+└── collaboration/          # 轻量 AI 协作速记
 ```
-
----
-
-## 🔧 开发命令
-
-```bash
-# 开发
-npm run dev         # 启动开发服务器（前端 5173 + 后端 5000）
-npm run build       # 构建生产版本
-npm run start       # 启动生产服务器
-
-# 代码质量
-npm run check       # TypeScript 类型检查
-
-# 数据库
-npm run db:push     # 推送 Schema 变更到数据库
-```
-
----
-
-## 📊 数据库结构
-
-### users 表
-- 存储用户认证信息（Google OAuth）
-- 关联 Web3 钱包地址
-- 自定义 username
-
-### profiles 表
-- 公开展示信息（姓名、头像、简介）
-- 社交媒体链接
-- 浏览量统计
-
-### links 表
-- 用户创建的链接
-- 点击统计
-- 排序和可见性控制
-
----
-
-## 🌐 部署
-
-### Replit 部署（推荐）
-
-1. **导入项目**
-   - 访问 Replit.com
-   - Create → Import from GitHub
-   - 选择此仓库
-
-2. **配置环境变量**
-   - 在 Replit Secrets 添加：
-     - `DATABASE_URL`
-     - `SESSION_SECRET`
-
-3. **设置自动部署**
-   - Deployments → New deployment
-   - 选择 "Autoscale"
-   - Branch: `main`
-   - 启用 "Auto-deploy on push"
-
-4. **推送代码触发部署**
-   ```bash
-   git push origin main
-   ```
-
-详细部署指南见 [WORKFLOW.md](WORKFLOW.md)
-
----
-
-## 🔄 工作流
-
-我们使用简化的 GitFlow 工作流：
-
-```
-main          → 生产环境（自动部署到 Replit）
-feat/*        → 功能开发分支
-fix/*         → Bug 修复分支
-```
-
-### 典型开发流程
-1. 从 `main` 创建功能分支
-2. 在 Cursor 中开发并本地测试
-3. 提交代码到 GitHub
-4. 创建 Pull Request
-5. 合并到 `main` 触发自动部署
-
-详细工作流见 [WORKFLOW.md](WORKFLOW.md)
-
----
-
-## 🤝 协作工具集成
-
-### ChatGPT (规划和咨询)
-- 架构设计和技术选型
-- 代码审查和优化建议
-- 文档和文案生成
-
-### Cursor (主力开发)
-- AI 辅助编码
-- 智能代码补全
-- 多文件重构
-
-### GitHub (版本控制)
-- 代码托管
-- Pull Request 审查
-- 自动化部署触发
-
-### Replit (部署平台)
-- 一键部署
-- 自动扩容
-- 日志监控
-
----
 
 ## 📖 文档
-
-### 🤝 AI协作系统
-- [**collaboration/**](collaboration/) - AI协作开发系统
-  - [README.md](collaboration/README.md) - 快速了解
-  - [DAILY_CHECKLIST.md](collaboration/DAILY_CHECKLIST.md) - 每日工作清单
-  - [GUIDE.md](collaboration/GUIDE.md) - 完整协作指南
-  - [SCENARIOS.md](collaboration/SCENARIOS.md) - 场景案例
-
-### 🚀 项目文档
-- [快速开始](docs/QUICK_START.md) - 10分钟上手
-- [环境配置](docs/ENV_SETUP.md) - 环境变量设置
-- [设计规范](design_guidelines.md) - UI/UX 指南
-
----
+- [docs/QUICK_START.md](docs/QUICK_START.md)：10 分钟完成本地环境搭建。
+- [docs/PROJECT.md](docs/PROJECT.md)：架构、API 与数据模型详解。
+- [docs/ENV_SETUP.md](docs/ENV_SETUP.md)：环境变量与部署配置。
+- [collaboration/README.md](collaboration/README.md)：精简版 AI 协作流程备忘。
 
 ## 🎯 路线图
-
-### ✅ MVP (已完成)
+### ✅ MVP
 - [x] 用户认证（Google OAuth）
 - [x] Web3 钱包连接
 - [x] 链接管理
 - [x] 公开资料页
 - [x] 基础分析
 
-### 🚧 V1.0 (进行中)
-- [ ] Landing 页面重设计
-- [ ] 用户评价展示
+### 🚧 规划中
+- [ ] Landing 页面重新设计
 - [ ] 社交分享优化
-- [ ] 移动端优化
-
-### 📅 V2.0 (计划中)
-- [ ] 自定义主题
+- [ ] 移动端交互细节打磨
+- [ ] 自定义主题扩展
 - [ ] 高级分析（UTM 追踪）
-- [ ] NFT 展示
-- [ ] 空投管理面板
-- [ ] API 开放
-
----
-
-## 🤔 常见问题
-
-### 如何获取数据库连接？
-推荐使用 [Neon](https://neon.tech/)，它提供免费的 Serverless PostgreSQL。
-
-### 如何部署到自己的服务器？
-项目支持任何 Node.js 环境，运行 `npm run build && npm start` 即可。
-
-### 如何自定义设计？
-修改 `client/src/index.css` 中的 CSS 变量，或直接修改组件的 Tailwind 类名。
-
-### 支持哪些钱包？
-目前支持 MetaMask，未来会添加 WalletConnect 支持更多钱包。
-
----
-
-## 🙏 鸣谢
-
-- [Shadcn UI](https://ui.shadcn.com/) - 优雅的组件库
-- [Drizzle ORM](https://orm.drizzle.team/) - 类型安全的 ORM
-- [Neon](https://neon.tech/) - Serverless PostgreSQL
-- [Replit](https://replit.com/) - 一键部署平台
-
----
 
 ## 📄 许可证
-
 MIT License
 
----
-
-## 💬 联系我们
-
+## 💬 联系
 - GitHub Issues: [提交问题](https://github.com/你的用户名/ProofOfInfluence/issues)
 - Email: your-email@example.com
 
----
-
-**用影响力证明你的价值 🚀**
-
+欢迎贡献，一起打造好用的 Link Bio 体验！
