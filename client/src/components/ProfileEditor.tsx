@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,35 +16,11 @@ interface ProfileEditorProps {
 }
 
 export default function ProfileEditor({ profile, username, onUpdate, isPending }: ProfileEditorProps) {
-  const [localProfile, setLocalProfile] = useState(profile);
-  const [localUsername, setLocalUsername] = useState(username || "");
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Sync with prop changes (when data is refreshed from server)
-  useEffect(() => {
-    setLocalProfile(profile);
-  }, [profile]);
-
-  useEffect(() => {
-    setLocalUsername(username || "");
-  }, [username]);
-
-  // Debounced update function
-  const debouncedUpdate = (updates: Partial<Profile> & { username?: string }) => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    debounceTimerRef.current = setTimeout(() => {
-      onUpdate(updates);
-    }, 800); // Wait 800ms after user stops typing
-  };
-
   const handleAvatarUpload = () => {
     console.log("Avatar upload clicked");
   };
 
-  const bioLength = localProfile.bio?.length || 0;
+  const bioLength = profile.bio?.length || 0;
   const maxBioLength = 200;
 
   return (
@@ -54,9 +29,9 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
       <div className="space-y-4">
         <div className="flex flex-col items-center gap-3">
           <ProfileAvatar
-            src={localProfile.avatarUrl || undefined}
-            alt={localProfile.name}
-            fallback={localProfile.name.slice(0, 2).toUpperCase()}
+            src={profile.avatarUrl || undefined}
+            alt={profile.name}
+            fallback={profile.name.slice(0, 2).toUpperCase()}
           />
           <Button variant="outline" size="sm" onClick={handleAvatarUpload} data-testid="button-upload-avatar">
             <Upload className="mr-2 h-4 w-4" />
@@ -70,12 +45,8 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
           </Label>
           <Input
             id="profile-name"
-            value={localProfile.name}
-            onChange={(e) => {
-              const newValue = e.target.value;
-              setLocalProfile(prev => ({ ...prev, name: newValue }));
-              debouncedUpdate({ name: newValue });
-            }}
+            value={profile.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
             placeholder="Your name"
             data-testid="input-profile-name"
             disabled={isPending}
@@ -83,19 +54,25 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
         </div>
 
         <div>
-          <Label className="text-sm font-medium mb-1.5 block">
-            Profile URL
+          <Label htmlFor="username" className="text-sm font-medium mb-1.5 block">
+            Username
           </Label>
-          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border text-sm">
-            <span className="text-muted-foreground font-mono">
-              {typeof window !== 'undefined' ? window.location.origin : ''}/
-            </span>
-            <span className="font-mono font-medium" data-testid="username-display">
-              {username || "loading..."}
-            </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">/</span>
+            <Input
+              id="username"
+              value={username || ""}
+              onChange={(e) => {
+                const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                onUpdate({ username: value });
+              }}
+              placeholder="your-username"
+              data-testid="input-username"
+              disabled={isPending}
+            />
           </div>
-          <p className="text-xs text-muted-foreground mt-1.5">
-            This is your permanent profile URL. Share it to showcase your links.
+          <p className="text-xs text-muted-foreground mt-1">
+            Your public profile will be available at /{username || "your-username"}
           </p>
         </div>
 
@@ -105,12 +82,8 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
           </Label>
           <Textarea
             id="profile-bio"
-            value={localProfile.bio || ""}
-            onChange={(e) => {
-              const newValue = e.target.value;
-              setLocalProfile(prev => ({ ...prev, bio: newValue }));
-              debouncedUpdate({ bio: newValue });
-            }}
+            value={profile.bio || ""}
+            onChange={(e) => onUpdate({ bio: e.target.value })}
             placeholder="Tell people about yourself"
             maxLength={maxBioLength}
             rows={3}
@@ -132,12 +105,8 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
               </Label>
               <Input
                 id="google-url"
-                value={localProfile.googleUrl || ""}
-                onChange={(e) => {
-                  const newValue = e.target.value || null;
-                  setLocalProfile(prev => ({ ...prev, googleUrl: newValue }));
-                  debouncedUpdate({ googleUrl: newValue });
-                }}
+                value={profile.googleUrl || ""}
+                onChange={(e) => onUpdate({ googleUrl: e.target.value || null })}
                 placeholder="https://..."
                 data-testid="input-google-url"
                 disabled={isPending}
@@ -151,12 +120,8 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
               </Label>
               <Input
                 id="twitter-url"
-                value={localProfile.twitterUrl || ""}
-                onChange={(e) => {
-                  const newValue = e.target.value || null;
-                  setLocalProfile(prev => ({ ...prev, twitterUrl: newValue }));
-                  debouncedUpdate({ twitterUrl: newValue });
-                }}
+                value={profile.twitterUrl || ""}
+                onChange={(e) => onUpdate({ twitterUrl: e.target.value || null })}
                 placeholder="https://x.com/..."
                 data-testid="input-twitter-url"
                 disabled={isPending}
@@ -170,12 +135,8 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
               </Label>
               <Input
                 id="weibo-url"
-                value={localProfile.weiboUrl || ""}
-                onChange={(e) => {
-                  const newValue = e.target.value || null;
-                  setLocalProfile(prev => ({ ...prev, weiboUrl: newValue }));
-                  debouncedUpdate({ weiboUrl: newValue });
-                }}
+                value={profile.weiboUrl || ""}
+                onChange={(e) => onUpdate({ weiboUrl: e.target.value || null })}
                 placeholder="https://weibo.com/..."
                 data-testid="input-weibo-url"
                 disabled={isPending}
@@ -189,12 +150,8 @@ export default function ProfileEditor({ profile, username, onUpdate, isPending }
               </Label>
               <Input
                 id="tiktok-url"
-                value={localProfile.tiktokUrl || ""}
-                onChange={(e) => {
-                  const newValue = e.target.value || null;
-                  setLocalProfile(prev => ({ ...prev, tiktokUrl: newValue }));
-                  debouncedUpdate({ tiktokUrl: newValue });
-                }}
+                value={profile.tiktokUrl || ""}
+                onChange={(e) => onUpdate({ tiktokUrl: e.target.value || null })}
                 placeholder="https://tiktok.com/@..."
                 data-testid="input-tiktok-url"
                 disabled={isPending}

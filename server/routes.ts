@@ -92,9 +92,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Username is auto-generated and cannot be modified
-      // Remove username from request body if present
-      delete req.body.username;
+      // If username is being updated, check if it's unique
+      if (req.body.username) {
+        const user = await storage.getUser(userId);
+        if (user && user.username !== req.body.username) {
+          const existingUser = await storage.getUserByUsername(req.body.username);
+          if (existingUser) {
+            return res.status(400).json({ message: "Username already taken" });
+          }
+          // Update username on user table
+          await storage.updateUserUsername(userId, req.body.username);
+          // Make profile public when username is set
+          req.body.isPublic = true;
+        }
+        // Remove username from profile updates (it's stored in users table)
+        delete req.body.username;
+      }
       
       const profile = await storage.updateProfile(userId, req.body);
       res.json(profile);

@@ -54,35 +54,12 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  // Generate unique username if user doesn't have one
-  const existingUser = await storage.getUser(claims["sub"]);
-  let username = existingUser?.username;
-  
-  if (!username) {
-    // Generate format: user-{8 random characters}
-    const generateUsername = () => {
-      const randomStr = Math.random().toString(36).substring(2, 10);
-      return `user-${randomStr}`;
-    };
-    
-    // Ensure uniqueness
-    let isUnique = false;
-    while (!isUnique) {
-      username = generateUsername();
-      const existing = await storage.getUserByUsername(username);
-      if (!existing) {
-        isUnique = true;
-      }
-    }
-  }
-
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    username,
   });
 }
 
