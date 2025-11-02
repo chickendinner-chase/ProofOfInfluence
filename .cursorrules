@@ -1,0 +1,159 @@
+# ProofOfInfluence - Cursor AI Rules
+
+## 项目概述
+Web3 link-in-bio 平台（类似 Linktree + Web3）：用户可创建个性化展示页面，集成钱包功能，追踪影响力数据。
+
+## 技术栈
+- **Frontend**: React 18, TypeScript, Vite, TailwindCSS, Shadcn UI
+- **Backend**: Express, TypeScript, Drizzle ORM, PostgreSQL (Neon)
+- **Auth**: Replit Auth (Google OAuth) + MetaMask Web3
+- **State**: TanStack Query (React Query)
+- **Routing**: Wouter
+
+## 开发规范
+
+### TypeScript
+- 使用 strict 模式
+- 优先使用 interface 定义 props
+- 避免使用 any，使用 unknown 替代
+- 共享类型定义在 shared/schema.ts
+
+### React 组件
+- 使用函数式组件 + hooks
+- Props 解构并添加类型注解
+- 添加 data-testid 属性用于测试
+- 事件处理函数命名：handle[EventName]
+- 示例：
+```typescript
+interface MyComponentProps {
+  title: string;
+  onUpdate: (value: string) => void;
+}
+
+export default function MyComponent({ title, onUpdate }: MyComponentProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onUpdate(e.target.value);
+  };
+  
+  return <input data-testid="input-title" value={title} onChange={handleChange} />;
+}
+```
+
+### UI 组件
+- 优先使用 Shadcn UI 组件（client/src/components/ui/）
+- 遵循 design_guidelines.md 的设计规范
+- 移动优先响应式设计（base → md → lg）
+- 使用 Tailwind 工具类，避免自定义 CSS
+
+### API 设计
+- RESTful 风格
+- 路由定义在 server/routes.ts
+- 使用 Zod 验证请求数据
+- 错误返回格式：`{ message: string }`
+- 成功返回实际数据对象
+
+### 数据库
+- Schema 定义在 shared/schema.ts
+- 使用 Drizzle ORM
+- 迁移命令：npm run db:push
+- 所有表包含 createdAt/updatedAt 时间戳
+
+## 文件组织
+```
+client/src/
+  ├── components/       # React 组件
+  │   ├── ui/          # Shadcn UI 基础组件
+  │   └── *.tsx        # 业务组件
+  ├── pages/           # 页面组件
+  │   ├── Landing.tsx  # 落地页
+  │   ├── Dashboard.tsx # 用户仪表板
+  │   └── PublicProfile.tsx # 公开资料页
+  ├── hooks/           # 自定义 hooks
+  └── lib/             # 工具函数
+
+server/
+  ├── index.ts         # Express 服务器入口
+  ├── routes.ts        # API 路由
+  ├── storage.ts       # 数据库抽象层
+  └── replitAuth.ts    # 认证逻辑
+
+shared/
+  └── schema.ts        # 共享 Schema 和类型
+```
+
+## MVP 原则
+- **简单优先**: 优先实现核心功能，避免过度设计
+- **小步快跑**: 每次修改保持小范围（单个功能/组件）
+- **快速迭代**: 功能能用就先上线，性能优化后续进行
+- **延迟抽象**: 不要过早抽象，先让代码工作起来
+
+## 命名规范
+- 组件文件：PascalCase (例：ProfileEditor.tsx)
+- 工具函数：camelCase (例：apiRequest.ts)
+- 常量：UPPER_SNAKE_CASE
+- CSS 类：kebab-case (Tailwind)
+
+## Git Commit 规范
+- feat: 新功能
+- fix: 修复 bug
+- refactor: 重构
+- style: 样式调整
+- docs: 文档更新
+- chore: 构建/工具变更
+
+示例：
+- feat: add testimonials carousel to landing page
+- fix: wallet connection timeout issue
+- refactor: simplify profile update logic
+
+## 测试
+- 关键组件添加 data-testid
+- 优先测试用户流程（登录、创建链接、查看资料）
+- 暂不强制要求单元测试覆盖率（MVP 阶段）
+
+## 性能
+- 图片使用懒加载
+- 大列表考虑虚拟化
+- 避免不必要的 re-render（useMemo/useCallback）
+- API 请求使用 React Query 缓存
+
+## 安全
+- 永远不要在客户端代码中暴露密钥
+- 使用环境变量存储敏感信息
+- 对用户输入进行验证和清理
+- API 路由添加认证中间件 (isAuthenticated)
+
+## 常见任务示例
+
+### 添加新的 API 端点
+1. 在 server/routes.ts 添加路由
+2. 使用 isAuthenticated 中间件保护需要认证的路由
+3. 使用 Zod schema 验证请求体
+4. 调用 storage 层方法操作数据库
+5. 返回 JSON 响应
+
+### 创建新组件
+1. 在 client/src/components/ 创建文件
+2. 定义 Props interface
+3. 使用 Shadcn UI 基础组件
+4. 添加 data-testid
+5. 在页面中引入使用
+
+### 修改数据库 Schema
+1. 编辑 shared/schema.ts
+2. 运行 npm run db:push 推送变更
+3. 更新相关的 TypeScript 类型
+4. 修改受影响的 API 和组件
+
+## 调试技巧
+- 使用 console.log 快速调试（记得删除）
+- Chrome DevTools React 组件树
+- Network 面板查看 API 请求
+- Replit 的 Shell 查看服务器日志
+
+## 注意事项
+- 不要直接修改 node_modules
+- 不要提交 .env 文件到 Git
+- 大型重构前先创建新分支
+- 部署前在本地测试所有功能
+

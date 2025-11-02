@@ -1,0 +1,14 @@
+run = "npm run dev"
+entrypoint = "server/index.ts"
+
+[deployment]
+run = ["npm", "start"]
+build = ["npm", "run", "build"]
+deploymentTarget = "autoscale"
+
+[deployment.autoscale]
+# 设置为 0 省钱（冷启动约 10-30 秒）
+# 设置为 1 常驻（秒开，但持续计费）
+minInstances = 0
+maxInstances = 3
+
