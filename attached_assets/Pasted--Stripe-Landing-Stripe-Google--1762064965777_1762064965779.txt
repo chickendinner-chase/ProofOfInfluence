@@ -1,0 +1,159 @@
+# Stripe支付集成实施计划
+
+## 实施范围
+
+在Landing页面添加Stripe支付入口，替换现有的Google登录按钮，支持用户自定义金额和支付用途。
+
+## 技术方案
+
+采用**Stripe Checkout**（托管支付页面）+ 简化后端端点的方式，无需处理复杂的webhook。
+
+## 实施步骤
+
+### 1. 安装依赖
+
+在package.json中添加Stripe库：
+
+```bash
+npm install stripe @stripe/stripe-js
+```
+
+### 2. 配置环境变量
+
+需要添加Stripe密钥（开发和生产环境）：
+
+- `STRIPE_PUBLISHABLE_KEY` - 前端使用的公钥
+- `STRIPE_SECRET_KEY` - 后端使用的密钥
+
+建议在Replit Secrets中配置生产环境密钥。
+
+### 3. 创建支付组件
+
+创建 `client/src/components/StripePayment.tsx`：
+
+- 支付用途选择器（下拉菜单）：
+  - 购买 $POI 代币
+  - 月度会员
+  - 年度会员
+  - 企业版
+  - 打赏/捐赠
+- 金额输入框（支持灵活定价，带预设金额快捷按钮）
+- 支付按钮（调用后端API创建Checkout Session）
+- 简洁的卡片式UI，符合现有设计风格
+
+### 4. 添加后端支付端点
+
+在 `server/routes.ts` 中添加新端点：
+
+```typescript
+app.post("/api/create-checkout-session", async (req, res) => {
+  const { amount, purpose } = req.body;
+  
+  // 创建Stripe Checkout Session
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: purpose,
+        },
+        unit_amount: amount * 100, // 转换为分
+      },
+      quantity: 1,
+    }],
+    mode: 'payment',
+    success_url: `${process.env.BASE_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.BASE_URL || 'http://localhost:5173'}`,
+  });
+  
+  res.json({ url: session.url });
+});
+```
+
+创建 `server/stripe.ts` 初始化Stripe实例：
+
+```typescript
+import Stripe from 'stripe';
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-11-20.acacia',
+});
+```
+
+### 5. 修改Landing页面
+
+修改 `client/src/pages/Landing.tsx`：
+
+- 移除Google登录相关按钮和逻辑
+- 导入并集成 `StripePayment` 组件
+- 调整Hero区域布局，将支付组件作为主要CTA
+- 保持现有的Features卡片和"Perfect for"区域
+
+修改后的Hero区域结构：
+
+```tsx
+<div className="space-y-4">
+  <h1>Your Web3-enabled link-in-bio</h1>
+  <p>Connect your social presence with Web3...</p>
+</div>
+
+{/* 替换为支付组件 */}
+<StripePayment />
+```
+
+### 6. 创建支付成功页面（可选）
+
+创建 `client/src/pages/PaymentSuccess.tsx`：
+
+- 显示支付成功消息
+- 显示订单信息
+- 提供"返回首页"或"去Dashboard"按钮
+
+在 `client/src/App.tsx` 中添加路由：
+
+```tsx
+<Route path="/payment-success" component={PaymentSuccess} />
+```
+
+### 7. 更新环境变量文档
+
+更新环境变量说明，添加Stripe相关配置要求。
+
+## 文件清单
+
+需要创建/修改的文件：
+
+- `client/src/components/StripePayment.tsx` - 新建
+- `client/src/pages/Landing.tsx` - 修改
+- `client/src/pages/PaymentSuccess.tsx` - 新建（可选）
+- `server/stripe.ts` - 新建
+- `server/routes.ts` - 修改（添加支付端点）
+- `package.json` - 修改（添加依赖）
+- `.env.example` - 新建或修改（添加环境变量示例）
+
+## 预设支付选项建议
+
+为了简化用户体验，可以预设以下金额：
+
+- $POI代币：$10, $50, $100, 自定义
+- 月度会员：$9.99
+- 年度会员：$99.99 (省20%)
+- 企业版：$299
+- 打赏：$5, $10, $20, 自定义
+
+## 注意事项
+
+1. Stripe测试模式：开发时使用测试密钥，测试卡号：4242 4242 4242 4242
+2. 金额验证：前端和后端都需要验证金额范围（如：最小$1，最大$10000）
+3. 错误处理：网络错误、支付取消、金额无效等情况的友好提示
+4. 安全性：敏感密钥只在后端使用，前端只使用PUBLISHABLE_KEY
+5. 简化版不处理webhook，支付成功后用户手动返回，后续可升级为webhook处理订单
+
+## 可选增强功能（后续迭代）
+
+- 支付历史记录（需要数据库表）
+- Webhook处理（自动更新用户权益）
+- 多货币支持
+- 优惠码功能
+- 订阅制自动续费（Stripe Subscriptions）
