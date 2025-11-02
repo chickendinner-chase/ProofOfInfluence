@@ -3,6 +3,7 @@ import {
   users,
   profiles,
   links,
+  transactions,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -10,6 +11,8 @@ import {
   type InsertProfile,
   type Link,
   type InsertLink,
+  type Transaction,
+  type InsertTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -40,6 +43,13 @@ export interface IStorage {
   deleteLink(linkId: string): Promise<void>;
   incrementLinkClicks(linkId: string): Promise<void>;
   reorderLinks(userId: string, linkIds: string[]): Promise<void>;
+  
+  // Transaction operations
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransaction(id: string): Promise<Transaction | undefined>;
+  getTransactionBySessionId(sessionId: string): Promise<Transaction | undefined>;
+  updateTransaction(id: string, updates: Partial<InsertTransaction>): Promise<Transaction>;
+  getUserTransactions(userId: string): Promise<Transaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -174,6 +184,42 @@ export class DatabaseStorage implements IStorage {
         .set({ position: i, updatedAt: new Date() })
         .where(and(eq(links.id, linkIds[i]), eq(links.userId, userId)));
     }
+  }
+
+  // Transaction operations
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const [newTransaction] = await db.insert(transactions).values(transaction).returning();
+    return newTransaction;
+  }
+
+  async getTransaction(id: string): Promise<Transaction | undefined> {
+    const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
+    return transaction;
+  }
+
+  async getTransactionBySessionId(sessionId: string): Promise<Transaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.stripeSessionId, sessionId));
+    return transaction;
+  }
+
+  async updateTransaction(id: string, updates: Partial<InsertTransaction>): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
+  }
+
+  async getUserTransactions(userId: string): Promise<Transaction[]> {
+    return await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.createdAt));
   }
 }
 

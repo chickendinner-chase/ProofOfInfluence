@@ -63,6 +63,22 @@ export const links = pgTable("links", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Transactions table - payment records
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }), // nullable for anonymous purchases
+  stripeSessionId: varchar("stripe_session_id").unique(), // Stripe Checkout Session ID
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"), // Payment Intent ID from webhook
+  amount: integer("amount").notNull(), // Amount in cents
+  currency: varchar("currency").default("usd").notNull(),
+  status: varchar("status").default("pending").notNull(), // pending, completed, failed, refunded
+  poiTokens: integer("poi_tokens").notNull(), // Amount of $POI tokens purchased (for simplicity: 1:1 with USD)
+  email: varchar("email"), // Email for receipt (especially for anonymous purchases)
+  metadata: jsonb("metadata"), // Additional data (e.g., user IP, browser info)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -94,6 +110,12 @@ export const insertLinkSchema = createInsertSchema(links).omit({
   clicks: true,
 });
 
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -105,3 +127,6 @@ export type Profile = typeof profiles.$inferSelect;
 
 export type InsertLink = z.infer<typeof insertLinkSchema>;
 export type Link = typeof links.$inferSelect;
+
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;

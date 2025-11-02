@@ -266,8 +266,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe webhook endpoint - must be placed before other routes to handle raw body
+  app.post("/api/stripe-webhook", express.raw({ type: 'application/json' }), async (req: any, res) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      console.warn('Warning: STRIPE_WEBHOOK_SECRET is not set. Webhook signature verification disabled.');
+    }
+
+    let event;
+
+    try {
+      // Verify webhook signature if secret is configured
+      if (webhookSecret && sig) {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } else {
+        // For development without webhook secret
+        event = JSON.parse(req.body.toString());
+      }
+    } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          console.log('Payment successful for session:', session.id);
+
+          // Get transaction from database
+          const transaction = await storage.getTransactionBySessionId(session.id);
+          
+          if (transaction) {
+            // Update transaction status
+            await storage.updateTransaction(transaction.id, {
+              status: 'completed',
+              stripePaymentIntentId: session.payment_intent as string,
+              email: session.customer_email || transaction.email || null,
+            });
+            
+            console.log(`Transaction ${transaction.id} marked as completed`);
+          } else {
+            console.error(`Transaction not found for session ${session.id}`);
+          }
+          break;
+        }
+
+        case 'checkout.session.expired': {
+          const session = event.data.object;
+          console.log('Payment session expired:', session.id);
+
+          const transaction = await storage.getTransactionBySessionId(session.id);
+          if (transaction && transaction.status === 'pending') {
+            await storage.updateTransaction(transaction.id, {
+              status: 'failed',
+            });
+          }
+          break;
+        }
+
+        case 'payment_intent.payment_failed': {
+          const paymentIntent = event.data.object;
+          console.log('Payment failed:', paymentIntent.id);
+          // Could update transaction status here if needed
+          break;
+        }
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  });
+
   // Stripe payment routes
-  app.post("/api/create-checkout-session", async (req, res) => {
+  app.post("/api/create-checkout-session", async (req: any, res) => {
     try {
       const { amount, purpose } = req.body;
 
@@ -282,10 +362,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const baseUrl = process.env.BASE_URL || 'http://localhost:5173';
+      const amountInCents = Math.round(amount * 100);
+      
+      // Get current user if logged in
+      const userId = req.user?.id;
+      const userEmail = req.user?.email;
+
+      // Create transaction record in database
+      const transaction = await storage.createTransaction({
+        userId: userId || null,
+        stripeSessionId: null, // Will be updated after Stripe session creation
+        amount: amountInCents,
+        currency: 'usd',
+        status: 'pending',
+        poiTokens: Math.round(amount), // 1:1 ratio with USD
+        email: userEmail || null,
+        metadata: {
+          purpose,
+          createdFrom: 'web',
+        },
+      });
 
       // Create Stripe Checkout Session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
+        customer_email: userEmail || undefined,
         line_items: [{
           price_data: {
             currency: 'usd',
@@ -293,19 +394,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: purpose,
               description: `ProofOfInfluence - ${purpose}`,
             },
-            unit_amount: Math.round(amount * 100), // Convert to cents
+            unit_amount: amountInCents,
           },
           quantity: 1,
         }],
         mode: 'payment',
         success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}`,
+        metadata: {
+          transactionId: transaction.id,
+          userId: userId || 'anonymous',
+          poiTokens: Math.round(amount).toString(),
+        },
+      });
+
+      // Update transaction with Stripe session ID
+      await storage.updateTransaction(transaction.id, {
+        stripeSessionId: session.id,
       });
 
       res.json({ url: session.url });
     } catch (error) {
       console.error("Error creating checkout session:", error);
       res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Get transaction details by session ID
+  app.get("/api/transaction/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      const transaction = await storage.getTransactionBySessionId(sessionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error fetching transaction:", error);
+      res.status(500).json({ message: "Failed to fetch transaction" });
+    }
+  });
+
+  // Get user's transaction history (requires authentication)
+  app.get("/api/transactions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const transactions = await storage.getUserTransactions(userId);
+      
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Failed to fetch transactions" });
     }
   });
 

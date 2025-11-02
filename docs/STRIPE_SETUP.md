@@ -21,12 +21,55 @@
 |-----|-------|------|
 | `STRIPE_SECRET_KEY` | `sk_test_...` 或 `sk_live_...` | Stripe 密钥 |
 | `STRIPE_PUBLISHABLE_KEY` | `pk_test_...` 或 `pk_live_...` | Stripe 公钥 |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` (可选) | Webhook 签名密钥 |
 | `BASE_URL` | `https://your-repl.replit.app` | 你的 Replit 应用 URL |
 
 > 💡 **测试模式**：使用 `sk_test_` 和 `pk_test_` 开头的密钥  
-> 🔴 **生产模式**：使用 `sk_live_` 和 `pk_live_` 开头的密钥
+> 🔴 **生产模式**：使用 `sk_live_` 和 `pk_live_` 开头的密钥  
+> ⚠️ **Webhook Secret**: 生产环境强烈推荐配置，用于验证 Stripe 发送的事件
 
-## Step 3: 测试支付功能
+## Step 3: 推送数据库变更
+
+支付功能需要新的 `transactions` 表来存储交易记录。在 Replit Shell 运行：
+
+```bash
+npm run db:push
+```
+
+这将在数据库中创建以下表：
+- `transactions` - 存储所有支付交易记录
+  - 支持用户关联（已登录用户）和匿名购买
+  - 记录 Stripe Session ID 和 Payment Intent ID
+  - 追踪支付状态（pending, completed, failed, refunded）
+  - 记录购买的 $POI token 数量
+
+## Step 4: 配置 Stripe Webhook（生产环境推荐）
+
+Webhook 用于接收 Stripe 的支付确认通知，自动更新交易状态。
+
+### 开发环境（使用 Stripe CLI）
+
+1. 安装 [Stripe CLI](https://stripe.com/docs/stripe-cli)
+2. 登录：`stripe login`
+3. 转发 webhook 到本地：
+```bash
+stripe listen --forward-to https://your-repl.replit.app/api/stripe-webhook
+```
+4. 复制显示的 webhook secret (whsec_xxx) 到 Replit Secrets 中的 `STRIPE_WEBHOOK_SECRET`
+
+### 生产环境
+
+1. 在 [Stripe Dashboard](https://dashboard.stripe.com/webhooks) 创建 webhook
+2. 端点 URL：`https://your-repl.replit.app/api/stripe-webhook`
+3. 选择要接收的事件：
+   - `checkout.session.completed` - 支付成功
+   - `checkout.session.expired` - 支付会话过期
+   - `payment_intent.payment_failed` - 支付失败
+4. 复制 Webhook 签名密钥到 Replit Secrets 中的 `STRIPE_WEBHOOK_SECRET`
+
+> 💡 如果不配置 Webhook Secret，系统仍可工作，但无法验证 Stripe 事件的真实性
+
+## Step 5: 测试支付功能
 
 ### 测试卡号
 
@@ -51,7 +94,7 @@ Stripe 提供测试卡号用于开发测试：
 6. 使用测试卡号完成支付
 7. 成功后会重定向到 `/payment-success` 页面
 
-## Step 4: 切换到生产模式
+## Step 6: 切换到生产模式
 
 准备接受真实支付时：
 
@@ -77,6 +120,27 @@ The integration is simplified to support only **$POI Token purchase**:
 - **Custom Amount** - Users can enter any amount between $1 and $10,000
 
 The simplified interface removes complexity and focuses solely on token purchases through Stripe payment.
+
+## Features Implemented
+
+### ✅ Payment Flow
+1. **Checkout Session Creation** - Creates Stripe payment session with user context
+2. **Database Transaction Record** - Stores transaction details before redirect
+3. **Stripe Hosted Checkout** - Secure payment page hosted by Stripe
+4. **Webhook Processing** - Automatic status updates via Stripe webhooks
+5. **Success Page** - Shows transaction details and $POI tokens purchased
+
+### ✅ User Experience
+- **Anonymous Purchases** - Users can buy without logging in
+- **User-Linked Purchases** - Authenticated users get transactions linked to their account
+- **Real-time Status** - Payment success page shows live transaction status
+- **Transaction History** - Logged-in users can view purchase history at `/api/transactions`
+
+### ✅ Data Management
+- All transactions stored in database with full audit trail
+- Status tracking: `pending` → `completed` / `failed`
+- Email capture for receipts
+- Metadata support for additional context
 
 ## 安全注意事项
 
