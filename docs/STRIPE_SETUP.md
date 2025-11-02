@@ -45,7 +45,7 @@ Stripe 提供测试卡号用于开发测试：
 
 1. 点击 Replit 的 **Run** 按钮启动项目
 2. 访问你的 Replit 应用 URL
-3. 在 Landing 页面选择支付用途和金额
+3. 在 Landing 页面选择 $POI Token 购买金额（预设或自定义）
 4. 点击 "Pay" 按钮
 5. 重定向到 Stripe Checkout
 6. 使用测试卡号完成支付
@@ -71,15 +71,12 @@ Stripe 提供测试卡号用于开发测试：
 
 ## Payment Options
 
-The integration supports flexible pricing with these purposes:
+The integration is simplified to support only **$POI Token purchase**:
 
-1. **Buy $POI Token** - Preset amounts: $10, $50, $100, or custom
-2. **Monthly Membership** - $9.99/month
-3. **Yearly Membership** - $99.99/year (save 20%)
-4. **Enterprise Plan** - $299
-5. **Tip / Donation** - Preset amounts: $5, $10, $20, or custom
+- **Buy $POI Token** - Quick select preset amounts: $10, $50, $100
+- **Custom Amount** - Users can enter any amount between $1 and $10,000
 
-Users can also enter custom amounts between $1 and $10,000.
+The simplified interface removes complexity and focuses solely on token purchases through Stripe payment.
 
 ## 安全注意事项
 
