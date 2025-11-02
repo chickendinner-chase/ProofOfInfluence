@@ -4,6 +4,21 @@
 
 一个类似 Linktree 的个人链接展示平台，集成 Web3 钱包功能，为内容创作者提供影响力数据追踪和空投资格验证。
 
+## 🤝 4方协作系统
+
+本项目采用独特的 **ChatGPT + Cursor + Replit + 人工** 四方协作模式，实现高效的 AI 辅助开发：
+
+| 工具 | 角色 | 职责 |
+|------|------|------|
+| **ChatGPT** | 战略规划师 | 需求分析、架构设计、问题诊断 |
+| **Cursor** | 编码执行官 | 代码实现、调试重构、本地测试 |
+| **Replit** | 部署运维官 | 自动部署、环境管理、日志监控 |
+| **人工** | 决策指挥官 | 质量把关、流程控制、效果评估 |
+
+📋 **开始工作**: [每日工作检查清单](CHECKLIST.md)  
+📖 **详细指南**: [4方协作完整文档](COLLABORATION.md)  
+🔄 **工作流程**: [开发工作流](WORKFLOW.md)
+
 ---
 
 ## ✨ 核心功能
@@ -221,10 +236,20 @@ fix/*         → Bug 修复分支
 
 ## 📖 文档
 
-- [快速开始指南](docs/QUICK_START.md) - 10分钟上手
-- [开发工作流](WORKFLOW.md) - 详细的协作流程
-- [设计规范](design_guidelines.md) - UI/UX 设计指南
-- [Cursor 规则](.cursorrules) - AI 辅助开发规范
+### 协作系统
+- **[每日工作检查清单](CHECKLIST.md)** ⭐ - 每次工作必看
+- **[4方协作指南](COLLABORATION.md)** ⭐ - 完整协作协议
+- [开发工作流](WORKFLOW.md) - 详细流程说明
+
+### 开发指南
+- [快速开始](docs/QUICK_START.md) - 10分钟上手
+- [环境配置](docs/ENV_SETUP.md) - 环境变量设置
+- [设计规范](design_guidelines.md) - UI/UX 指南
+- [Cursor 规则](.cursorrules) - AI 开发规范
+
+### 交接文档
+- [配置完成](docs/SETUP_COMPLETE.md) - 配置验证清单
+- [交接总结](docs/HANDOFF_SUMMARY.md) - 完整交接说明
 
 ---
 
