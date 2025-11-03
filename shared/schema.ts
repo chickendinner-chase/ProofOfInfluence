@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, bigint, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, bigint, numeric, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -81,7 +81,7 @@ export const transactions = pgTable("transactions", {
 
 // POI Tiers - membership levels based on POI balance/staking
 export const poiTiers = pgTable("poi_tiers", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   minPoi: bigint("min_poi", { mode: "number" }).notNull(), // Min POI balance required
   feeDiscountRate: numeric("fee_discount_rate", { precision: 5, scale: 4 }).notNull().default("0"), // 0.10 = 10% discount

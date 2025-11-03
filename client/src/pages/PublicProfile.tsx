@@ -1,18 +1,27 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy, ExternalLink, Edit, Coins } from "lucide-react";
 import { SiGoogle, SiX, SiSinaweibo, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import type { Profile, Link, User } from "@shared/schema";
 
 export default function PublicProfile() {
   const { username } = useParams<{ username: string }>();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  // Get current logged-in user
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ["/api/auth/user"],
+    enabled: isAuthenticated,
+  });
 
   const { data, isLoading, error} = useQuery<{
     profile: Profile;
@@ -88,6 +97,9 @@ export default function PublicProfile() {
   const { profile, links, user } = data;
   const visibleLinks = links.filter((link) => link.visible);
 
+  // Check if current user is viewing their own profile
+  const isOwnProfile = currentUser?.username === username;
+
   const socialLinks = [
     { url: profile.googleUrl, icon: SiGoogle, label: "Google", testId: "link-google" },
     { url: profile.twitterUrl, icon: SiX, label: "X", testId: "link-twitter" },
@@ -97,7 +109,29 @@ export default function PublicProfile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        {isOwnProfile && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/recharge")}
+              data-testid="button-recharge"
+            >
+              <Coins className="mr-2 h-4 w-4" />
+              充值
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/dashboard")}
+              data-testid="button-edit"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              编辑资料
+            </Button>
+          </>
+        )}
         <ThemeToggle />
       </div>
 

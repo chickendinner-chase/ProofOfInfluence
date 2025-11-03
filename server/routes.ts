@@ -451,6 +451,291 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POI Tier routes
+  app.get("/api/poi/tiers", async (req, res) => {
+    try {
+      const tiers = await storage.getAllTiers();
+      res.json(tiers);
+    } catch (error) {
+      console.error("Error fetching tiers:", error);
+      res.status(500).json({ message: "Failed to fetch tiers" });
+    }
+  });
+
+  app.get("/api/poi/me/tier", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // TODO: Get actual POI balance from blockchain/wallet
+      // For MVP, return mock balance or from transactions
+      const mockPoiBalance = 0; // Replace with actual balance lookup
+      
+      const tier = await storage.getUserTier(mockPoiBalance);
+      res.json({ tier, poiBalance: mockPoiBalance });
+    } catch (error) {
+      console.error("Error fetching user tier:", error);
+      res.status(500).json({ message: "Failed to fetch user tier" });
+    }
+  });
+
+  // POI Fee Credit routes
+  app.get("/api/poi/me/fee-credits", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const feeCredit = await storage.getFeeCredit(userId);
+      
+      res.json({
+        balanceCents: feeCredit?.balanceCents || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching fee credits:", error);
+      res.status(500).json({ message: "Failed to fetch fee credits" });
+    }
+  });
+
+  app.post("/api/poi/fee-credits/burn-intent", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { burnTxHash } = req.body;
+
+      if (!burnTxHash) {
+        return res.status(400).json({ message: "burnTxHash is required" });
+      }
+
+      // Check if this transaction has already been processed
+      const existing = await storage.getBurnIntentByTxHash(burnTxHash);
+      if (existing) {
+        return res.status(400).json({ 
+          message: "This burn transaction has already been processed",
+          code: "POI_BURN_ALREADY_PROCESSED"
+        });
+      }
+
+      // TODO: Verify transaction on blockchain
+      // For MVP, using mock values
+      const mockPoiAmount = 1000; // POI burned
+      const mockSnapshotRate = 0.05; // $0.05 per POI
+      const creditedCents = Math.floor(mockPoiAmount * mockSnapshotRate * 100);
+
+      // Create burn intent record
+      const burnIntent = await storage.createBurnIntent({
+        userId,
+        burnTxHash,
+        poiAmount: mockPoiAmount,
+        creditedCents,
+        snapshotRate: mockSnapshotRate.toString(),
+        status: 'credited',
+      });
+
+      // Update user's fee credit balance
+      await storage.updateFeeCreditBalance(userId, creditedCents);
+
+      res.json({
+        creditedCents,
+        snapshotRate: mockSnapshotRate,
+        burnIntent,
+      });
+    } catch (error) {
+      console.error("Error processing burn intent:", error);
+      res.status(500).json({ message: "Failed to process burn intent" });
+    }
+  });
+
+  // Checkout routes
+  app.post("/api/checkout/quote", async (req, res) => {
+    try {
+      const {
+        items,
+        fees,
+        region,
+        applyTier,
+        applyFeeCreditsCents,
+      } = req.body;
+
+      // Validate inputs
+      if (!items || !fees) {
+        return res.status(400).json({ message: "items and fees are required" });
+      }
+
+      // Calculate item total
+      const itemTotalCents = items.reduce((sum: number, item: any) => sum + item.priceCents, 0);
+      
+      // Calculate original fee total
+      const feeOriginalCents = (fees.platformFeeCents || 0) + 
+                               (fees.authFeeCents || 0) + 
+                               (fees.custodyFeeCents || 0);
+
+      let tierDiscountCents = 0;
+      let shippingCreditAppliedCents = 0;
+      let feeCreditsAppliedCents = 0;
+
+      // Apply tier discount if requested
+      if (applyTier && req.user) {
+        // TODO: Get actual user tier based on POI balance
+        const mockPoiBalance = 0;
+        const userTier = await storage.getUserTier(mockPoiBalance);
+        
+        if (userTier) {
+          // Apply discount to platform fee only
+          const discountRate = parseFloat(userTier.feeDiscountRate);
+          tierDiscountCents = Math.floor((fees.platformFeeCents || 0) * discountRate);
+          
+          // Apply shipping credit cap
+          shippingCreditAppliedCents = Math.min(
+            fees.shippingCents || 0,
+            userTier.shippingCreditCapCents
+          );
+        }
+      }
+
+      // Apply fee credits if requested
+      if (applyFeeCreditsCents && applyFeeCreditsCents > 0 && req.user) {
+        const userId = req.user.claims?.sub;
+        if (userId) {
+          const feeCredit = await storage.getFeeCredit(userId);
+          const availableCredits = feeCredit?.balanceCents || 0;
+
+          // Max 20% of total fees can be paid with credits
+          const maxFeeCreditCents = Math.floor(feeOriginalCents * 0.20);
+          
+          feeCreditsAppliedCents = Math.min(
+            applyFeeCreditsCents,
+            availableCredits,
+            maxFeeCreditCents
+          );
+        }
+      }
+
+      const feesPayable = feeOriginalCents - tierDiscountCents - feeCreditsAppliedCents;
+      const shippingPayable = Math.max(0, (fees.shippingCents || 0) - shippingCreditAppliedCents);
+      const payableCents = itemTotalCents + feesPayable + shippingPayable;
+
+      res.json({
+        itemTotalCents,
+        feeOriginalCents,
+        tierDiscountCents,
+        feeCreditsAppliedCents,
+        shippingCreditAppliedCents,
+        payableCents,
+        appliedMode: {
+          tier: tierDiscountCents > 0,
+          feeCredit: feeCreditsAppliedCents > 0,
+        },
+      });
+    } catch (error) {
+      console.error("Error calculating quote:", error);
+      res.status(500).json({ message: "Failed to calculate quote" });
+    }
+  });
+
+  app.post("/api/checkout/lock-credits", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { orderId, amountCents } = req.body;
+
+      if (!orderId || !amountCents) {
+        return res.status(400).json({ message: "orderId and amountCents are required" });
+      }
+
+      // Check available balance
+      const feeCredit = await storage.getFeeCredit(userId);
+      const availableCredits = feeCredit?.balanceCents || 0;
+
+      if (amountCents > availableCredits) {
+        return res.status(400).json({ 
+          message: "Insufficient fee credits",
+          code: "INSUFFICIENT_FEE_CREDITS"
+        });
+      }
+
+      // Create lock
+      const lock = await storage.createFeeCreditLock({
+        userId,
+        orderId,
+        lockedCents: amountCents,
+        status: 'locked',
+      });
+
+      res.json(lock);
+    } catch (error) {
+      console.error("Error locking credits:", error);
+      res.status(500).json({ message: "Failed to lock credits" });
+    }
+  });
+
+  app.post("/api/checkout/confirm", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { orderId } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ message: "orderId is required" });
+      }
+
+      // Get the lock
+      const lock = await storage.getFeeCreditLock(orderId);
+      if (!lock) {
+        return res.status(404).json({ message: "Lock not found" });
+      }
+
+      if (lock.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Consume the credits (deduct from balance)
+      await storage.updateFeeCreditBalance(userId, -lock.lockedCents);
+
+      // Update lock status
+      await storage.updateFeeCreditLockStatus(lock.id, 'consumed');
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error confirming checkout:", error);
+      res.status(500).json({ message: "Failed to confirm checkout" });
+    }
+  });
+
+  app.post("/api/checkout/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { orderId } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ message: "orderId is required" });
+      }
+
+      // Get the lock
+      const lock = await storage.getFeeCreditLock(orderId);
+      if (!lock) {
+        return res.status(404).json({ message: "Lock not found" });
+      }
+
+      if (lock.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Release the lock
+      await storage.releaseFeeCreditLock(orderId);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error canceling checkout:", error);
+      res.status(500).json({ message: "Failed to cancel checkout" });
+    }
+  });
+
+  // Region and feature flag routes
+  app.get("/api/region", async (req, res) => {
+    // TODO: Detect region from IP or user settings
+    res.json({ region: process.env.REGION_DEFAULT || "US" });
+  });
+
+  app.get("/api/features", async (req, res) => {
+    res.json({
+      FEATURE_POI_TIER_DISCOUNT: process.env.FEATURE_POI_TIER_DISCOUNT === 'true',
+      FEATURE_POI_FEE_CREDIT: process.env.FEATURE_POI_FEE_CREDIT === 'true',
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
