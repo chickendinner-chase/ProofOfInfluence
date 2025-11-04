@@ -1,213 +1,362 @@
+import React, { useMemo, useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wallet, Link as LinkIcon, Sparkles, Github, ShieldCheck, EyeOff, Package } from "lucide-react";
-import { SiGoogle, SiX } from "react-icons/si";
-import ThemeToggle from "@/components/ThemeToggle";
+import {
+  ShieldCheck,
+  Layers,
+  Scale,
+  Network,
+  CheckCircle2,
+  Building2,
+  BookText,
+  Coins,
+  MapPin,
+  Users,
+  ArrowRight,
+} from "lucide-react";
+
+// i18n/config (ZH only for now; extendable to EN)
+const zh = {
+  brand: "ACEE Ventures",
+  nav: {
+    poi: "POI 白皮书",
+    features: "核心功能",
+    tokenomics: "代币经济学",
+    roadmap: "路线图",
+    about: "关于我们",
+    contact: "AI 咨询",
+  },
+  hero: {
+    title: "Proof of Influence（POI）：非金融资产通证化基础设施",
+    subtitle:
+      "让影视剧版权、艺术/奢侈品、房产等非金融资产上链、可验证、可交易。以'影响力即价值'为核心，构建 RWA资产发行 + DEX平台交易 + 现实世界消费 的三合一生态架构。",
+    primaryCTA: "AI 免费咨询（立即体验）",
+    secondaryCTA: "预约人工专家（付费）",
+    badges: ["非金融 RWA", "RWA 发行 + DEX 交易 + 消费闭环", "$POI 原生代币"],
+  },
+  sections: {
+    whitepaper: {
+      title: "$POI 白皮书",
+      desc: "深入了解 POI 的项目背景、定位与核心价值体系，以及如何构建非金融资产通证化基础设施。",
+      icon: BookText,
+    },
+    services: {
+      title: "核心功能",
+      desc: "探索资产代币发行、DEX 平台交易、现实世界消费三大核心功能模块的详细实现方案。",
+      icon: Layers,
+    },
+    tokenomics: {
+      title: "$POI 代币经济学",
+      desc: "了解代币总量、分配机制、挖矿模型、治理体系等完整的经济模型设计。",
+      icon: Coins,
+    },
+    roadmap: {
+      title: "三年路线图",
+      desc: "从 TGE 到生态成熟的五个阶段详细规划，涵盖技术开发、市场拓展与治理升级。",
+      icon: MapPin,
+    },
+    profile: {
+      title: "团队与顾问",
+      desc: "认识推动 POI 项目的核心团队成员与技术顾问，了解我们的背景与专业能力。",
+      icon: Users,
+    },
+  },
+  consulting: {
+    title: "AI 免费咨询 + 付费人工咨询",
+    ai: {
+      title: "AI 免费咨询",
+      desc: "即时获取代币经济学/合规/架构答疑（演示版）。",
+      placeholder: "请输入你的问题，如：如何为短剧版权设计通证模型？",
+      cta: "开始对话",
+    },
+    human: {
+      title: "预约人工专家（付费）",
+      desc: "由资深顾问一对一提供方案评估与落地建议，含保密协议。",
+      cta: "预约 60 分钟咨询",
+    },
+  },
+};
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const [lang, setLang] = useState("zh");
+  const [aiQuery, setAiQuery] = useState("");
+  const t = useMemo(() => zh, [lang]);
+
+  const handleAiConsult = () => {
+    if (aiQuery.trim()) {
+      alert(`AI 咨询功能开发中...\n您的问题：${aiQuery}`);
+    }
+  };
+
+  const handleHumanConsult = () => {
+    alert("人工专家预约功能开发中...");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 py-12 md:py-20">
-        <div className="flex flex-col items-center text-center space-y-8">
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Your Web3-enabled link-in-bio
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Connect your social presence with Web3. Share your links, connect your wallet, and become eligible for exclusive airdrops.
-            </p>
-          </div>
-
-          {/* CTA Button */}
-          <Button 
-            size="lg"
-            onClick={handleLogin}
-            data-testid="button-login"
-            className="text-lg px-8 py-6"
+    <div className="min-h-screen bg-slate-900 text-slate-100">
+      {/* Header */}
+      <header className="border-b border-slate-800 sticky top-0 bg-slate-900/95 backdrop-blur-sm z-50">
+        <div className="max-w-7xl mx-auto flex justify-between items-center p-4">
+          <div className="font-semibold text-lg text-white">{t.brand}</div>
+          <nav className="hidden md:flex gap-6 text-sm">
+            <a href="#whitepaper" className="hover:text-white transition-colors">
+              {t.nav.poi}
+            </a>
+            <a href="#services" className="hover:text-white transition-colors">
+              {t.nav.features}
+            </a>
+            <a href="#tokenomics" className="hover:text-white transition-colors">
+              {t.nav.tokenomics}
+            </a>
+            <a href="#roadmap" className="hover:text-white transition-colors">
+              {t.nav.roadmap}
+            </a>
+            <a href="#profile" className="hover:text-white transition-colors">
+              {t.nav.about}
+            </a>
+          </nav>
+          <a
+            href="#consulting"
+            className="border border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
           >
-            <SiGoogle className="mr-2 h-5 w-5" />
-            Get Started - Sign in with Google
-          </Button>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 w-full max-w-4xl">
-            <Card className="p-6 space-y-3 hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <SiGoogle className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold">Social Login</h3>
-              <p className="text-sm text-muted-foreground">
-                Sign in with your Google account. No complicated setup, just one click to get started.
-              </p>
-            </Card>
-
-            <Card className="p-6 space-y-3 hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Wallet className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold">Connect Wallet</h3>
-              <p className="text-sm text-muted-foreground">
-                Link your crypto wallet to become eligible for exclusive airdrops and Web3 features.
-              </p>
-            </Card>
-
-            <Card className="p-6 space-y-3 hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <LinkIcon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold">Custom Links</h3>
-              <p className="text-sm text-muted-foreground">
-                Showcase all your important links in one beautiful, customizable page.
-              </p>
-            </Card>
-          </div>
-
-          {/* RWA Section - Luxury Watches */}
-          <div className="mt-20 w-full max-w-5xl">
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                RWA 链商板块 - 名贵手表
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Real World Assets on Blockchain - 将现实世界的高价值奢侈手表安全、可溯源地在链上传递
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="p-8 space-y-4 hover-elevate bg-gradient-to-br from-primary/5 to-accent/5">
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto">
-                  <ShieldCheck className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold text-center">可溯源</h3>
-                <p className="text-muted-foreground text-center">
-                  每块名表都有完整的链上记录：出厂证书、购入凭证、鉴定报告、维保记录、过户历史，所有数据哈希上链，真伪可验
-                </p>
-              </Card>
-
-              <Card className="p-8 space-y-4 hover-elevate bg-gradient-to-br from-primary/5 to-accent/5">
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto">
-                  <EyeOff className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold text-center">匿名传递</h3>
-                <p className="text-muted-foreground text-center">
-                  支持库内过户或仅转移 NFT 凭证，保护买卖双方隐私。注意：一旦发货，需完成 KYC，物流信息将暴露身份
-                </p>
-              </Card>
-
-              <Card className="p-8 space-y-4 hover-elevate bg-gradient-to-br from-primary/5 to-accent/5">
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto">
-                  <Package className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold text-center">高价值藏品</h3>
-                <p className="text-muted-foreground text-center">
-                  Patek Philippe、Rolex、Audemars Piguet 等顶级腕表上链，解锁全球流动性市场，打破地域限制
-                </p>
-              </Card>
-            </div>
-
-            {/* RWA Use Cases */}
-            <Card className="p-8 space-y-6 bg-muted/30 backdrop-blur">
-              <h3 className="text-2xl font-bold text-center">名表 RWA 应用场景</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-lg flex items-center gap-2">
-                    ⌚ 奢侈腕表交易
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    百达翡丽、劳力士、爱彼等珍贵腕表通过 NFT 形式上链，实现全球范围内的安全交易和所有权转移，突破地域限制
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-lg flex items-center gap-2">
-                    🔒 防伪认证
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    每块手表配备独特的链上身份证明，序列号、证书、鉴定记录全部上链，杜绝假货和仿品问题
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-lg flex items-center gap-2">
-                    🏛️ 维保溯源
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    官方维保记录、翻新历史、零件更换完整备案，保值增值有据可查，收藏投资更放心
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-lg flex items-center gap-2">
-                    🤝 库内托管
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    手表存放在专业金库，买卖双方仅转移 NFT 凭证，实现匿名交易，无需发货，降低风险和费用
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Privacy & Compliance Notice */}
-            <Card className="p-6 bg-muted/20 border-primary/20 mt-6">
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                <div className="space-y-2">
-                  <h4 className="font-semibold">隐私与合规说明</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• <strong>库内过户</strong>：手表保存在托管金库，买卖双方仅转移 NFT 所有权凭证，全程匿名</li>
-                    <li>• <strong>实物提货</strong>：一旦申请发货，买家需完成身份验证（KYC）和物流信息登记，隐私将被部分暴露</li>
-                    <li>• <strong>费用优惠</strong>：持有 $POI 可享受平台费用折扣和物流补贴（$POI 不直接支付商品价款）</li>
-                  </ul>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          <div className="mt-16 space-y-6 w-full max-w-3xl">
-            <h2 className="text-2xl md:text-3xl font-bold">Perfect for</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3 text-left">
-                <Sparkles className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Content Creators</h4>
-                  <p className="text-sm text-muted-foreground">Share all your social links in one place</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left">
-                <Wallet className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Web3 Enthusiasts</h4>
-                  <p className="text-sm text-muted-foreground">Connect wallet for airdrop eligibility</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left">
-                <Github className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Developers</h4>
-                  <p className="text-sm text-muted-foreground">Showcase projects and GitHub profile</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left">
-                <SiX className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Social Media</h4>
-                  <p className="text-sm text-muted-foreground">Connect all your social platforms</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <footer className="mt-20 text-center">
-            <p className="text-sm text-muted-foreground">
-              Powered by Replit × Web3
-            </p>
-          </footer>
+            {t.nav.contact}
+          </a>
         </div>
-      </div>
+      </header>
+
+      {/* Hero */}
+      <section className="max-w-7xl mx-auto px-4 py-16 md:py-24">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h1 className="text-4xl md:text-5xl font-bold leading-tight text-white">
+              {t.hero.title}
+            </h1>
+            <p className="text-lg text-slate-400 leading-relaxed">
+              {t.hero.subtitle}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a href="#consulting">
+                <Button
+                  size="lg"
+                  className="bg-white text-slate-900 hover:bg-slate-100"
+                >
+                  {t.hero.primaryCTA}
+                </Button>
+              </a>
+              <a href="#consulting">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-slate-700 hover:bg-slate-800"
+                >
+                  {t.hero.secondaryCTA}
+                </Button>
+              </a>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {t.hero.badges.map((badge) => (
+                <span
+                  key={badge}
+                  className="text-xs px-3 py-1 rounded-full border border-slate-700 bg-slate-800/50"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="border border-slate-700 rounded-2xl p-8 bg-slate-800/30 backdrop-blur">
+            <div className="aspect-video flex items-center justify-center text-slate-500">
+              <div className="text-center space-y-2">
+                <ShieldCheck className="w-16 h-16 mx-auto opacity-50" />
+                <p>AI 咨询界面预览</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Sections Grid */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Whitepaper */}
+          <Link href="/whitepaper">
+            <Card
+              id="whitepaper"
+              className="p-6 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all cursor-pointer group h-full"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center">
+                  <BookText className="w-6 h-6 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">
+                  {t.sections.whitepaper.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.sections.whitepaper.desc}
+                </p>
+                <div className="flex items-center text-sm text-slate-400 group-hover:text-white transition-colors pt-2">
+                  了解更多 <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          {/* Services */}
+          <Link href="/services">
+            <Card
+              id="services"
+              className="p-6 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all cursor-pointer group h-full"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center">
+                  <Layers className="w-6 h-6 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">
+                  {t.sections.services.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.sections.services.desc}
+                </p>
+                <div className="flex items-center text-sm text-slate-400 group-hover:text-white transition-colors pt-2">
+                  了解更多 <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          {/* Tokenomics */}
+          <Link href="/tokenomics">
+            <Card
+              id="tokenomics"
+              className="p-6 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all cursor-pointer group h-full"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center">
+                  <Coins className="w-6 h-6 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">
+                  {t.sections.tokenomics.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.sections.tokenomics.desc}
+                </p>
+                <div className="flex items-center text-sm text-slate-400 group-hover:text-white transition-colors pt-2">
+                  了解更多 <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          {/* Roadmap */}
+          <Link href="/roadmap">
+            <Card
+              id="roadmap"
+              className="p-6 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all cursor-pointer group h-full"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">
+                  {t.sections.roadmap.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.sections.roadmap.desc}
+                </p>
+                <div className="flex items-center text-sm text-slate-400 group-hover:text-white transition-colors pt-2">
+                  了解更多 <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          {/* Profile */}
+          <Link href="/profile">
+            <Card
+              id="profile"
+              className="p-6 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all cursor-pointer group h-full"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">
+                  {t.sections.profile.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.sections.profile.desc}
+                </p>
+                <div className="flex items-center text-sm text-slate-400 group-hover:text-white transition-colors pt-2">
+                  了解更多 <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+      </section>
+
+      {/* Consulting Section */}
+      <section id="consulting" className="max-w-7xl mx-auto px-4 py-16">
+        <div className="border-t border-slate-800 pt-16">
+          <h2 className="text-3xl font-bold mb-8 text-center text-white">
+            {t.consulting.title}
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* AI Free Consulting */}
+            <Card className="p-6 bg-slate-800/50 border-slate-700">
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-white">
+                  {t.consulting.ai.title}
+                </h3>
+                <p className="text-sm text-slate-400">{t.consulting.ai.desc}</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAiConsult()}
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-600"
+                    placeholder={t.consulting.ai.placeholder}
+                  />
+                  <Button
+                    onClick={handleAiConsult}
+                    className="bg-white text-slate-900 hover:bg-slate-100"
+                  >
+                    {t.consulting.ai.cta}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Human Paid Consulting */}
+            <Card className="p-6 bg-slate-800/50 border-slate-700">
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-white">
+                  {t.consulting.human.title}
+                </h3>
+                <p className="text-sm text-slate-400">
+                  {t.consulting.human.desc}
+                </p>
+                <Button
+                  onClick={handleHumanConsult}
+                  variant="outline"
+                  className="border-slate-700 hover:bg-slate-800 w-full md:w-auto"
+                >
+                  {t.consulting.human.cta}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800 mt-20">
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center text-sm text-slate-500">
+          © 2025 ACEE Ventures. 保留所有权利。
+        </div>
+      </footer>
     </div>
   );
 }

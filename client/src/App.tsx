@@ -10,6 +10,11 @@ import Dashboard from "@/pages/Dashboard";
 import PublicProfile from "@/pages/PublicProfile";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import Recharge from "@/pages/Recharge";
+import Whitepaper from "@/pages/Whitepaper";
+import Services from "@/pages/Services";
+import Tokenomics from "@/pages/Tokenomics";
+import Roadmap from "@/pages/Roadmap";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
@@ -46,6 +51,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/whitepaper" component={Whitepaper} />
+      <Route path="/services" component={Services} />
+      <Route path="/tokenomics" component={Tokenomics} />
+      <Route path="/roadmap" component={Roadmap} />
+      <Route path="/profile" component={Profile} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/recharge" component={Recharge} />
       <Route path="/payment-success" component={PaymentSuccess} />
