@@ -8,18 +8,21 @@ import ProfileEditor, { type ProfileData } from "@/components/ProfileEditor";
 import LinkEditor, { type LinkEditorData } from "@/components/LinkEditor";
 import AddLinkButton from "@/components/AddLinkButton";
 import AnalyticsView from "@/components/AnalyticsView";
-import PublicProfile, { type Profile } from "./PublicProfile";
+import PublicProfile, {
+  type PublicProfileData,
+  type Profile as PublicProfileProfile,
+  type Link as PublicProfileLink,
+} from "./PublicProfile";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EditMode() {
   const { toast } = useToast();
-  const [walletAddress, setWalletAddress] = useState<string>();
   const [showPreview, setShowPreview] = useState(false);
 
   const [profile, setProfile] = useState<ProfileData>({
     name: "John Doe",
     bio: "Web3 enthusiast | Developer | Creator",
-    avatarUrl: undefined,
+    avatarUrl: null,
     googleUrl: null,
     twitterUrl: null,
     weiboUrl: null,
@@ -34,21 +37,6 @@ export default function EditMode() {
     { id: "2", title: "GitHub Profile", url: "https://github.com", clicks: 856, visible: true },
     { id: "3", title: "Twitter", url: "https://twitter.com", clicks: 492, visible: true },
   ]);
-
-  const handleConnect = () => {
-    setWalletAddress("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb");
-    toast({
-      title: "Wallet connected",
-      description: "Successfully connected to MetaMask",
-    });
-  };
-
-  const handleDisconnect = () => {
-    setWalletAddress(undefined);
-    toast({
-      title: "Wallet disconnected",
-    });
-  };
 
   const handleProfileEditorChange = (updates: Partial<ProfileData> & { username?: string }) => {
     const { username: nextUsername, ...profileUpdates } = updates;
@@ -101,11 +89,31 @@ export default function EditMode() {
   const totalClicks = links.reduce((sum, link) => sum + link.clicks, 0);
   const topLinks = [...links].sort((a, b) => b.clicks - a.clicks).slice(0, 5);
 
-  const previewProfile: Profile = {
-    ...profile,
-    walletAddress,
-    links: links,
+  const previewProfile: PublicProfileProfile = {
+    name: profile.name,
+    bio: profile.bio,
+    avatarUrl: profile.avatarUrl,
+    googleUrl: profile.googleUrl,
+    twitterUrl: profile.twitterUrl,
+    weiboUrl: profile.weiboUrl,
+    tiktokUrl: profile.tiktokUrl,
     totalViews: 8924,
+  };
+
+  const previewLinks: PublicProfileLink[] = links.map((link) => ({
+    id: link.id,
+    title: link.title,
+    url: link.url,
+    visible: link.visible,
+  }));
+
+  const previewData: PublicProfileData = {
+    profile: previewProfile,
+    links: previewLinks,
+    user: {
+      walletAddress: undefined,
+      username,
+    },
   };
 
   if (showPreview) {
@@ -116,7 +124,7 @@ export default function EditMode() {
             Close Preview
           </Button>
         </div>
-        <PublicProfile profile={previewProfile} username={username || "johndoe"} />
+        <PublicProfile previewData={previewData} />
       </div>
     );
   }
@@ -139,11 +147,7 @@ export default function EditMode() {
               <Save className="mr-2 h-4 w-4" />
               Save
             </Button>
-            <WalletConnectButton
-              walletAddress={walletAddress}
-              onConnect={handleConnect}
-              onDisconnect={handleDisconnect}
-            />
+            <WalletConnectButton />
             <ThemeToggle />
           </div>
         </div>

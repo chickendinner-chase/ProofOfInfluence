@@ -1,7 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
+import type { RouteComponentProps } from "wouter";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import ThemeToggle from "@/components/ThemeToggle";
+import WalletConnectButton from "@/components/WalletConnectButton";
+import { UniswapSwapCard } from "@/components/UniswapSwapCard";
 import { Copy, ExternalLink, Edit, Coins } from "lucide-react";
 import { SiGoogle, SiX, SiSinaweibo, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -9,10 +12,49 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import type { Profile, Link, User } from "@shared/schema";
+import type { Profile as ProfileRecord, Link as LinkRecord, User } from "@shared/schema";
 
-export default function PublicProfile() {
-  const { username } = useParams<{ username: string }>();
+export type Profile = {
+  name: string;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  googleUrl?: string | null;
+  twitterUrl?: string | null;
+  weiboUrl?: string | null;
+  tiktokUrl?: string | null;
+  totalViews: number;
+};
+
+export type Link = {
+  id: string;
+  title: string;
+  url: string;
+  visible: boolean;
+};
+
+export type PublicProfileData = {
+  profile: Profile;
+  links: Link[];
+  user: {
+    walletAddress?: string | null;
+    username?: string | null;
+  };
+};
+
+type PublicProfileProps = Partial<RouteComponentProps<{ username: string }>> & {
+  previewData?: PublicProfileData;
+};
+
+type ApiResponse = {
+  profile: ProfileRecord;
+  links: LinkRecord[];
+  user: User;
+};
+
+export default function PublicProfile(props?: PublicProfileProps) {
+  const { previewData } = props ?? {};
+  const params = useParams<{ username: string }>();
+  const username = params?.username;
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
@@ -23,11 +65,11 @@ export default function PublicProfile() {
     enabled: isAuthenticated,
   });
 
-  const { data, isLoading, error} = useQuery<{
-    profile: Profile;
-    links: Link[];
-    user: User;
-  }>({
+  const {
+    data,
+    isLoading,
+    error,
+  } = useQuery<ApiResponse>({
     queryKey: ["/api/profile", username],
     queryFn: async () => {
       const response = await fetch(`/api/profile/${username}`);
@@ -36,7 +78,7 @@ export default function PublicProfile() {
       }
       return response.json();
     },
-    enabled: !!username,
+    enabled: !previewData && !!username,
   });
 
   const trackClickMutation = useMutation({
@@ -50,7 +92,9 @@ export default function PublicProfile() {
   };
 
   const handleLinkClick = (linkId: string, url: string) => {
-    trackClickMutation.mutate(linkId);
+    if (!previewData) {
+      trackClickMutation.mutate(linkId);
+    }
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -62,10 +106,11 @@ export default function PublicProfile() {
     });
   };
 
-  if (isLoading) {
+  if (!previewData && isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex flex-wrap items-center justify-end gap-2">
+          {isAuthenticated && <WalletConnectButton />}
           <ThemeToggle />
         </div>
         <div className="max-w-md mx-auto px-4 py-8 md:py-12">
@@ -81,9 +126,13 @@ export default function PublicProfile() {
     );
   }
 
-  if (error || !data) {
+  if (!previewData && (error || !data)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center">
+        <div className="absolute top-4 right-4 flex flex-wrap items-center justify-end gap-2">
+          {isAuthenticated && <WalletConnectButton />}
+          <ThemeToggle />
+        </div>
         <div className="text-center space-y-4 p-8">
           <h1 className="text-3xl font-bold">Profile not found</h1>
           <p className="text-muted-foreground">
@@ -94,11 +143,18 @@ export default function PublicProfile() {
     );
   }
 
-  const { profile, links, user } = data;
+  const resolvedData = previewData ?? (data ? mapApiResponse(data) : undefined);
+
+  if (!resolvedData) {
+    return null;
+  }
+
+  const { profile, links, user } = resolvedData;
   const visibleLinks = links.filter((link) => link.visible);
 
   // Check if current user is viewing their own profile
-  const isOwnProfile = currentUser?.username === username;
+  const activeUsername = previewData?.user?.username ?? username;
+  const isOwnProfile = previewData ? true : currentUser?.username === activeUsername;
 
   const socialLinks = [
     { url: profile.googleUrl, icon: SiGoogle, label: "Google", testId: "link-google" },
@@ -109,13 +165,17 @@ export default function PublicProfile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="absolute top-4 right-4 flex items-center gap-2">
+      <div className="absolute top-4 right-4 flex flex-wrap items-center justify-end gap-2">
         {isOwnProfile && (
           <>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setLocation("/recharge")}
+              onClick={() => {
+                if (previewData) return;
+                setLocation("/recharge");
+              }}
+              disabled={!!previewData}
               data-testid="button-recharge"
             >
               <Coins className="mr-2 h-4 w-4" />
@@ -124,7 +184,11 @@ export default function PublicProfile() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setLocation("/dashboard")}
+              onClick={() => {
+                if (previewData) return;
+                setLocation("/dashboard");
+              }}
+              disabled={!!previewData}
               data-testid="button-edit"
             >
               <Edit className="mr-2 h-4 w-4" />
@@ -132,6 +196,7 @@ export default function PublicProfile() {
             </Button>
           </>
         )}
+        {isAuthenticated && <WalletConnectButton />}
         <ThemeToggle />
       </div>
 
@@ -187,7 +252,11 @@ export default function PublicProfile() {
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => copyAddress(user.walletAddress!)}
+                onClick={() => {
+                  if (user.walletAddress) {
+                    copyAddress(user.walletAddress);
+                  }
+                }}
                 data-testid="button-copy-wallet"
               >
                 <Copy className="h-3 w-3" />
@@ -209,6 +278,10 @@ export default function PublicProfile() {
               </Button>
             </div>
           )}
+
+          <div className="mt-8 w-full">
+            <UniswapSwapCard walletAddress={currentUser?.walletAddress} />
+          </div>
 
           <p className="text-xs md:text-sm text-muted-foreground" data-testid="text-profile-views">
             {profile.totalViews.toLocaleString()} profile views
@@ -245,4 +318,29 @@ export default function PublicProfile() {
       </div>
     </div>
   );
+}
+
+function mapApiResponse(data: ApiResponse): PublicProfileData {
+  return {
+    profile: {
+      name: data.profile.name,
+      bio: data.profile.bio,
+      avatarUrl: data.profile.avatarUrl,
+      googleUrl: data.profile.googleUrl,
+      twitterUrl: data.profile.twitterUrl,
+      weiboUrl: data.profile.weiboUrl,
+      tiktokUrl: data.profile.tiktokUrl,
+      totalViews: data.profile.totalViews,
+    },
+    links: data.links.map((link) => ({
+      id: link.id,
+      title: link.title,
+      url: link.url,
+      visible: link.visible,
+    })),
+    user: {
+      walletAddress: data.user.walletAddress,
+      username: data.user.username,
+    },
+  };
 }
