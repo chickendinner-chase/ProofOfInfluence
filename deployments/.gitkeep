@@ -1,0 +1,22 @@
+# Deployment Records
+
+This directory stores deployment records for POI Token and Uniswap V2 liquidity pools.
+
+Files are automatically generated during deployment:
+- `deployment-{network}.json` - Token deployment info
+- `liquidity-{network}.json` - Liquidity pool info
+
+Example structure:
+```json
+{
+  "network": "sepolia",
+  "timestamp": "2025-11-05T10:30:00.000Z",
+  "contracts": {
+    "poiToken": "0xAbC...123",
+    "liquidityPair": "0xDeF...456"
+  },
+  "transactionHash": "0x..."
+}
+```
+
+
