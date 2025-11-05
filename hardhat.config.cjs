@@ -1,5 +1,11 @@
 require("@nomiclabs/hardhat-ethers");
 require("dotenv").config();
+require("ts-node").register({
+  transpileOnly: true,
+  compilerOptions: {
+    module: "commonjs",
+  },
+});
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
