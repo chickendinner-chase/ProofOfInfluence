@@ -4,7 +4,7 @@ import type { RouteComponentProps } from "wouter";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import ThemeToggle from "@/components/ThemeToggle";
 import WalletConnectButton from "@/components/WalletConnectButton";
-import { UniswapSwapCard } from "@/components/UniswapSwapCard";
+import UniswapSwapCard from "@/components/UniswapSwapCard";
 import { Copy, ExternalLink, Edit, Coins } from "lucide-react";
 import { SiGoogle, SiX, SiSinaweibo, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
