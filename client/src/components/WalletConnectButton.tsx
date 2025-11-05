@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Wallet, Copy, ExternalLink, LogOut, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,13 +23,35 @@ declare global {
   }
 }
 
-export default function WalletConnectButton() {
+interface WalletConnectButtonProps {
+  standalone?: boolean;
+  onConnect?: (address: string) => void;
+  onDisconnect?: () => void;
+}
+
+export default function WalletConnectButton({ 
+  standalone = false,
+  onConnect,
+  onDisconnect 
+}: WalletConnectButtonProps = {}) {
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [standaloneAddress, setStandaloneAddress] = useState<string | null>(null);
 
   const { data: user } = useQuery<User>({
     queryKey: ["/api/auth/user"],
+    enabled: !standalone,
   });
+
+  // Load standalone wallet address from localStorage
+  useEffect(() => {
+    if (standalone) {
+      const savedAddress = localStorage.getItem("wallet_address");
+      if (savedAddress) {
+        setStandaloneAddress(savedAddress);
+      }
+    }
+  }, [standalone]);
 
   const connectWalletMutation = useMutation({
     mutationFn: async (data: { walletAddress: string; signature: string }) => {
@@ -83,6 +105,20 @@ export default function WalletConnectButton() {
 
       const walletAddress = accounts[0];
 
+      if (standalone) {
+        // Standalone mode: only connect wallet, no backend call
+        localStorage.setItem("wallet_address", walletAddress);
+        setStandaloneAddress(walletAddress);
+        onConnect?.(walletAddress);
+        toast({
+          title: "钱包已连接",
+          description: truncateAddress(walletAddress),
+        });
+        setIsConnecting(false);
+        return;
+      }
+
+      // Web2 integration mode: call backend API
       const message = `Sign this message to connect your wallet to LinkTree Web3.\n\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
 
       const signature = await window.ethereum.request({
@@ -110,10 +146,18 @@ export default function WalletConnectButton() {
   };
 
   const handleDisconnect = () => {
+    if (standalone) {
+      localStorage.removeItem("wallet_address");
+      setStandaloneAddress(null);
+      onDisconnect?.();
+      toast({ title: "钱包已断开" });
+      return;
+    }
+    
     disconnectWalletMutation.mutate();
   };
 
-  const walletAddress = user?.walletAddress;
+  const walletAddress = standalone ? standaloneAddress : user?.walletAddress;
 
   const truncateAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;

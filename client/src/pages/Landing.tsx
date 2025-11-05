@@ -25,15 +25,15 @@ const zh = {
     tokenomics: "代币经济学",
     roadmap: "路线图",
     about: "关于我们",
-    contact: "AI 咨询",
+    contact: "进入 APP",
   },
   hero: {
-    title: "Proof of Influence（POI）：非金融资产通证化基础设施",
+    title: "雇佣 AI 交易员：智能 ETH/USDC 交易平台",
     subtitle:
-      "让影视剧版权、艺术/奢侈品、房产等非金融资产上链、可验证、可交易。以'影响力即价值'为核心，构建 RWA资产发行 + DEX平台交易 + 现实世界消费 的三合一生态架构。",
-    primaryCTA: "AI 免费咨询（立即体验）",
-    secondaryCTA: "预约人工专家（付费）",
-    badges: ["非金融 RWA", "RWA 发行 + DEX 交易 + 消费闭环", "$POI 原生代币"],
+      "基于 Uniswap 的去中心化交易，实时图表监控 Base 网络，一键完成代币兑换，无需注册账户。",
+    primaryCTA: "立即开始交易",
+    secondaryCTA: "查看实时行情",
+    badges: ["Uniswap V2", "Base 网络", "MetaMask"],
   },
   sections: {
     whitepaper: {
@@ -62,36 +62,24 @@ const zh = {
       icon: Users,
     },
   },
-  consulting: {
-    title: "AI 免费咨询 + 付费人工咨询",
-    ai: {
-      title: "AI 免费咨询",
-      desc: "即时获取代币经济学/合规/架构答疑（演示版）。",
-      placeholder: "请输入你的问题，如：如何为短剧版权设计通证模型？",
-      cta: "开始对话",
+  trading: {
+    title: "雇佣 AI 交易员",
+    monitoring: {
+      title: "实时市场监控",
+      desc: "24/7 监控 Base 链 ETH/USDC 交易对价格变动，基于 Uniswap V2 提供最优兑换路径。",
+      cta: "进入交易平台",
     },
-    human: {
-      title: "预约人工专家（付费）",
-      desc: "由资深顾问一对一提供方案评估与落地建议，含保密协议。",
-      cta: "预约 60 分钟咨询",
+    swap: {
+      title: "一键智能兑换",
+      desc: "连接 MetaMask 钱包即可开始交易，无需注册，所有交易在链上完成。",
+      cta: "了解更多",
     },
   },
 };
 
 export default function Landing() {
   const [lang, setLang] = useState("zh");
-  const [aiQuery, setAiQuery] = useState("");
   const t = useMemo(() => zh, [lang]);
-
-  const handleAiConsult = () => {
-    if (aiQuery.trim()) {
-      alert(`AI 咨询功能开发中...\n您的问题：${aiQuery}`);
-    }
-  };
-
-  const handleHumanConsult = () => {
-    alert("人工专家预约功能开发中...");
-  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
@@ -116,12 +104,11 @@ export default function Landing() {
               {t.nav.about}
             </a>
           </nav>
-          <a
-            href="#consulting"
-            className="border border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors"
-          >
-            {t.nav.contact}
-          </a>
+          <Link href="/app">
+            <div className="border border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+              {t.nav.contact}
+            </div>
+          </Link>
         </div>
       </header>
 
@@ -136,15 +123,15 @@ export default function Landing() {
               {t.hero.subtitle}
             </p>
             <div className="flex flex-wrap gap-3">
-              <a href="#consulting">
+              <Link href="/app">
                 <Button
                   size="lg"
                   className="bg-white text-slate-900 hover:bg-slate-100"
                 >
                   {t.hero.primaryCTA}
                 </Button>
-              </a>
-              <a href="#consulting">
+              </Link>
+              <Link href="/app">
                 <Button
                   size="lg"
                   variant="outline"
@@ -152,7 +139,7 @@ export default function Landing() {
                 >
                   {t.hero.secondaryCTA}
                 </Button>
-              </a>
+              </Link>
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {t.hero.badges.map((badge) => (
@@ -165,13 +152,15 @@ export default function Landing() {
               ))}
             </div>
           </div>
-          <div className="border border-slate-700 rounded-2xl p-8 bg-slate-800/30 backdrop-blur">
-            <div className="aspect-video flex items-center justify-center text-slate-500">
-              <div className="text-center space-y-2">
-                <ShieldCheck className="w-16 h-16 mx-auto opacity-50" />
-                <p>AI 咨询界面预览</p>
-              </div>
+          <div className="border border-slate-700 rounded-2xl p-4 bg-slate-800/30 backdrop-blur overflow-hidden">
+            <div className="aspect-video">
+              <iframe
+                src="https://www.tradingview.com/embed-widget/symbol-overview/?locale=zh_CN&symbol=COINBASE%3AETHUSD&interval=15&theme=dark&style=1&height=100%&width=100%"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="ETH/USDC Live Chart"
+              />
             </div>
+            <p className="text-xs text-slate-400 mt-2 text-center">ETH/USDC 实时行情</p>
           </div>
         </div>
       </section>
@@ -296,55 +285,47 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Consulting Section */}
-      <section id="consulting" className="max-w-7xl mx-auto px-4 py-16">
+      {/* Trading Section */}
+      <section id="trading" className="max-w-7xl mx-auto px-4 py-16">
         <div className="border-t border-slate-800 pt-16">
           <h2 className="text-3xl font-bold mb-8 text-center text-white">
-            {t.consulting.title}
+            {t.trading.title}
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
-            {/* AI Free Consulting */}
+            {/* Real-time Monitoring Card */}
             <Card className="p-6 bg-slate-800/50 border-slate-700">
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-white">
-                  {t.consulting.ai.title}
+                  {t.trading.monitoring.title}
                 </h3>
-                <p className="text-sm text-slate-400">{t.consulting.ai.desc}</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAiConsult()}
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-600"
-                    placeholder={t.consulting.ai.placeholder}
-                  />
-                  <Button
-                    onClick={handleAiConsult}
-                    className="bg-white text-slate-900 hover:bg-slate-100"
-                  >
-                    {t.consulting.ai.cta}
+                <p className="text-sm text-slate-400">
+                  {t.trading.monitoring.desc}
+                </p>
+                <Link href="/app">
+                  <Button className="bg-white text-slate-900 hover:bg-slate-100">
+                    {t.trading.monitoring.cta}
                   </Button>
-                </div>
+                </Link>
               </div>
             </Card>
 
-            {/* Human Paid Consulting */}
+            {/* One-click Swap Card */}
             <Card className="p-6 bg-slate-800/50 border-slate-700">
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-white">
-                  {t.consulting.human.title}
+                  {t.trading.swap.title}
                 </h3>
                 <p className="text-sm text-slate-400">
-                  {t.consulting.human.desc}
+                  {t.trading.swap.desc}
                 </p>
-                <Button
-                  onClick={handleHumanConsult}
-                  variant="outline"
-                  className="border-slate-700 hover:bg-slate-800 w-full md:w-auto"
-                >
-                  {t.consulting.human.cta}
-                </Button>
+                <Link href="/app">
+                  <Button
+                    variant="outline"
+                    className="border-slate-700 hover:bg-slate-800 w-full md:w-auto"
+                  >
+                    {t.trading.swap.cta}
+                  </Button>
+                </Link>
               </div>
             </Card>
           </div>
