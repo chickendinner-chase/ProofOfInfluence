@@ -22,7 +22,7 @@ All Web3/blockchain operations (smart contracts, token deployment) should be don
 
 **Framework**: React 18 with TypeScript, built using Vite for fast development and optimized production builds.
 
-**UI Framework**: Shadcn UI components built on Radix UI primitives with Tailwind CSS for styling. The design follows a mobile-first approach with gradient-driven visual identity inspired by Linktree's simplicity and Rainbow.me's Web3 aesthetics.
+**UI Framework**: Shadcn UI components built on Radix UI primitives with Tailwind CSS for styling. The design follows a mobile-first approach with gradient-driven visual identity that emphasizes POI-centric Web3 Profile features, drawing inspiration from Rainbow.me's Web3 aesthetics and modern design principles.
 
 **State Management**: TanStack Query (React Query) for server state management with built-in caching, optimistic updates, and automatic refetching. No additional global state management library is used.
 

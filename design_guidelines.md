@@ -2,7 +2,7 @@
 
 ## Design Approach
 
-**Reference-Based Design:** Linktree's simplicity enhanced with Rainbow.me's Web3 aesthetics and Gradient.page's modern visual treatment
+**Reference-Based Design:** POI-centric Web3 Profile design with Rainbow.me's Web3 aesthetics, Gradient.page's modern visual treatment, and emphasis on on-chain influence display and Gradient.page's modern visual treatment
 
 **Core Principles:** 
 - Mobile-first centered hierarchy
