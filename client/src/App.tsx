@@ -16,6 +16,14 @@ import Tokenomics from "@/pages/Tokenomics";
 import Roadmap from "@/pages/Roadmap";
 import Profile from "@/pages/Profile";
 import TradingApp from "@/pages/TradingApp";
+import Products from "@/pages/Products";
+import ForCreators from "@/pages/ForCreators";
+import ForBrands from "@/pages/ForBrands";
+import UseCases from "@/pages/UseCases";
+import TokenDocs from "@/pages/TokenDocs";
+import Compliance from "@/pages/Compliance";
+import Changelog from "@/pages/Changelog";
+import Company from "@/pages/Company";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
@@ -51,17 +59,36 @@ function Router() {
 
   return (
     <Switch>
+      {/* Home */}
       <Route path="/" component={Landing} />
-      <Route path="/app" component={TradingApp} />
+      
+      {/* Information Architecture Routes */}
+      <Route path="/products" component={Products} />
+      <Route path="/for-creators" component={ForCreators} />
+      <Route path="/for-brands" component={ForBrands} />
+      <Route path="/use-cases" component={UseCases} />
+      <Route path="/token-docs" component={TokenDocs} />
+      <Route path="/compliance" component={Compliance} />
+      <Route path="/changelog" component={Changelog} />
+      <Route path="/company" component={Company} />
+      
+      {/* Legacy Routes (keep for backwards compatibility) */}
       <Route path="/whitepaper" component={Whitepaper} />
       <Route path="/services" component={Services} />
       <Route path="/tokenomics" component={Tokenomics} />
       <Route path="/roadmap" component={Roadmap} />
-      <Route path="/profile" component={Profile} />
+      
+      {/* App & Dashboard */}
+      <Route path="/app" component={TradingApp} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/profile" component={Profile} />
       <Route path="/recharge" component={Recharge} />
       <Route path="/payment-success" component={PaymentSuccess} />
+      
+      {/* Dynamic User Profiles */}
       <Route path="/:username" component={PublicProfile} />
+      
+      {/* 404 */}
       <Route component={NotFound} />
     </Switch>
   );
