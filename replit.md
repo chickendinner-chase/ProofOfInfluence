@@ -1,20 +1,12 @@
-# Replit Configuration - Web2 Only
+# Web3 Link-in-Bio Platform
 
 ## Overview
 
-**Important**: This Replit environment is configured for **Web2 applications only**. 
+This is a Web3-enabled link-in-bio platform similar to Linktree, allowing users to create personalized showcase pages with integrated wallet functionality. Users can authenticate via Replit Auth (Google OAuth), connect Web3 wallets, manage their profile and links, and track analytics. The platform features a public profile view for sharing and a dashboard for content management.
 
-- ✅ Frontend (React + TypeScript)
-- ✅ Backend API (Express)
-- ✅ Database (PostgreSQL via Drizzle)
-- ✅ Authentication (Replit Auth + OAuth)
-- ✅ Payment (Stripe)
+## User Preferences
 
-**❌ No Smart Contract Deployment or Management**
-
-All Web3/blockchain operations (smart contracts, token deployment) should be done **locally**, not on Replit.
-
----
+Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
@@ -26,7 +18,7 @@ All Web3/blockchain operations (smart contracts, token deployment) should be don
 
 **State Management**: TanStack Query (React Query) for server state management with built-in caching, optimistic updates, and automatic refetching. No additional global state management library is used.
 
-**Routing**: Wouter for lightweight client-side routing with main routes:
+**Routing**: Wouter for lightweight client-side routing with two main routes:
 - `/` - Landing page (unauthenticated) or Dashboard (authenticated)
 - `/:username` - Public profile pages
 
@@ -46,157 +38,101 @@ All Web3/blockchain operations (smart contracts, token deployment) should be don
 - Session management using express-session with PostgreSQL storage (connect-pg-simple)
 
 **API Design**: RESTful API with the following endpoint categories:
-- Auth: `/api/auth/*` - Login, logout, user session
-- Profile: `/api/profile` - User profile CRUD
-- Links: `/api/links/*` - Link management
-- Analytics: `/api/analytics` - View and click tracking
-- Wallet: `/api/wallet/*` - Wallet connection (read-only in Replit)
-- Payment: `/api/stripe/*` - Stripe payment handling
+- `/api/auth/*` - Authentication (login, logout, user session)
+- `/api/profile/*` - Profile management (CRUD operations)
+- `/api/links/*` - Link management and click tracking
+- `/api/wallet/*` - Wallet connection and management
+- `/api/analytics` - Analytics data retrieval
 
-**Database**: PostgreSQL via Neon serverless with Drizzle ORM for type-safe database access. Schema defined in `shared/schema.ts` with automatic migrations via `drizzle-kit push`.
+**Middleware Stack**:
+- JSON body parsing with raw body preservation for webhook verification
+- Session middleware with secure cookie configuration
+- Request logging with response time tracking
+- Passport.js authentication middleware
 
----
+**Key Design Decisions**:
+- Stateless API design with session-based authentication
+- Separation of concerns: routes → storage layer → database
+- Storage abstraction pattern (IStorage interface) for potential database swapping
+- Automatic profile creation on first login
 
-## Web3 Integration (Frontend Only)
+### Data Storage
 
-**Important**: Replit handles only the **frontend** Web3 integration for:
-- Wallet connection (MetaMask)
-- Token balance display
-- Transaction status tracking
-- Uniswap interface embedding
+**Database**: PostgreSQL accessed via Neon serverless driver with WebSocket support for serverless environments.
 
-**Not handled in Replit**:
-- Smart contract deployment
-- Contract management
-- Private key operations
-- Token minting/burning
-- Liquidity pool management
+**ORM**: Drizzle ORM for type-safe database queries and schema management.
 
-All smart contract operations should be done **locally** using Hardhat.
+**Schema Design**:
 
----
+1. **users table**: Core authentication table
+   - Stores Replit Auth data (email, firstName, lastName, profileImageUrl)
+   - Custom fields: username (unique), walletAddress (unique)
+   - Timestamps: createdAt, updatedAt, lastLoginAt
 
-## Development Workflow
+2. **profiles table**: Public showcase information
+   - Links to users table with cascade delete
+   - Profile data: name, bio, avatarUrl
+   - Social links: googleUrl, twitterUrl, weiboUrl, tiktokUrl
+   - Analytics: totalViews, isPublic flag
+   - Timestamps for tracking updates
 
-### On Replit (Web2)
+3. **links table**: User's curated links
+   - Links to users table with cascade delete
+   - Link data: title, url, displayOrder (for custom ordering)
+   - Analytics: clicks counter
+   - Visibility: isVisible flag for draft links
+   - Timestamps for tracking
 
-```bash
-# Install dependencies
-npm install
+4. **sessions table**: Session persistence (required for Replit Auth)
+   - Standard connect-pg-simple schema
+   - Indexed on expire column for efficient cleanup
 
-# Run development server
-npm run dev
+**Key Design Decisions**:
+- User-profile separation allows authentication without requiring complete profile setup
+- Username is optional initially but required to make profile public
+- Wallet address stored at user level for cross-platform identity
+- Click tracking and view counting at database level for accuracy
+- Cascade deletes ensure data integrity when users are removed
 
-# Database migrations
-npm run db:push
+### External Dependencies
 
-# Type checking
-npm run check
+**Authentication & Identity**:
+- **Replit Auth (OIDC)**: Primary authentication provider via Google OAuth
+  - Uses openid-client library for OIDC flow
+  - Provides user email, name, and profile image
+  - Session-based authentication with PostgreSQL storage
 
-# Build for production
-npm run build
-```
+**Database**:
+- **Neon Serverless PostgreSQL**: Cloud PostgreSQL database
+  - WebSocket-based connection for serverless compatibility
+  - Managed via Drizzle Kit migrations
 
-### Locally (Web3 - Not on Replit)
+**Web3 Integration**:
+- **MetaMask** (client-side): Browser wallet for Web3 authentication
+  - Uses window.ethereum API for wallet connection
+  - Signature-based verification for wallet ownership
+  - Optional binding to existing accounts
 
-```bash
-# Compile smart contracts
-npm run compile
+**Payment Processing** (Planned):
+- **Stripe**: Payment infrastructure mentioned in PRD for future implementation
+  - One-time payments and subscriptions
+  - Webhook handling for payment status updates
 
-# Deploy contracts
-npm run deploy:all -- --network <network>
+**UI & Styling**:
+- **Radix UI**: Headless UI components for accessibility
+- **Tailwind CSS**: Utility-first styling framework
+- **Lucide React**: Icon library
+- **React Icons**: Additional social media icons (Google, Twitter, Weibo, TikTok)
 
-# Verify contracts
-npx hardhat verify --network <network> <address>
-```
+**Development Tools**:
+- **Vite**: Build tool and development server
+- **TypeScript**: Type safety across frontend and backend
+- **Drizzle Kit**: Database migration tool
+- **Replit Dev Tools**: Cartographer and dev banner for development environment
 
----
-
-## Environment Variables (Replit Secrets)
-
-### Web2 Application
-```
-DATABASE_URL=postgresql://...
-SESSION_SECRET=...
-STRIPE_SECRET_KEY=sk_...
-STRIPE_PUBLISHABLE_KEY=pk_...
-BASE_URL=https://your-app.repl.co
-```
-
-### Web3 Configuration (Frontend Only)
-```
-POI_TOKEN_ADDRESS=0x...  # Read-only, for display
-UNISWAP_PAIR_ADDRESS=0x...  # Read-only, for display
-```
-
-**Do NOT store private keys in Replit Secrets!**
-
----
-
-## Deployment
-
-### Automatic Deployment
-
-When you push to the main branch on GitHub, Replit automatically:
-1. Pulls the latest code
-2. Installs dependencies
-3. Builds the application
-4. Restarts the server
-
-### Manual Deployment
-
-In Replit Shell:
-```bash
-npm run build
-npm start
-```
-
----
-
-## Security Best Practices
-
-### On Replit
-- ✅ Store secrets in Replit Secrets
-- ✅ Use environment variables for configuration
-- ✅ Enable authentication middleware for protected routes
-- ✅ Validate all user inputs
-- ✅ Use HTTPS only (automatic on Replit)
-
-### NOT on Replit
-- ❌ No private key storage
-- ❌ No smart contract deployment
-- ❌ No direct blockchain write operations
-- ❌ No mainnet fund management
-
----
-
-## Limitations
-
-### Replit Environment
-- **Memory**: Limited RAM, avoid heavy processing
-- **Storage**: Ephemeral filesystem (use database for persistence)
-- **Networking**: Outbound connections only
-- **Cold Starts**: Possible with minInstances = 0
-
-### What to Do Locally Instead
-- Smart contract development and testing
-- Heavy computation or data processing
-- File system-dependent operations
-- Blockchain transaction signing
-
----
-
-## Support
-
-For Replit-specific issues:
-- Check Replit documentation: https://docs.replit.com/
-- Replit community: https://ask.replit.com/
-
-For ProofOfInfluence issues:
-- Check project documentation in `/docs`
-- GitHub Issues
-- Internal team communication
-
----
-
-**Remember**: Replit is for Web2 applications only. All Web3/blockchain operations should be done locally!
+**Key Integration Decisions**:
+- Dual authentication system (traditional OAuth + Web3) for flexibility
+- Serverless-compatible database connection for Replit deployment
+- Shadcn UI for maintainable, customizable component library
+- Session storage in database rather than memory for horizontal scaling
+- Environment variable configuration for all external services

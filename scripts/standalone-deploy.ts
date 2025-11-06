@@ -120,15 +120,10 @@ async function main() {
 
   const POITokenFactory = new ethers.ContractFactory(abi, bytecode, wallet);
   const poiToken = await POITokenFactory.deploy();
-  
-  console.log(`   交易已发送，等待确认...`);
-  const deployReceipt = await poiToken.deployTransaction.wait(2); // 等待2个区块确认
-  console.log(`✅ POI Token 已部署: ${poiToken.address}`);
-  console.log(`   区块: ${deployReceipt.blockNumber}`);
+  await poiToken.deployed();
 
-  // 等待一下确保合约可以被调用
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
+  console.log(`✅ POI Token 已部署: ${poiToken.address}`);
+
   const totalSupply = await poiToken.totalSupply();
   console.log(`   总供应量: ${ethers.utils.formatEther(totalSupply)} POI\n`);
 

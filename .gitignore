@@ -40,14 +40,8 @@ artifacts/
 typechain/
 typechain-types/
 
-# Deployments - 主网部署记录保护
-deployments/deployment-mainnet.json
-deployments/deployment-base.json
-deployments/deployment-arbitrum.json
-deployments/liquidity-*.json
-
-# Internal documents - 内部文档不提交
-internal/
+# Deployments (可选：如果不想提交部署记录，取消注释下一行)
+# deployments/
 
 # Replit
 .replit
@@ -55,8 +49,3 @@ internal/
 .cache/
 .config/
 replit.nix
-
-# Local development - 本地开发环境
-.env.local
-.env.mainnet
-config/local.json
