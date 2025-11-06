@@ -5,9 +5,10 @@ import { Input } from "./ui/input";
 import { ArrowDownUp, Loader2, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "./ui/alert";
-import { useAccount, useBalance, useSwitchChain, useWalletClient } from 'wagmi';
+import { useAccount, useBalance, useSwitchChain, useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { ethers } from "ethers";
+import { publicClientToProvider, walletClientToSigner } from "@/lib/ethersAdapter";
 import {
   WETH_ADDRESS,
   USDC_ADDRESS,
@@ -35,6 +36,7 @@ export default function UniswapSwapCard({ walletAddress: _deprecated }: UniswapS
   const { address, isConnected, chain } = useAccount();
   const { switchChain } = useSwitchChain();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   // Get ETH balance
   const { data: ethBalance, refetch: refetchEthBalance } = useBalance({
@@ -104,12 +106,12 @@ export default function UniswapSwapCard({ walletAddress: _deprecated }: UniswapS
     setIsLoadingQuote(true);
 
     try {
-      // Use window.ethereum for read operations
-      if (!window.ethereum) {
-        throw new Error("No wallet provider found");
+      // Use wagmi's publicClient for read operations (no wallet required)
+      if (!publicClient) {
+        throw new Error("No provider available");
       }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+      const provider = publicClientToProvider(publicClient);
       const routerContract = new ethers.Contract(
         BASESWAP_ROUTER_ADDRESS,
         UNISWAP_V2_ROUTER_ABI,
@@ -216,12 +218,12 @@ export default function UniswapSwapCard({ walletAddress: _deprecated }: UniswapS
     setIsSwapping(true);
 
     try {
-      if (!window.ethereum) {
-        throw new Error("No wallet provider found");
+      // Use wagmi's walletClient for write operations
+      if (!walletClient) {
+        throw new Error("Please connect your wallet");
       }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
-      const signer = provider.getSigner();
+      const signer = walletClientToSigner(walletClient);
       const routerContract = new ethers.Contract(
         BASESWAP_ROUTER_ADDRESS,
         UNISWAP_V2_ROUTER_ABI,
