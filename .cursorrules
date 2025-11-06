@@ -1,7 +1,7 @@
 # ProofOfInfluence - Cursor AI Rules
 
 ## 项目概述
-Web3 link-in-bio 平台（类似 Linktree + Web3）：用户可创建个性化展示页面，集成钱包功能，追踪影响力数据。
+ProofOfInfluence：
 
 ## 🚨 重要：三AI协同工作模式
 
@@ -11,8 +11,7 @@ Web3 link-in-bio 平台（类似 Linktree + Web3）：用户可创建个性化�
 - ✅ **Web3 开发**：智能合约编写、脚本开发
 - ✅ **代码审查**：检查代码质量、性能优化
 - ✅ **文档编写**：技术文档、注释
-- ❌ **不部署**：不执行部署命令
-- ❌ **不测试部署**：不连接测试网/主网
+
 
 ### Replit AI（部署测试）
 **职责**：部署、测试、密钥管理
