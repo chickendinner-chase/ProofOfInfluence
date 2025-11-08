@@ -10,6 +10,7 @@ import ProfileEditor from "@/components/ProfileEditor";
 import LinkEditor, { type LinkEditorData } from "@/components/LinkEditor";
 import AddLinkButton from "@/components/AddLinkButton";
 import AnalyticsView from "@/components/AnalyticsView";
+import ReservePoolPanel from "@/components/ReservePoolPanel";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Profile, Link, User } from "@shared/schema";
@@ -429,6 +430,12 @@ export default function Dashboard() {
             <TabsTrigger value="analytics" data-testid="tab-analytics">
               Analytics
             </TabsTrigger>
+            <TabsTrigger value="reserve-pool" data-testid="tab-reserve-pool">
+              Reserve Pool
+            </TabsTrigger>
+            <TabsTrigger value="merchant" data-testid="tab-merchant">
+              Merchant
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -480,6 +487,47 @@ export default function Dashboard() {
                   topLinks={analytics.topLinks}
                 />
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reserve-pool">
+            <ReservePoolPanel />
+          </TabsContent>
+
+          <TabsContent value="merchant">
+            <div className="space-y-6">
+              <div className="p-8 rounded-xl bg-gradient-to-r from-purple-900/20 to-purple-800/10 border border-purple-700/30">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-3 h-3 rounded-full bg-purple-400 animate-pulse"></div>
+                  <span className="text-lg font-semibold text-purple-300">商家后台开发中</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed mb-4">
+                  商家后台管理界面正在开发中，将提供以下功能：
+                </p>
+                <ul className="space-y-2 text-sm text-slate-400 mb-6">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-1">•</span>
+                    <span>产品/服务自主定价管理</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-1">•</span>
+                    <span>订单管理与状态跟踪</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-1">•</span>
+                    <span>税务报表生成与导出</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-1">•</span>
+                    <span>交易数据统计分析</span>
+                  </li>
+                </ul>
+                <div className="pt-4 border-t border-purple-700/30">
+                  <p className="text-xs text-slate-400 italic">
+                    ⏳ 等待 Codex 完成商家后台后端接口
+                  </p>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

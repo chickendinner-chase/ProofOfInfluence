@@ -11,6 +11,9 @@ import {
   Sparkles,
   Lock,
   Network,
+  DollarSign,
+  Scale,
+  FileText,
 } from "lucide-react";
 
 export default function Whitepaper() {
@@ -185,6 +188,186 @@ export default function Whitepaper() {
               <p className="text-sm text-slate-400">
                 Web/移动端应用、API 接口、钱包集成，为用户提供便捷的访问入口
               </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Low Fee Channel - NEW SECTION */}
+        <Card className="p-8 mb-8 bg-slate-800/50 border-slate-700">
+          <h2 className="text-2xl font-semibold mb-6 text-white flex items-center gap-2">
+            <DollarSign className="w-6 h-6" />
+            低手续费通道（费用路径）
+          </h2>
+          <div className="space-y-4">
+            <div className="p-6 rounded-xl bg-gradient-to-r from-blue-900/20 to-blue-800/10 border border-blue-700/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse"></div>
+                <span className="text-sm font-semibold text-blue-300">内容待补充</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                本节将详细介绍 ProjectX 平台的低手续费交易通道设计，包括：
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span>手续费结构与定价机制</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span>费用路径优化策略</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span>与传统交易所的费用对比</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span>Reserve Pool 费用归集机制</span>
+                </li>
+              </ul>
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <p className="text-xs text-slate-500 italic">
+                  📝 详细内容将由 ChatGPT 提供并整合到此处
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Compliance Module - NEW SECTION */}
+        <Card className="p-8 mb-8 bg-slate-800/50 border-slate-700">
+          <h2 className="text-2xl font-semibold mb-6 text-white flex items-center gap-2">
+            <ShieldCheck className="w-6 h-6" />
+            合规模块
+          </h2>
+          <div className="space-y-4">
+            <div className="p-6 rounded-xl bg-gradient-to-r from-green-900/20 to-green-800/10 border border-green-700/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
+                <span className="text-sm font-semibold text-green-300">内容待补充</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                本节将详细阐述 ACEE Ventures 的合规与税务结构，包括：
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span>KYC/AML 合规流程</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span>跨境税务优化结构</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span>用户隐私保护机制</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span>监管报告与审计流程</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400 mt-1">•</span>
+                  <span>商家税务报表生成功能</span>
+                </li>
+              </ul>
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <p className="text-xs text-slate-500 italic">
+                  📝 详细内容将由 ChatGPT 提供并整合到此处
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Tax Comparison - NEW SECTION */}
+        <Card className="p-8 mb-8 bg-slate-800/50 border-slate-700">
+          <h2 className="text-2xl font-semibold mb-6 text-white flex items-center gap-2">
+            <Scale className="w-6 h-6" />
+            税收比较图示
+          </h2>
+          <div className="space-y-4">
+            <div className="p-6 rounded-xl bg-gradient-to-r from-purple-900/20 to-purple-800/10 border border-purple-700/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-3 h-3 rounded-full bg-purple-400 animate-pulse"></div>
+                <span className="text-sm font-semibold text-purple-300">内容待补充</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                本节将通过图表和案例对比展示不同税务结构的差异，包括：
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>传统 Web2 平台 vs ProjectX 税务结构对比</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>不同司法管辖区的税率比较</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>创作者和品牌的税务优惠方案</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>合规成本与效益分析</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>实际案例与数据图表</span>
+                </li>
+              </ul>
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <p className="text-xs text-slate-500 italic">
+                  📝 详细内容和图表将由 ChatGPT 提供并整合到此处
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* ProjectX Architecture - NEW SECTION */}
+        <Card className="p-8 mb-8 bg-slate-800/50 border-slate-700">
+          <h2 className="text-2xl font-semibold mb-6 text-white flex items-center gap-2">
+            <FileText className="w-6 h-6" />
+            ProjectX 架构详解
+          </h2>
+          <div className="space-y-4">
+            <div className="p-6 rounded-xl bg-gradient-to-r from-orange-900/20 to-orange-800/10 border border-orange-700/30">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-3 h-3 rounded-full bg-orange-400 animate-pulse"></div>
+                <span className="text-sm font-semibold text-orange-300">内容待补充</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                本节将深入介绍 ProjectX 平台的技术架构和核心模块，包括：
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span>交易市场模块：订单撮合与低手续费通道</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span>Reserve Pool 模块：资金池管理与 $POI 回购策略</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span>商家后台模块：定价、订单管理与税务报表</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span>系统集成与数据流转</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-400 mt-1">•</span>
+                  <span>技术栈与安全机制</span>
+                </li>
+              </ul>
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <p className="text-xs text-slate-500 italic">
+                  📝 详细内容将由 ChatGPT 提供并整合到此处
+                </p>
+              </div>
             </div>
           </div>
         </Card>

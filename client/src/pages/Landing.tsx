@@ -19,6 +19,10 @@ import {
   Zap,
   Globe,
   Lock,
+  ShoppingCart,
+  Wallet,
+  BarChart3,
+  DollarSign,
 } from "lucide-react";
 
 // i18n/config (ZH only for now; extendable to EN)
@@ -54,6 +58,34 @@ const zh = {
         icon: TrendingUp,
         title: "生态增长",
         desc: "通过 $POI 代币激励和治理机制促进生态发展",
+      },
+    ],
+  },
+  projectX: {
+    title: "ProjectX 核心模块",
+    subtitle: "构建完整的影响力变现生态系统",
+    description: "ProjectX 集成了市场交易、资金池管理和商家后台三大核心功能，为创作者、品牌和平台提供完整的价值流通解决方案。",
+    modules: [
+      {
+        icon: ShoppingCart,
+        title: "交易市场",
+        desc: "去中心化的影响力代币交易平台，支持实时报价、订单撮合和低手续费交易通道",
+        features: ["实时交易", "订单撮合", "低手续费"],
+        color: "blue",
+      },
+      {
+        icon: Wallet,
+        title: "Reserve Pool",
+        desc: "智能资金池管理系统，自动归集手续费、管理金库并执行 $POI 回购策略",
+        features: ["手续费归集", "金库管理", "$POI 回购"],
+        color: "green",
+      },
+      {
+        icon: BarChart3,
+        title: "商家后台",
+        desc: "专业的商家管理界面，支持自主定价、订单管理和税务报表生成",
+        features: ["自主定价", "订单管理", "税务报表"],
+        color: "purple",
       },
     ],
   },
@@ -179,6 +211,126 @@ export default function Landing() {
               </Card>
             );
           })}
+        </div>
+      </section>
+
+      {/* ProjectX Showcase Section */}
+      <section className="max-w-7xl mx-auto px-4 py-20">
+        <div className="text-center space-y-4 mb-12">
+          <h2 className="text-4xl md:text-5xl font-bold text-white">
+            {t.projectX.title}
+          </h2>
+          <p className="text-xl text-slate-300 font-semibold">
+            {t.projectX.subtitle}
+          </p>
+          <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed">
+            {t.projectX.description}
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-8 mt-12">
+          {t.projectX.modules.map((module, index) => {
+            const Icon = module.icon;
+            const colorClasses = {
+              blue: "from-blue-900/50 to-blue-800/30 border-blue-700/50",
+              green: "from-green-900/50 to-green-800/30 border-green-700/50",
+              purple: "from-purple-900/50 to-purple-800/30 border-purple-700/50",
+            };
+            return (
+              <Card
+                key={index}
+                className={`p-8 bg-gradient-to-br ${colorClasses[module.color]} hover:scale-105 transition-all duration-300`}
+              >
+                <div className="space-y-6">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-700/50 flex items-center justify-center">
+                    <Icon className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-3">
+                      {module.title}
+                    </h3>
+                    <p className="text-slate-300 leading-relaxed mb-4">
+                      {module.desc}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {module.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm text-slate-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        <div className="text-center mt-12">
+          <Link href={isAuthenticated ? "/app" : "/login"}>
+            <Button
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-10 text-lg py-6"
+            >
+              探索 ProjectX <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Feature Deep Dive Sections */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Low Fee Channel */}
+          <Card className="p-8 bg-slate-800/50 border-slate-700">
+            <div className="flex items-center gap-3 mb-4">
+              <DollarSign className="w-8 h-8 text-blue-400" />
+              <h3 className="text-2xl font-bold text-white">低手续费通道</h3>
+            </div>
+            <p className="text-slate-300 leading-relaxed mb-4">
+              ProjectX 提供行业领先的低手续费交易通道，通过优化的费用路径和智能合约设计，让每笔交易都更经济实惠。
+            </p>
+            <ul className="space-y-2 text-sm text-slate-400">
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2"></div>
+                <span>仅 0.3% 交易手续费</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2"></div>
+                <span>自动归集到 Reserve Pool</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2"></div>
+                <span>支持生态系统可持续发展</span>
+              </li>
+            </ul>
+          </Card>
+
+          {/* Compliance & Tax Structure */}
+          <Card className="p-8 bg-slate-800/50 border-slate-700">
+            <div className="flex items-center gap-3 mb-4">
+              <ShieldCheck className="w-8 h-8 text-green-400" />
+              <h3 className="text-2xl font-bold text-white">合规与税务结构</h3>
+            </div>
+            <p className="text-slate-300 leading-relaxed mb-4">
+              ACEE Ventures 严格遵守全球监管要求，为用户和商家提供合规、透明的税务解决方案。
+            </p>
+            <ul className="space-y-2 text-sm text-slate-400">
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2"></div>
+                <span>完善的 KYC/AML 合规流程</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2"></div>
+                <span>自动化税务报表生成</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2"></div>
+                <span>跨境税务优化结构</span>
+              </li>
+            </ul>
+          </Card>
         </div>
       </section>
 

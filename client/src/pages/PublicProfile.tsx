@@ -4,8 +4,7 @@ import type { RouteComponentProps } from "wouter";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import ThemeToggle from "@/components/ThemeToggle";
 import WalletConnectButton from "@/components/WalletConnectButton";
-import UniswapSwapCard from "@/components/UniswapSwapCard";
-import { Copy, ExternalLink, Edit, Coins } from "lucide-react";
+import { Copy, ExternalLink, Edit, ShoppingCart } from "lucide-react";
 import { SiGoogle, SiX, SiSinaweibo, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -279,9 +278,25 @@ export default function PublicProfile(props?: PublicProfileProps) {
             </div>
           )}
 
-          <div className="mt-8 w-full">
-            <UniswapSwapCard walletAddress={currentUser?.walletAddress} />
-          </div>
+          {/* Trading - Link to Market Page */}
+          {isAuthenticated && (
+            <div className="mt-8 w-full">
+              <div className="p-6 rounded-xl bg-gradient-to-r from-blue-900/30 to-blue-800/20 border border-blue-700/50">
+                <div className="flex items-center gap-3 mb-3">
+                  <ShoppingCart className="w-5 h-5 text-blue-400" />
+                  <h3 className="text-lg font-semibold text-white">交易市场</h3>
+                </div>
+                <p className="text-sm text-slate-300 mb-4">
+                  访问我们的去中心化交易市场，交易 $POI 代币
+                </p>
+                <a href="/app/market">
+                  <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                    前往交易市场
+                  </button>
+                </a>
+              </div>
+            </div>
+          )}
 
           <p className="text-xs md:text-sm text-muted-foreground" data-testid="text-profile-views">
             {profile.totalViews.toLocaleString()} profile views

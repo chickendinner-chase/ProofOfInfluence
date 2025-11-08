@@ -25,6 +25,7 @@ import TokenDocs from "@/pages/TokenDocs";
 import Compliance from "@/pages/Compliance";
 import Changelog from "@/pages/Changelog";
 import Company from "@/pages/Company";
+import Market from "@/pages/Market";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/app" component={Dashboard} />
       <Route path="/app/settings" component={Profile} />
       <Route path="/app/recharge" component={Recharge} />
+      <Route path="/app/market" component={Market} />
       <Route path="/payment-success" component={PaymentSuccess} />
       
       {/* Legacy App Routes (redirect for backwards compatibility) */}

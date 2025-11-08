@@ -17,7 +17,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
   const navItems = lang === "zh" 
     ? [
         { label: "首页", href: "/" },
-        { label: "产品", href: "/products" },
+        { label: "ProjectX", href: "/products", highlight: true },
         { label: "创作者", href: "/for-creators" },
         { label: "品牌", href: "/for-brands" },
         { label: "应用案例", href: "/use-cases" },
@@ -28,7 +28,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
       ]
     : [
         { label: "Home", href: "/" },
-        { label: "Products", href: "/products" },
+        { label: "ProjectX", href: "/products", highlight: true },
         { label: "For Creators", href: "/for-creators" },
         { label: "For Brands", href: "/for-brands" },
         { label: "Use Cases", href: "/use-cases" },
@@ -58,7 +58,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
               <a
                 className={`hover:text-white transition-colors ${
                   location === item.href ? "text-white font-semibold" : "text-slate-400"
-                }`}
+                } ${item.highlight ? "text-blue-400 font-semibold" : ""}`}
               >
                 {item.label}
               </a>
@@ -120,7 +120,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
                     location === item.href
                       ? "text-white bg-slate-800 font-semibold"
                       : "text-slate-400"
-                  }`}
+                  } ${item.highlight ? "text-blue-400 font-semibold" : ""}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {item.label}
