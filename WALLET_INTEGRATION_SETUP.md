@@ -1,14 +1,22 @@
 # 多钱包集成配置说明
 
-本次更新集成了 RainbowKit + wagmi，支持多种钱包连接方式，包括移动端扫码连接。
+本次更新集成了 **AppKit (Reown)** + wagmi，支持多种钱包连接方式，包括移动端扫码连接。
 
-## 🎯 支持的钱包
+## 🎯 主推钱包（Featured Wallets）
 
-- **MetaMask** (浏览器插件 + 移动端)
-- **WalletConnect** (扫码连接，支持 100+ 钱包)
-- **Coinbase Wallet**
+1. **MetaMask** - 最流行的以太坊钱包
+2. **Coinbase Wallet** - Coinbase 官方钱包
+3. **Phantom** - 支持多链的现代钱包
+4. **Binance Web3 Wallet** - 币安生态钱包
+5. **OKX Wallet** - OKX 交易所钱包
+
+## 🌐 其他支持的钱包
+
+- **WalletConnect** (扫码连接，支持 300+ 钱包)
 - **Trust Wallet**
 - **Rainbow Wallet**
+- **Ledger**
+- **Trezor**
 - 以及更多...
 
 ## 📱 移动端支持
@@ -76,20 +84,21 @@ npm start
 ### 新增依赖
 ```json
 {
-  "@rainbow-me/rainbowkit": "^2.0.0",
+  "@reown/appkit": "^1.7.0",
+  "@reown/appkit-adapter-wagmi": "^1.7.0",
   "wagmi": "^2.0.0",
   "viem": "^2.0.0"
 }
 ```
 
 ### 修改的文件
-- `package.json` - 添加依赖（@rainbow-me/rainbowkit, wagmi, viem）
-- `client/src/App.tsx` - 集成 RainbowKit Provider
-- `client/src/lib/wagmi.ts` - 新建 wagmi 配置
-- `client/src/lib/ethersAdapter.ts` - 新建 viem 到 ethers.js 适配器
-- `client/src/components/WalletConnectButton.tsx` - 重构为 RainbowKit（保留 standalone 模式）
-- `client/src/components/UniswapSwapCard.tsx` - 移除 window.ethereum，使用 wagmi hooks
-- `client/src/pages/TradingApp.tsx` - 简化钱包状态管理
+- `package.json` - 更新依赖（AppKit + wagmi + viem）
+- `client/src/App.tsx` - 简化 Provider 结构（无需额外 Provider）
+- `client/src/lib/wagmi.ts` - AppKit Wagmi Adapter 配置
+- `client/src/lib/ethersAdapter.ts` - viem 到 ethers.js 适配器（保持不变）
+- `client/src/components/WalletConnectButton.tsx` - 使用 AppKit hooks（保留 standalone 模式）
+- `client/src/components/UniswapSwapCard.tsx` - 使用 wagmi hooks（保持不变）
+- `client/src/pages/TradingApp.tsx` - 钱包状态管理（保持不变）
 
 ## 🚀 新功能
 
@@ -131,7 +140,7 @@ npm start
 ## 📞 故障排查
 
 ### 问题：连接按钮无反应
-**解决**：检查浏览器控制台，确认 RainbowKit Provider 正确初始化。
+**解决**：检查浏览器控制台，确认 AppKit 正确初始化。
 
 ### 问题：WalletConnect 二维码不显示
 **解决**：检查 `VITE_WALLETCONNECT_PROJECT_ID` 是否正确配置。
@@ -147,7 +156,7 @@ npm start
 
 ## 📚 相关文档
 
-- [RainbowKit 文档](https://www.rainbowkit.com/docs/introduction)
+- [AppKit (Reown) 文档](https://docs.reown.com/appkit/overview)
 - [wagmi 文档](https://wagmi.sh/)
 - [WalletConnect 文档](https://docs.walletconnect.com/)
 - [Base Network 文档](https://docs.base.org/)
@@ -160,7 +169,8 @@ npm start
 
 ---
 
-**集成完成日期**: 2025-11-06
+**初次集成日期**: 2025-11-06
+**AppKit 迁移日期**: 2025-11-08
 **负责人**: Cursor AI
-**状态**: ✅ 代码完成，等待 Replit 部署测试
+**状态**: ✅ AppKit 迁移完成，等待 Replit 部署测试
 

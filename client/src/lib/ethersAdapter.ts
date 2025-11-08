@@ -3,7 +3,7 @@ import type { PublicClient, WalletClient } from 'viem';
 
 /**
  * Adapter to convert viem clients to ethers.js providers/signers
- * This allows us to use RainbowKit/wagmi with existing ethers.js code
+ * This allows us to use AppKit/wagmi with existing ethers.js code
  */
 
 /**
@@ -13,9 +13,9 @@ import type { PublicClient, WalletClient } from 'viem';
 export function publicClientToProvider(publicClient: PublicClient) {
   const { chain, transport } = publicClient;
   const network = {
-    chainId: chain.id,
-    name: chain.name,
-    ensAddress: chain.contracts?.ensRegistry?.address,
+    chainId: chain!.id,
+    name: chain!.name,
+    ensAddress: chain!.contracts?.ensRegistry?.address,
   };
   
   if (transport.type === 'fallback') {
