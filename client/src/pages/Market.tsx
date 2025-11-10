@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TradingChart from "@/components/TradingChart";
@@ -22,20 +23,14 @@ import {
   ArrowRight,
 } from "lucide-react";
 import type { User } from "@shared/schema";
-
-// Placeholder types for Market data (will be replaced with actual backend types)
-interface MarketOrder {
-  id: string;
-  type: "buy" | "sell";
-  amount: number;
-  price: number;
-  status: "pending" | "completed" | "cancelled";
-  createdAt: string;
-}
+import { marketApi } from "@/lib/api";
+import type { MarketOrder } from "@/lib/api/types";
 
 export default function Market() {
   const { isAuthenticated } = useAuth();
   const { canTrade } = useAccessControl();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [orderType, setOrderType] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
@@ -46,20 +41,94 @@ export default function Market() {
     enabled: isAuthenticated,
   });
 
-  // TODO: Replace with actual Market API endpoint from Codex
-  // const { data: orders, isLoading } = useQuery<MarketOrder[]>({
-  //   queryKey: ["/api/market/orders"],
-  //   enabled: isAuthenticated,
-  // });
+  // Fetch market stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["market-stats", "USDC-POI"],
+    queryFn: () => marketApi.getStats("USDC-POI"),
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
 
-  // Placeholder data for UI demonstration
-  const orders: MarketOrder[] = [];
-  const isLoading = false;
+  // Fetch user orders
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ["market-orders"],
+    queryFn: () => marketApi.getOrders({ limit: 20 }),
+    enabled: isAuthenticated,
+    refetchInterval: 5000, // Refetch every 5 seconds
+  });
+
+  // Fetch recent trades
+  const { data: tradesData } = useQuery({
+    queryKey: ["market-trades", "USDC-POI"],
+    queryFn: () => marketApi.getTrades("USDC-POI", 20),
+    enabled: isAuthenticated,
+    refetchInterval: 5000,
+  });
+
+  // Create order mutation
+  const createOrderMutation = useMutation({
+    mutationFn: marketApi.createOrder,
+    onSuccess: (order) => {
+      toast({
+        title: "订单已创建",
+        description: `${orderType === "buy" ? "买入" : "卖出"} 订单 #${order.id.slice(0, 8)} 已提交`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["market-orders"] });
+      setAmount("");
+      setPrice("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "订单创建失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cancel order mutation
+  const cancelOrderMutation = useMutation({
+    mutationFn: marketApi.cancelOrder,
+    onSuccess: () => {
+      toast({
+        title: "订单已取消",
+        description: "订单已成功取消",
+      });
+      queryClient.invalidateQueries({ queryKey: ["market-orders"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "取消失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handlePlaceOrder = () => {
-    // TODO: Implement order placement with Codex backend API
-    console.log("Place order:", { orderType, amount, price });
+    if (!amount || parseFloat(amount) <= 0) {
+      toast({
+        title: "输入错误",
+        description: "请输入有效的数量",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createOrderMutation.mutate({
+      side: orderType,
+      tokenIn: orderType === "buy" ? "USDC" : "POI",
+      tokenOut: orderType === "buy" ? "POI" : "USDC",
+      amountIn: amount,
+    });
   };
+
+  const handleCancelOrder = (orderId: string) => {
+    cancelOrderMutation.mutate(orderId);
+  };
+
+  const orders = ordersData?.orders || [];
+  const isLoading = ordersLoading;
 
   if (!isAuthenticated) {
     return (
@@ -126,21 +195,51 @@ export default function Market() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="p-4 bg-slate-800/50 border-slate-700">
             <div className="text-sm text-slate-400 mb-1">24h 交易量</div>
-            <div className="text-2xl font-bold text-white">待接入</div>
-            <div className="text-xs text-green-400 flex items-center mt-1">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              待统计
-            </div>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-24 bg-slate-700" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-white">
+                  ${stats?.volume24h || "0"}
+                </div>
+                <div className={`text-xs flex items-center mt-1 ${
+                  stats?.change24h?.startsWith('+') ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {stats?.change24h?.startsWith('+') ? (
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 mr-1" />
+                  )}
+                  {stats?.change24h || "0%"}
+                </div>
+              </>
+            )}
           </Card>
           <Card className="p-4 bg-slate-800/50 border-slate-700">
             <div className="text-sm text-slate-400 mb-1">当前价格</div>
-            <div className="text-2xl font-bold text-white">待接入</div>
-            <div className="text-xs text-slate-400 mt-1">参考价格</div>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-20 bg-slate-700" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-white">
+                  ${stats?.price || "0"}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">POI/USDC</div>
+              </>
+            )}
           </Card>
           <Card className="p-4 bg-slate-800/50 border-slate-700">
             <div className="text-sm text-slate-400 mb-1">流动性池</div>
-            <div className="text-2xl font-bold text-white">待接入</div>
-            <div className="text-xs text-slate-400 mt-1">TVL</div>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-24 bg-slate-700" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-white">
+                  ${stats?.tvl || "0"}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">TVL</div>
+              </>
+            )}
           </Card>
           <Card className="p-4 bg-slate-800/50 border-slate-700">
             <div className="text-sm text-slate-400 mb-1">手续费</div>
@@ -173,7 +272,7 @@ export default function Market() {
                       <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p>暂无活跃订单</p>
                       <p className="text-sm mt-1">
-                        后端 API 接口对接中（等待 Codex）
+                        使用右侧面板创建新订单
                       </p>
                     </div>
                   ) : (
@@ -186,41 +285,56 @@ export default function Market() {
                           <div className="flex items-center gap-3">
                             <div
                               className={`px-2 py-1 rounded text-xs font-semibold ${
-                                order.type === "buy"
+                                order.side === "buy"
                                   ? "bg-green-900/50 text-green-400"
                                   : "bg-red-900/50 text-red-400"
                               }`}
                             >
-                              {order.type === "buy" ? "买入" : "卖出"}
+                              {order.side === "buy" ? "买入" : "卖出"}
                             </div>
                             <div>
                               <div className="text-white font-semibold">
-                                {order.amount} POI
+                                {order.amountIn} {order.tokenIn}
                               </div>
                               <div className="text-xs text-slate-400">
-                                @ ${order.price}
+                                {order.amountOut ? `→ ${order.amountOut} ${order.tokenOut}` : "处理中..."}
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div
-                              className={`text-sm font-semibold ${
-                                order.status === "completed"
-                                  ? "text-green-400"
-                                  : order.status === "pending"
-                                    ? "text-yellow-400"
-                                    : "text-red-400"
-                              }`}
-                            >
-                              {order.status === "completed"
-                                ? "已完成"
-                                : order.status === "pending"
-                                  ? "处理中"
-                                  : "已取消"}
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <div
+                                className={`text-sm font-semibold ${
+                                  order.status === "FILLED"
+                                    ? "text-green-400"
+                                    : order.status === "PENDING"
+                                      ? "text-yellow-400"
+                                      : "text-red-400"
+                                }`}
+                              >
+                                {order.status === "FILLED"
+                                  ? "已完成"
+                                  : order.status === "PENDING"
+                                    ? "处理中"
+                                    : order.status === "CANCELED"
+                                      ? "已取消"
+                                      : order.status}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {new Date(order.createdAt).toLocaleString()}
+                              </div>
                             </div>
-                            <div className="text-xs text-slate-400">
-                              {new Date(order.createdAt).toLocaleDateString()}
-                            </div>
+                            {order.status === "PENDING" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={cancelOrderMutation.isPending}
+                                className="border-slate-600 text-red-400 hover:bg-red-900/20"
+                              >
+                                取消
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -228,13 +342,44 @@ export default function Market() {
                   )}
                 </TabsContent>
                 <TabsContent value="history" className="mt-4">
-                  <div className="text-center py-8 text-slate-400">
-                    <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>暂无交易历史</p>
-                    <p className="text-sm mt-1">
-                      后端 API 接口对接中（等待 Codex）
-                    </p>
-                  </div>
+                  {tradesData?.trades.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                      <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>暂无交易历史</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {tradesData?.trades.map((trade, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 hover:bg-slate-700/20 rounded"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                trade.side === "buy"
+                                  ? "bg-green-900/50 text-green-400"
+                                  : "bg-red-900/50 text-red-400"
+                              }`}
+                            >
+                              {trade.side === "buy" ? "买" : "卖"}
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-white font-semibold">
+                                ${trade.price}
+                              </span>
+                              <span className="text-slate-400 text-xs ml-1">
+                                × {trade.amount}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {new Date(trade.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </Card>
@@ -250,10 +395,10 @@ export default function Market() {
               <UniswapSwapCard />
             </Card>
 
-            {/* Order Placement Form (Placeholder for Codex backend) */}
+            {/* Order Placement Form */}
             <Card className="p-6 bg-slate-800/50 border-slate-700">
               <h3 className="text-lg font-semibold text-white mb-4">
-                限价订单
+                市价订单
               </h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2">
@@ -282,23 +427,8 @@ export default function Market() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="price" className="text-slate-300">
-                    价格 (USDC)
-                  </Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    placeholder="0.00"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="bg-slate-700 border-slate-600 text-white"
-                    disabled
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="amount" className="text-slate-300">
-                    数量 (POI)
+                    数量 ({orderType === "buy" ? "USDC" : "POI"})
                   </Label>
                   <Input
                     id="amount"
@@ -307,18 +437,36 @@ export default function Market() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="bg-slate-700 border-slate-600 text-white"
-                    disabled
                   />
+                  <p className="text-xs text-slate-400">
+                    {orderType === "buy" 
+                      ? "输入要花费的 USDC 数量" 
+                      : "输入要卖出的 POI 数量"}
+                  </p>
                 </div>
 
-                <div className="pt-2 text-center">
-                  <p className="text-sm text-yellow-400 mb-3">
-                    ⏳ 限价订单功能开发中
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    等待 Codex 后端接口完成
-                  </p>
-                </div>
+                {stats && amount && parseFloat(amount) > 0 && (
+                  <div className="p-3 bg-slate-700/30 rounded-lg text-sm">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-slate-400">当前价格:</span>
+                      <span className="text-white">${stats.price}</span>
+                    </div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-slate-400">预估获得:</span>
+                      <span className="text-white">
+                        {orderType === "buy" 
+                          ? `~${(parseFloat(amount) * parseFloat(stats.price)).toFixed(2)} POI`
+                          : `~${(parseFloat(amount) / parseFloat(stats.price)).toFixed(2)} USDC`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-400">手续费 (0.3%):</span>
+                      <span className="text-slate-400">
+                        ~${(parseFloat(amount) * 0.003).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   onClick={handlePlaceOrder}
@@ -327,9 +475,16 @@ export default function Market() {
                       ? "bg-green-600 hover:bg-green-700"
                       : "bg-red-600 hover:bg-red-700"
                   }`}
-                  disabled
+                  disabled={createOrderMutation.isPending || !amount || parseFloat(amount) <= 0}
                 >
-                  {orderType === "buy" ? "买入" : "卖出"} POI
+                  {createOrderMutation.isPending ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      创建中...
+                    </>
+                  ) : (
+                    `${orderType === "buy" ? "买入" : "卖出"} ${orderType === "buy" ? "POI" : "换 USDC"}`
+                  )}
                 </Button>
               </div>
             </Card>
