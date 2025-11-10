@@ -17,6 +17,7 @@ import {
 
 export default function ForCreators() {
   const lang = "zh";
+  const isAuthenticated = false;
 
   const features = [
     {
