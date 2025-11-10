@@ -1,20 +1,34 @@
 /**
  * Real Reserve Pool API Implementation
- * To be connected with Codex backend
+ * Connected with Codex backend (Admin only)
  */
 
 import type { ReserveApiInterface } from './types';
 
 export const realReserveApi: ReserveApiInterface = {
   async getPoolStatus() {
-    const res = await fetch('/api/reserve-pool');
-    if (!res.ok) throw new Error('Failed to fetch pool status');
+    const res = await fetch('/api/reserve-pool', {
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to fetch pool status' }));
+      throw new Error(error.message || 'Failed to fetch pool status');
+    }
+    
     return res.json();
   },
 
   async getHistory(range) {
-    const res = await fetch(`/api/reserve-pool/history?range=${range}`);
-    if (!res.ok) throw new Error('Failed to fetch history');
+    const res = await fetch(`/api/reserve-pool/history?range=${range}`, {
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to fetch history' }));
+      throw new Error(error.message || 'Failed to fetch history');
+    }
+    
     return res.json();
   },
 
@@ -22,9 +36,15 @@ export const realReserveApi: ReserveApiInterface = {
     const res = await fetch('/api/reserve-pool/buyback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Failed to execute buyback');
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to execute buyback' }));
+      throw new Error(error.message || 'Failed to execute buyback');
+    }
+    
     return res.json();
   },
 
@@ -32,21 +52,41 @@ export const realReserveApi: ReserveApiInterface = {
     const res = await fetch('/api/reserve-pool/withdraw', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Failed to withdraw fees');
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to withdraw fees' }));
+      throw new Error(error.message || 'Failed to withdraw fees');
+    }
+    
     return res.json();
   },
 
   async getAnalytics() {
-    const res = await fetch('/api/reserve-pool/analytics');
-    if (!res.ok) throw new Error('Failed to fetch analytics');
+    const res = await fetch('/api/reserve-pool/analytics', {
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to fetch analytics' }));
+      throw new Error(error.message || 'Failed to fetch analytics');
+    }
+    
     return res.json();
   },
 
   async getActivities() {
-    const res = await fetch('/api/reserve-pool/activities');
-    if (!res.ok) throw new Error('Failed to fetch activities');
+    const res = await fetch('/api/reserve-pool/activities', {
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to fetch activities' }));
+      throw new Error(error.message || 'Failed to fetch activities');
+    }
+    
     return res.json();
   },
 };

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useMerchantAccess } from "@/hooks/useMerchantAccess";
 import {
   Package,
   ShoppingBag,
@@ -25,6 +26,7 @@ import {
   CheckCircle2,
   Clock,
   DollarSign,
+  AlertCircle,
 } from "lucide-react";
 import { merchantApi } from "@/lib/api";
 import type { Product, MerchantOrder } from "@/lib/api/types";
@@ -32,6 +34,7 @@ import type { Product, MerchantOrder } from "@/lib/api/types";
 export default function MerchantDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isMerchant, merchantId } = useMerchantAccess();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({
@@ -125,11 +128,15 @@ export default function MerchantDashboard() {
       return;
     }
 
+    const idempotencyKey = `product-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     createProductMutation.mutate({
       title: newProduct.title,
       sku: newProduct.sku,
       description: newProduct.description,
       price: parseFloat(newProduct.price),
+      idempotencyKey,
+      merchantId,  // Use merchantId from hook
     });
   };
 
@@ -141,12 +148,44 @@ export default function MerchantDashboard() {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const idempotencyKey = `tax-report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     generateTaxReportMutation.mutate({
       periodStart: startOfMonth.toISOString().split('T')[0],
       periodEnd: endOfMonth.toISOString().split('T')[0],
+      idempotencyKey,
+      merchantId,  // Use merchantId from hook
     });
   };
+
+  const handleDownloadTaxReport = async (reportId: string) => {
+    try {
+      const result = await merchantApi.downloadTaxReport(reportId);
+      // Codex returns { url: string }, open in new tab
+      window.open(result.url, '_blank');
+      toast({ title: "下载已启动", description: "报表将在新标签页中打开" });
+    } catch (error: any) {
+      toast({ title: "下载失败", description: error.message, variant: "destructive" });
+    }
+  };
+
+  // Show merchant access warning if not merchant
+  if (!isMerchant) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-12 text-center bg-slate-800/50 border-slate-700">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+          <h2 className="text-2xl font-bold text-white mb-4">
+            需要商家权限
+          </h2>
+          <p className="text-slate-400 mb-6">
+            商家后台功能仅限商家账户访问。<br />
+            如需访问，请联系管理员申请商家权限。
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -161,7 +200,8 @@ export default function MerchantDashboard() {
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-          <span className="text-green-300 font-semibold">✓ Mock API 运行中</span>
+          <span className="text-green-300 font-semibold">✓ 商家权限已验证</span>
+          <span className="text-slate-400">(Merchant ID: {merchantId?.slice(0, 8)}...)</span>
         </div>
       </Card>
 
@@ -470,6 +510,7 @@ export default function MerchantDashboard() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => handleDownloadTaxReport(report.id)}
                         className="border-slate-600"
                       >
                         <Download className="w-4 h-4 mr-2" />

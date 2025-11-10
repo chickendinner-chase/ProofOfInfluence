@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import {
   Wallet,
   TrendingUp,
@@ -14,6 +15,7 @@ import {
   Download,
   Clock,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import {
   AreaChart,
@@ -32,6 +34,7 @@ export default function ReservePoolPanel() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAdminAccess();
 
   // Fetch pool status
   const { data: poolData, isLoading } = useQuery({
@@ -102,31 +105,69 @@ export default function ReservePoolPanel() {
 
   const handleExecuteBuyback = () => {
     if (!poolData) return;
+    if (!isAdmin) {
+      toast({
+        title: "权限不足",
+        description: "仅管理员可以执行回购操作",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const usdcAmount = "1000.00"; // Default amount, could be from a dialog
     const minPOI = "950.00"; // 5% slippage tolerance
+    const idempotencyKey = `buyback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     buybackMutation.mutate({
       amountUSDC: usdcAmount,
       minPOI,
+      idempotencyKey,
     });
   };
 
   const handleWithdrawFees = () => {
     if (!poolData) return;
+    if (!isAdmin) {
+      toast({
+        title: "权限不足",
+        description: "仅管理员可以提取手续费",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const amount = "5000.00"; // Default amount, could be from a dialog
     const asset = "USDC";
     const to = "0x742d35Cc6634C0532925a3b844Bc9e7595f5b9c";
+    const idempotencyKey = `withdraw-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     withdrawMutation.mutate({
       amount,
       asset,
       to,
+      idempotencyKey,
     });
   };
 
   const feeHistoryData = historyData?.data || [];
+
+  // Show admin access warning if not admin
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-12 text-center bg-slate-800/50 border-slate-700">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+          <h2 className="text-2xl font-bold text-white mb-4">
+            需要管理员权限
+          </h2>
+          <p className="text-slate-400 mb-6">
+            Reserve Pool 功能仅限管理员访问。<br />
+            如需访问，请联系系统管理员获取权限。
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,8 +182,8 @@ export default function ReservePoolPanel() {
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-          <span className="text-green-300 font-semibold">✓ Mock API 运行中</span>
-          <span className="text-slate-400">(模拟数据，等待 Codex 真实 API)</span>
+          <span className="text-green-300 font-semibold">✓ 管理员权限已验证</span>
+          <span className="text-slate-400">(连接 Codex 真实 API)</span>
         </div>
       </Card>
 

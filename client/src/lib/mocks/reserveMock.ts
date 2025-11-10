@@ -10,6 +10,7 @@ import type {
   BuybackRequest,
   BuybackAction,
   WithdrawRequest,
+  WithdrawResponse,
   ReserveAnalytics,
   ReserveActivity,
 } from '../api/types';
@@ -162,7 +163,7 @@ export const mockReserveApi: ReserveApiInterface = {
     return action;
   },
 
-  async withdrawFees(request: WithdrawRequest): Promise<BuybackAction> {
+  async withdrawFees(request: WithdrawRequest): Promise<WithdrawResponse> {
     await delay(500);
 
     const { amount, asset, to } = request;
@@ -172,10 +173,13 @@ export const mockReserveApi: ReserveApiInterface = {
       throw new Error(`Insufficient ${asset} balance`);
     }
 
-    const action: BuybackAction = {
-      actionId: `withdraw-${Date.now()}`,
+    const actionId = `withdraw-${Date.now()}`;
+    const response: WithdrawResponse = {
+      actionId,
       status: 'PENDING',
-      amountUSDC: amount,
+      txRef: null,
+      amount,
+      asset: asset.toUpperCase(),
       createdAt: new Date().toISOString(),
     };
 
@@ -188,19 +192,19 @@ export const mockReserveApi: ReserveApiInterface = {
 
       // Add activity
       mockActivities.unshift({
-        id: action.actionId,
+        id: actionId,
         type: 'withdraw',
         status: 'SUCCESS',
         details: {
           amount,
-          asset,
+          asset: asset.toUpperCase(),
           to,
         },
         createdAt: new Date().toISOString(),
       });
     }, 2000);
 
-    return action;
+    return response;
   },
 
   async getAnalytics(): Promise<ReserveAnalytics> {

@@ -108,6 +108,7 @@ export interface ReserveHistoryData {
 export interface BuybackRequest {
   amountUSDC: string;
   minPOI: string;
+  idempotencyKey: string;  // Required by Codex backend
 }
 
 export interface BuybackAction {
@@ -122,6 +123,16 @@ export interface WithdrawRequest {
   amount: string;
   asset: string;
   to: string;
+  idempotencyKey: string;  // Required by Codex backend
+}
+
+export interface WithdrawResponse {
+  actionId: string;
+  status: string;
+  txRef: string | null;
+  amount: string;
+  asset: string;
+  createdAt: string;
 }
 
 export interface ReserveAnalytics {
@@ -164,15 +175,17 @@ export interface CreateProductRequest {
   price: number;
   currency?: string;
   media?: string[];
+  idempotencyKey: string;  // Required by Codex backend
+  merchantId?: string;  // Optional, defaults to userId
 }
 
 export interface MerchantOrder {
   id: string;
-  productId: string;
+  productId?: string;
   merchantId: string;
   buyerId?: string;
-  amount: number;
-  fee: number;
+  amount: string;  // Codex returns string
+  fee: string;  // Codex returns string
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'REFUNDED' | 'CANCELED';
   txRef?: string;
   createdAt: string;
@@ -184,10 +197,10 @@ export interface TaxReport {
   merchantId: string;
   periodStart: string;
   periodEnd: string;
-  grossSales: number;
-  platformFees: number;
-  netAmount: number;
-  taxableAmount?: number;
+  grossSales: string;  // Codex returns string
+  platformFees: string;  // Codex returns string
+  netAmount: string;  // Codex returns string
+  taxableAmount?: string;  // Codex returns string
   fileUrl?: string;
   createdAt: string;
 }
@@ -195,6 +208,8 @@ export interface TaxReport {
 export interface GenerateTaxReportRequest {
   periodStart: string;
   periodEnd: string;
+  idempotencyKey: string;  // Required by Codex backend
+  merchantId?: string;  // Optional, defaults to userId
 }
 
 export interface MerchantAnalytics {
@@ -229,7 +244,7 @@ export interface ReserveApiInterface {
   getPoolStatus(): Promise<ReservePoolData>;
   getHistory(range: '7d' | '30d' | '90d'): Promise<ReserveHistoryData>;
   executeBuyback(data: BuybackRequest): Promise<BuybackAction>;
-  withdrawFees(data: WithdrawRequest): Promise<BuybackAction>;
+  withdrawFees(data: WithdrawRequest): Promise<WithdrawResponse>;
   getAnalytics(): Promise<ReserveAnalytics>;
   getActivities(): Promise<{ activities: ReserveActivity[] }>;
 }
@@ -238,13 +253,13 @@ export interface MerchantApiInterface {
   getProducts(): Promise<Product[]>;
   createProduct(data: CreateProductRequest): Promise<Product>;
   updateProduct(id: string, data: Partial<CreateProductRequest>): Promise<Product>;
-  deleteProduct(id: string): Promise<{ success: boolean }>;
+  deleteProduct(id: string): Promise<{ id: string; status: string }>;
   getOrders(): Promise<MerchantOrder[]>;
   getOrderById(id: string): Promise<MerchantOrder>;
-  updateOrderStatus(id: string, status: MerchantOrder['status']): Promise<MerchantOrder>;
-  getTaxReports(): Promise<TaxReport[]>;
+  updateOrderStatus(id: string, status: MerchantOrder['status'], txRef?: string): Promise<MerchantOrder>;
+  getTaxReports(): Promise<{ reports: TaxReport[] }>;
   generateTaxReport(data: GenerateTaxReportRequest): Promise<TaxReport>;
-  downloadTaxReport(id: string): Promise<Blob>;
+  downloadTaxReport(id: string): Promise<{ url: string }>;  // Codex returns URL, not Blob
   getAnalytics(): Promise<MerchantAnalytics>;
 }
 
