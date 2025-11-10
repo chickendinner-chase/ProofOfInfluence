@@ -10,6 +10,12 @@ import {
   poiFeeCreditLocks,
   marketOrders,
   marketTrades,
+  feesLedger,
+  reserveBalances,
+  reserveActions,
+  products,
+  merchantOrders,
+  taxReports,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -31,9 +37,21 @@ import {
   type InsertMarketOrder,
   type MarketTrade,
   type InsertMarketTrade,
+  type FeesLedgerEntry,
+  type InsertFeesLedger,
+  type ReserveBalance,
+  type InsertReserveBalance,
+  type ReserveAction,
+  type InsertReserveAction,
+  type Product,
+  type InsertProduct,
+  type MerchantOrder,
+  type InsertMerchantOrder,
+  type TaxReport,
+  type InsertTaxReport,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, or } from "drizzle-orm";
+import { eq, and, desc, sql, gte, or, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -113,6 +131,57 @@ export interface IStorage {
     since: Date;
   }): Promise<Array<{ trade: MarketTrade; order: MarketOrder }>>;
   getPendingMarketOrdersForPair(params: { tokenIn: string; tokenOut: string }): Promise<MarketOrder[]>;
+
+  // Reserve pool operations
+  getReserveBalances(): Promise<ReserveBalance[]>;
+  getReserveBalance(asset: string): Promise<ReserveBalance | undefined>;
+  upsertReserveBalance(balance: InsertReserveBalance): Promise<ReserveBalance>;
+  sumFeesLedgerSince(days: number): Promise<string>;
+  sumFeesLedgerAllTime(): Promise<string>;
+  getReserveHistory(rangeDays: number): Promise<Array<{ date: string; fees: string; buyback: string }>>;
+  createReserveAction(action: InsertReserveAction): Promise<ReserveAction>;
+  updateReserveAction(
+    id: string,
+    updates: Partial<InsertReserveAction & { executedAt?: Date | null }>,
+  ): Promise<ReserveAction>;
+  getReserveActionById(id: string): Promise<ReserveAction | undefined>;
+  getReserveActionByIdempotency(type: string, idempotencyKey: string): Promise<ReserveAction | undefined>;
+  listRecentReserveActions(limit: number): Promise<ReserveAction[]>;
+  sumReserveActionsByType(type: string): Promise<string>;
+  getLatestReserveAction(type: string): Promise<ReserveAction | undefined>;
+
+  // Merchant operations
+  listProducts(params: {
+    merchantId: string;
+    status?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ products: Product[]; total: number }>;
+  getProductById(productId: string): Promise<Product | undefined>;
+  getProductByIdempotency(merchantId: string, idempotencyKey: string): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(productId: string, updates: Partial<InsertProduct>): Promise<Product>;
+  archiveProduct(productId: string): Promise<void>;
+
+  listMerchantOrders(params: {
+    merchantId: string;
+    status?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ orders: MerchantOrder[]; total: number }>;
+  getMerchantOrder(orderId: string): Promise<MerchantOrder | undefined>;
+  updateMerchantOrder(orderId: string, updates: Partial<InsertMerchantOrder>): Promise<MerchantOrder>;
+  getMerchantOrderSummary(params: { merchantId: string; start?: Date; end?: Date }): Promise<{
+    sales: string;
+    orders: number;
+    fees: string;
+  }>;
+
+  listTaxReports(merchantId: string): Promise<TaxReport[]>;
+  getTaxReportById(reportId: string): Promise<TaxReport | undefined>;
+  getTaxReportByIdempotency(merchantId: string, idempotencyKey: string): Promise<TaxReport | undefined>;
+  createTaxReport(report: InsertTaxReport): Promise<TaxReport>;
+  updateTaxReport(reportId: string, updates: Partial<InsertTaxReport>): Promise<TaxReport>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -525,6 +594,362 @@ export class DatabaseStorage implements IStorage {
       .from(marketOrders)
       .where(and(pairClause, eq(marketOrders.status, 'PENDING')))
       .orderBy(desc(marketOrders.createdAt));
+  }
+
+  // Reserve pool operations
+  async getReserveBalances(): Promise<ReserveBalance[]> {
+    return await db.select().from(reserveBalances).orderBy(reserveBalances.asset);
+  }
+
+  async getReserveBalance(asset: string): Promise<ReserveBalance | undefined> {
+    if (!asset) {
+      return undefined;
+    }
+
+    const [balance] = await db
+      .select()
+      .from(reserveBalances)
+      .where(eq(reserveBalances.asset, asset.toUpperCase()));
+    return balance;
+  }
+
+  async upsertReserveBalance(balance: InsertReserveBalance): Promise<ReserveBalance> {
+    const upperAsset = balance.asset.toUpperCase();
+    const [updated] = await db
+      .insert(reserveBalances)
+      .values({ ...balance, asset: upperAsset })
+      .onConflictDoUpdate({
+        target: reserveBalances.asset,
+        set: { balance: balance.balance, updatedAt: new Date() },
+      })
+      .returning();
+    return updated;
+  }
+
+  async sumFeesLedgerSince(days: number): Promise<string> {
+    if (days <= 0) {
+      return await this.sumFeesLedgerAllTime();
+    }
+
+    const since = new Date();
+    since.setUTCDate(since.getUTCDate() - days);
+
+    const [row] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${feesLedger.amount}), '0')` })
+      .from(feesLedger)
+      .where(gte(feesLedger.createdAt, since));
+    return row?.total ?? '0';
+  }
+
+  async sumFeesLedgerAllTime(): Promise<string> {
+    const [row] = await db.select({ total: sql<string>`COALESCE(SUM(${feesLedger.amount}), '0')` }).from(feesLedger);
+    return row?.total ?? '0';
+  }
+
+  async getReserveHistory(rangeDays: number): Promise<Array<{ date: string; fees: string; buyback: string }>> {
+    const days = Math.max(rangeDays, 1);
+    const start = new Date();
+    start.setUTCDate(start.getUTCDate() - (days - 1));
+    start.setUTCHours(0, 0, 0, 0);
+
+    const feeRows = await db
+      .select({
+        day: sql<string>`DATE_TRUNC('day', ${feesLedger.createdAt})::date`,
+        total: sql<string>`SUM(${feesLedger.amount})`,
+      })
+      .from(feesLedger)
+      .where(gte(feesLedger.createdAt, start))
+      .groupBy(sql`DATE_TRUNC('day', ${feesLedger.createdAt})`)
+      .orderBy(sql`DATE_TRUNC('day', ${feesLedger.createdAt})`);
+
+    const buybackRows = await db
+      .select({
+        day: sql<string>`DATE_TRUNC('day', ${reserveActions.createdAt})::date`,
+        total: sql<string>`SUM(((${reserveActions.payload} ->> 'amountUSDC')::numeric))`,
+      })
+      .from(reserveActions)
+      .where(and(eq(reserveActions.type, 'buyback'), gte(reserveActions.createdAt, start)))
+      .groupBy(sql`DATE_TRUNC('day', ${reserveActions.createdAt})`)
+      .orderBy(sql`DATE_TRUNC('day', ${reserveActions.createdAt})`);
+
+    const feesMap = new Map<string, string>();
+    for (const row of feeRows) {
+      feesMap.set(row.day, row.total ?? '0');
+    }
+
+    const buybackMap = new Map<string, string>();
+    for (const row of buybackRows) {
+      buybackMap.set(row.day, row.total ?? '0');
+    }
+
+    const series: Array<{ date: string; fees: string; buyback: string }> = [];
+    const cursor = new Date(start);
+    for (let i = 0; i < days; i++) {
+      const isoDate = cursor.toISOString().slice(0, 10);
+      series.push({
+        date: isoDate,
+        fees: feesMap.get(isoDate) ?? '0',
+        buyback: buybackMap.get(isoDate) ?? '0',
+      });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return series;
+  }
+
+  async createReserveAction(action: InsertReserveAction): Promise<ReserveAction> {
+    const [created] = await db.insert(reserveActions).values(action).returning();
+    return created;
+  }
+
+  async updateReserveAction(
+    id: string,
+    updates: Partial<InsertReserveAction & { executedAt?: Date | null }>,
+  ): Promise<ReserveAction> {
+    const updatePayload: Record<string, unknown> = { ...updates };
+    if (updatePayload.executedAt === undefined) {
+      delete updatePayload.executedAt;
+    }
+
+    const [updated] = await db
+      .update(reserveActions)
+      .set(updatePayload)
+      .where(eq(reserveActions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getReserveActionById(id: string): Promise<ReserveAction | undefined> {
+    const [action] = await db.select().from(reserveActions).where(eq(reserveActions.id, id));
+    return action;
+  }
+
+  async getReserveActionByIdempotency(type: string, idempotencyKey: string): Promise<ReserveAction | undefined> {
+    if (!idempotencyKey) {
+      return undefined;
+    }
+
+    const [action] = await db
+      .select()
+      .from(reserveActions)
+      .where(and(eq(reserveActions.type, type), eq(reserveActions.idempotencyKey, idempotencyKey)));
+    return action;
+  }
+
+  async listRecentReserveActions(limit: number): Promise<ReserveAction[]> {
+    return await db
+      .select()
+      .from(reserveActions)
+      .orderBy(desc(reserveActions.createdAt))
+      .limit(limit);
+  }
+
+  async sumReserveActionsByType(type: string): Promise<string> {
+    if (type === 'withdraw') {
+      const [row] = await db
+        .select({
+          total: sql<string>`COALESCE(SUM(((${reserveActions.payload} ->> 'amount')::numeric)), '0')`,
+        })
+        .from(reserveActions)
+        .where(eq(reserveActions.type, type));
+      return row?.total ?? '0';
+    }
+
+    const [row] = await db
+      .select({
+        total: sql<string>`COALESCE(SUM(((${reserveActions.payload} ->> 'amountUSDC')::numeric)), '0')`,
+      })
+      .from(reserveActions)
+      .where(eq(reserveActions.type, type));
+    return row?.total ?? '0';
+  }
+
+  async getLatestReserveAction(type: string): Promise<ReserveAction | undefined> {
+    const [latest] = await db
+      .select()
+      .from(reserveActions)
+      .where(eq(reserveActions.type, type))
+      .orderBy(desc(reserveActions.createdAt))
+      .limit(1);
+    return latest;
+  }
+
+  // Merchant operations
+  async listProducts(params: {
+    merchantId: string;
+    status?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ products: Product[]; total: number }> {
+    const { merchantId, status, limit, offset } = params;
+    let whereClause: any = eq(products.merchantId, merchantId);
+    if (status) {
+      whereClause = and(whereClause, eq(products.status, status));
+    }
+
+    const rows = await db
+      .select()
+      .from(products)
+      .where(whereClause)
+      .orderBy(desc(products.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ value: total }] = await db
+      .select({ value: sql<number>`count(*)` })
+      .from(products)
+      .where(whereClause);
+
+    return { products: rows, total: Number(total ?? 0) };
+  }
+
+  async getProductById(productId: string): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, productId));
+    return product;
+  }
+
+  async getProductByIdempotency(merchantId: string, idempotencyKey: string): Promise<Product | undefined> {
+    if (!idempotencyKey) {
+      return undefined;
+    }
+
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(and(eq(products.merchantId, merchantId), eq(products.idempotencyKey, idempotencyKey)));
+    return product;
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const [created] = await db.insert(products).values(product).returning();
+    return created;
+  }
+
+  async updateProduct(productId: string, updates: Partial<InsertProduct>): Promise<Product> {
+    const [updated] = await db
+      .update(products)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(products.id, productId))
+      .returning();
+    return updated;
+  }
+
+  async archiveProduct(productId: string): Promise<void> {
+    await db
+      .update(products)
+      .set({ status: 'ARCHIVED', updatedAt: new Date() })
+      .where(eq(products.id, productId));
+  }
+
+  async listMerchantOrders(params: {
+    merchantId: string;
+    status?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ orders: MerchantOrder[]; total: number }> {
+    const { merchantId, status, limit, offset } = params;
+    let whereClause: any = eq(merchantOrders.merchantId, merchantId);
+    if (status) {
+      whereClause = and(whereClause, eq(merchantOrders.status, status));
+    }
+
+    const orders = await db
+      .select()
+      .from(merchantOrders)
+      .where(whereClause)
+      .orderBy(desc(merchantOrders.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ value: total }] = await db
+      .select({ value: sql<number>`count(*)` })
+      .from(merchantOrders)
+      .where(whereClause);
+
+    return { orders, total: Number(total ?? 0) };
+  }
+
+  async getMerchantOrder(orderId: string): Promise<MerchantOrder | undefined> {
+    const [order] = await db.select().from(merchantOrders).where(eq(merchantOrders.id, orderId));
+    return order;
+  }
+
+  async updateMerchantOrder(orderId: string, updates: Partial<InsertMerchantOrder>): Promise<MerchantOrder> {
+    const [updated] = await db
+      .update(merchantOrders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(merchantOrders.id, orderId))
+      .returning();
+    return updated;
+  }
+
+  async getMerchantOrderSummary(params: { merchantId: string; start?: Date; end?: Date }): Promise<{
+    sales: string;
+    orders: number;
+    fees: string;
+  }> {
+    const { merchantId, start, end } = params;
+    let whereClause: any = eq(merchantOrders.merchantId, merchantId);
+    if (start) {
+      whereClause = and(whereClause, gte(merchantOrders.createdAt, start));
+    }
+    if (end) {
+      whereClause = and(whereClause, lte(merchantOrders.createdAt, end));
+    }
+
+    const [row] = await db
+      .select({
+        sales: sql<string>`COALESCE(SUM(${merchantOrders.amount}), '0')`,
+        fees: sql<string>`COALESCE(SUM(${merchantOrders.fee}), '0')`,
+        orders: sql<number>`count(*)`,
+      })
+      .from(merchantOrders)
+      .where(whereClause);
+
+    return {
+      sales: row?.sales ?? '0',
+      fees: row?.fees ?? '0',
+      orders: Number(row?.orders ?? 0),
+    };
+  }
+
+  async listTaxReports(merchantId: string): Promise<TaxReport[]> {
+    return await db
+      .select()
+      .from(taxReports)
+      .where(eq(taxReports.merchantId, merchantId))
+      .orderBy(desc(taxReports.periodStart));
+  }
+
+  async getTaxReportById(reportId: string): Promise<TaxReport | undefined> {
+    const [report] = await db.select().from(taxReports).where(eq(taxReports.id, reportId));
+    return report;
+  }
+
+  async getTaxReportByIdempotency(merchantId: string, idempotencyKey: string): Promise<TaxReport | undefined> {
+    if (!idempotencyKey) {
+      return undefined;
+    }
+
+    const [report] = await db
+      .select()
+      .from(taxReports)
+      .where(and(eq(taxReports.merchantId, merchantId), eq(taxReports.idempotencyKey, idempotencyKey)));
+    return report;
+  }
+
+  async createTaxReport(report: InsertTaxReport): Promise<TaxReport> {
+    const [created] = await db.insert(taxReports).values(report).returning();
+    return created;
+  }
+
+  async updateTaxReport(reportId: string, updates: Partial<InsertTaxReport>): Promise<TaxReport> {
+    const [updated] = await db
+      .update(taxReports)
+      .set(updates)
+      .where(eq(taxReports.id, reportId))
+      .returning();
+    return updated;
   }
 }
 

@@ -1,5 +1,19 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, bigint, numeric, serial, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  integer,
+  boolean,
+  jsonb,
+  index,
+  bigint,
+  numeric,
+  serial,
+  uniqueIndex,
+  date,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -164,6 +178,125 @@ export const marketTrades = pgTable(
 );
 
 
+// Reserve pool tables
+export const feesLedger = pgTable(
+  "fees_ledger",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    orderId: varchar("order_id").references(() => marketOrders.id, { onDelete: "set null" }),
+    token: varchar("token", { length: 50 }).notNull(),
+    amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+    source: varchar("source", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_fees_ledger_created_at").on(table.createdAt),
+    index("idx_fees_ledger_token").on(table.token),
+  ],
+);
+
+export const reserveBalances = pgTable("reserve_balances", {
+  id: serial("id").primaryKey(),
+  asset: varchar("asset", { length: 50 }).notNull().unique(),
+  balance: numeric("balance", { precision: 20, scale: 8 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const reserveActions = pgTable(
+  "reserve_actions",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    type: varchar("type", { length: 20 }).notNull(),
+    payload: jsonb("payload").notNull(),
+    result: jsonb("result"),
+    status: varchar("status", { length: 20 }).notNull().default("PENDING"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    executedAt: timestamp("executed_at"),
+    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+  },
+  (table) => [
+    index("idx_reserve_actions_type").on(table.type),
+    index("idx_reserve_actions_created_at").on(table.createdAt),
+    uniqueIndex("uniq_reserve_actions_idempotency")
+      .on(table.type, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ],
+);
+
+
+// Merchant tables
+export const products = pgTable(
+  "products",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    merchantId: varchar("merchant_id", { length: 255 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    sku: varchar("sku", { length: 100 }),
+    description: text("description"),
+    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 10 }).notNull().default("USDC"),
+    status: varchar("status", { length: 20 }).notNull().default("ACTIVE"),
+    media: jsonb("media"),
+    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_products_merchant_id").on(table.merchantId),
+    index("idx_products_status").on(table.status),
+    uniqueIndex("uniq_products_sku").on(table.sku).where(sql`sku IS NOT NULL`),
+    uniqueIndex("uniq_products_idempotency")
+      .on(table.merchantId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ],
+);
+
+export const merchantOrders = pgTable(
+  "merchant_orders",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    productId: varchar("product_id").references(() => products.id, { onDelete: "set null" }),
+    merchantId: varchar("merchant_id", { length: 255 }).notNull(),
+    buyerId: varchar("buyer_id", { length: 255 }),
+    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    fee: numeric("fee", { precision: 10, scale: 2 }).notNull().default("0"),
+    status: varchar("status", { length: 20 }).notNull().default("PENDING"),
+    txRef: varchar("tx_ref", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_merchant_orders_merchant_id").on(table.merchantId),
+    index("idx_merchant_orders_status").on(table.status),
+  ],
+);
+
+export const taxReports = pgTable(
+  "tax_reports",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    merchantId: varchar("merchant_id", { length: 255 }).notNull(),
+    periodStart: date("period_start").notNull(),
+    periodEnd: date("period_end").notNull(),
+    grossSales: numeric("gross_sales", { precision: 12, scale: 2 }).notNull(),
+    platformFees: numeric("platform_fees", { precision: 12, scale: 2 }).notNull(),
+    netAmount: numeric("net_amount", { precision: 12, scale: 2 }).notNull(),
+    taxableAmount: numeric("taxable_amount", { precision: 12, scale: 2 }),
+    fileUrl: varchar("file_url", { length: 500 }),
+    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_tax_reports_merchant_id").on(table.merchantId),
+    uniqueIndex("uniq_tax_reports_period")
+      .on(table.merchantId, table.periodStart, table.periodEnd),
+    uniqueIndex("uniq_tax_reports_idempotency")
+      .on(table.merchantId, table.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ],
+);
+
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -233,6 +366,39 @@ export const insertMarketTradeSchema = createInsertSchema(marketTrades).omit({
   createdAt: true,
 });
 
+export const insertFeesLedgerSchema = createInsertSchema(feesLedger).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReserveBalanceSchema = createInsertSchema(reserveBalances).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertReserveActionSchema = createInsertSchema(reserveActions).omit({
+  id: true,
+  createdAt: true,
+  executedAt: true,
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMerchantOrderSchema = createInsertSchema(merchantOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaxReportSchema = createInsertSchema(taxReports).omit({
+  id: true,
+  createdAt: true,
+});
+
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -265,3 +431,21 @@ export type MarketOrder = typeof marketOrders.$inferSelect;
 
 export type InsertMarketTrade = z.infer<typeof insertMarketTradeSchema>;
 export type MarketTrade = typeof marketTrades.$inferSelect;
+
+export type InsertFeesLedger = z.infer<typeof insertFeesLedgerSchema>;
+export type FeesLedgerEntry = typeof feesLedger.$inferSelect;
+
+export type InsertReserveBalance = z.infer<typeof insertReserveBalanceSchema>;
+export type ReserveBalance = typeof reserveBalances.$inferSelect;
+
+export type InsertReserveAction = z.infer<typeof insertReserveActionSchema>;
+export type ReserveAction = typeof reserveActions.$inferSelect;
+
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+
+export type InsertMerchantOrder = z.infer<typeof insertMerchantOrderSchema>;
+export type MerchantOrder = typeof merchantOrders.$inferSelect;
+
+export type InsertTaxReport = z.infer<typeof insertTaxReportSchema>;
+export type TaxReport = typeof taxReports.$inferSelect;
