@@ -69,6 +69,24 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // DEV MODE: Grant admin access to all authenticated users if enabled
+  // This middleware MUST run after passport.session() to modify req.user.claims
+  // IMPORTANT: Only works when NODE_ENV is explicitly 'development' for security
+  app.use((req, res, next) => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const devModeAdmin = process.env.DEV_MODE_ADMIN === 'true';
+    
+    if (isDevelopment && devModeAdmin && req.user) {
+      const user = req.user as any;
+      if (user.claims) {
+        // Override role in claims so all downstream RBAC checks see admin
+        user.claims.role = 'admin';
+        console.log(`[DEV MODE] Admin role injected for user ${user.claims.email || user.claims.sub}`);
+      }
+    }
+    next();
+  });
+
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (
