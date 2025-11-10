@@ -254,11 +254,11 @@ export default function Whitepaper() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-400 mt-1">•</span>
-                  <span><strong>撮合策略</strong>：<code className="text-xs bg-slate-700 px-1 py-0.5 rounded">内部撮合 > 外部 Maker > OTC RFQ > 外部 Taker（兜底）</code></span>
+                  <span><strong>撮合策略</strong>：<code className="text-xs bg-slate-700 px-1 py-0.5 rounded">内部撮合 {' > '} 外部 Maker {' > '} OTC RFQ {' > '} 外部 Taker（兜底）</code></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-400 mt-1">•</span>
-                  <span><strong>银行出金策略</strong>：<code className="text-xs bg-slate-700 px-1 py-0.5 rounded">ACH/SEPA 批量（T+1）> Wire（仅大额/紧急）</code></span>
+                  <span><strong>银行出金策略</strong>：<code className="text-xs bg-slate-700 px-1 py-0.5 rounded">ACH/SEPA 批量（T+1）{' > '} Wire（仅大额/紧急）</code></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-400 mt-1">•</span>
