@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import {
   Wallet,
   TrendingUp,
@@ -25,52 +26,107 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-
-// Placeholder types - will be replaced with actual backend types from Codex
-interface ReservePoolData {
-  totalFees: number;
-  treasuryBalance: number;
-  poiBuybackAmount: number;
-  lastBuybackDate: string;
-}
-
-interface FeeHistoryData {
-  date: string;
-  fees: number;
-  buyback: number;
-}
+import { reserveApi } from "@/lib/api";
 
 export default function ReservePoolPanel() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // TODO: Replace with actual Reserve Pool API endpoint from Codex
-  // const { data: poolData, isLoading } = useQuery<ReservePoolData>({
-  //   queryKey: ["/api/reserve-pool"],
-  // });
+  // Fetch pool status
+  const { data: poolData, isLoading } = useQuery({
+    queryKey: ["reserve-pool-status"],
+    queryFn: () => reserveApi.getPoolStatus(),
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
 
-  // Placeholder data for UI demonstration
-  const poolData: ReservePoolData | undefined = undefined;
-  const isLoading = false;
+  // Fetch history data
+  const { data: historyData } = useQuery({
+    queryKey: ["reserve-pool-history", timeRange],
+    queryFn: () => reserveApi.getHistory(timeRange),
+    refetchInterval: 15000,
+  });
 
-  // Placeholder chart data
-  const feeHistoryData: FeeHistoryData[] = [
-    { date: "2024-01", fees: 1200, buyback: 800 },
-    { date: "2024-02", fees: 1800, buyback: 1200 },
-    { date: "2024-03", fees: 2400, buyback: 1600 },
-    { date: "2024-04", fees: 2100, buyback: 1400 },
-    { date: "2024-05", fees: 2800, buyback: 1900 },
-    { date: "2024-06", fees: 3200, buyback: 2200 },
-  ];
+  // Fetch analytics
+  const { data: analytics } = useQuery({
+    queryKey: ["reserve-pool-analytics"],
+    queryFn: () => reserveApi.getAnalytics(),
+  });
+
+  // Fetch activities
+  const { data: activitiesData } = useQuery({
+    queryKey: ["reserve-pool-activities"],
+    queryFn: () => reserveApi.getActivities(),
+    refetchInterval: 5000,
+  });
+
+  // Buyback mutation
+  const buybackMutation = useMutation({
+    mutationFn: reserveApi.executeBuyback,
+    onSuccess: () => {
+      toast({
+        title: "回购已启动",
+        description: "POI 回购操作正在执行中，请稍候...",
+      });
+      queryClient.invalidateQueries({ queryKey: ["reserve-pool-status"] });
+      queryClient.invalidateQueries({ queryKey: ["reserve-pool-activities"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "回购失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Withdraw mutation
+  const withdrawMutation = useMutation({
+    mutationFn: reserveApi.withdrawFees,
+    onSuccess: () => {
+      toast({
+        title: "提取已启动",
+        description: "手续费提取操作正在处理中...",
+      });
+      queryClient.invalidateQueries({ queryKey: ["reserve-pool-status"] });
+      queryClient.invalidateQueries({ queryKey: ["reserve-pool-activities"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "提取失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleExecuteBuyback = () => {
-    // TODO: Implement buyback execution with Codex backend API
-    console.log("Execute buyback");
+    if (!poolData) return;
+
+    const usdcAmount = "1000.00"; // Default amount, could be from a dialog
+    const minPOI = "950.00"; // 5% slippage tolerance
+
+    buybackMutation.mutate({
+      amountUSDC: usdcAmount,
+      minPOI,
+    });
   };
 
   const handleWithdrawFees = () => {
-    // TODO: Implement fee withdrawal with Codex backend API
-    console.log("Withdraw fees");
+    if (!poolData) return;
+
+    const amount = "5000.00"; // Default amount, could be from a dialog
+    const asset = "USDC";
+    const to = "0x742d35Cc6634C0532925a3b844Bc9e7595f5b9c";
+
+    withdrawMutation.mutate({
+      amount,
+      asset,
+      to,
+    });
   };
+
+  const feeHistoryData = historyData?.data || [];
 
   return (
     <div className="space-y-6">
@@ -84,9 +140,9 @@ export default function ReservePoolPanel() {
           智能资金池管理系统 - 自动归集手续费、管理金库并执行 $POI 回购策略
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm">
-          <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
-          <span className="text-yellow-300 font-semibold">⏳ 后端接口对接中</span>
-          <span className="text-slate-400">(等待 Codex 完成 API)</span>
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+          <span className="text-green-300 font-semibold">✓ Mock API 运行中</span>
+          <span className="text-slate-400">(模拟数据，等待 Codex 真实 API)</span>
         </div>
       </Card>
 
@@ -96,7 +152,7 @@ export default function ReservePoolPanel() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-blue-400" />
-              <h4 className="font-semibold text-slate-300">累积手续费</h4>
+              <h4 className="font-semibold text-slate-300">30天手续费</h4>
             </div>
           </div>
           {isLoading ? (
@@ -104,9 +160,11 @@ export default function ReservePoolPanel() {
           ) : (
             <div>
               <div className="text-3xl font-bold text-white mb-1">
-                {poolData ? `$${poolData.totalFees.toLocaleString()}` : "待接入"}
+                ${poolData?.totalFees30d || "0"}
               </div>
-              <div className="text-sm text-slate-400">总累积手续费收入</div>
+              <div className="text-sm text-slate-400">
+                7天: ${poolData?.totalFees7d || "0"}
+              </div>
             </div>
           )}
         </Card>
@@ -115,7 +173,7 @@ export default function ReservePoolPanel() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Wallet className="w-5 h-5 text-green-400" />
-              <h4 className="font-semibold text-slate-300">金库余额</h4>
+              <h4 className="font-semibold text-slate-300">资金池余额</h4>
             </div>
           </div>
           {isLoading ? (
@@ -123,9 +181,11 @@ export default function ReservePoolPanel() {
           ) : (
             <div>
               <div className="text-3xl font-bold text-white mb-1">
-                {poolData ? `$${poolData.treasuryBalance.toLocaleString()}` : "待接入"}
+                ${poolData?.balances.USDC || "0"}
               </div>
-              <div className="text-sm text-slate-400">当前可用余额</div>
+              <div className="text-sm text-slate-400">
+                POI: {poolData?.balances.POI || "0"}
+              </div>
             </div>
           )}
         </Card>
@@ -134,7 +194,7 @@ export default function ReservePoolPanel() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-purple-400" />
-              <h4 className="font-semibold text-slate-300">$POI 回购</h4>
+              <h4 className="font-semibold text-slate-300">累计回购</h4>
             </div>
           </div>
           {isLoading ? (
@@ -142,7 +202,7 @@ export default function ReservePoolPanel() {
           ) : (
             <div>
               <div className="text-3xl font-bold text-white mb-1">
-                {poolData ? `${poolData.poiBuybackAmount.toLocaleString()} POI` : "待接入"}
+                ${poolData?.totalBuyback || "0"}
               </div>
               <div className="text-sm text-slate-400">
                 {poolData ? `上次: ${new Date(poolData.lastBuybackDate).toLocaleDateString()}` : "待执行"}
@@ -257,17 +317,30 @@ export default function ReservePoolPanel() {
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-slate-700/30">
                 <div className="text-sm text-slate-400 mb-1">平均月度手续费</div>
-                <div className="text-2xl font-bold text-white">$2,250</div>
+                <div className="text-2xl font-bold text-white">
+                  ${analytics?.avgMonthlyFees.toLocaleString() || "0"}
+                </div>
               </div>
               <div className="p-4 rounded-lg bg-slate-700/30">
                 <div className="text-sm text-slate-400 mb-1">平均回购比例</div>
-                <div className="text-2xl font-bold text-white">68%</div>
+                <div className="text-2xl font-bold text-white">
+                  {analytics ? `${(analytics.avgBuybackRatio * 100).toFixed(0)}%` : "0%"}
+                </div>
               </div>
             </div>
-            <div className="mt-4 text-center">
-              <p className="text-sm text-slate-400">
-                📊 示例数据 - 真实数据将从 Codex 后端 API 获取
-              </p>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-slate-700/30">
+                <div className="text-sm text-slate-400 mb-1">历史总手续费</div>
+                <div className="text-xl font-bold text-white">
+                  ${analytics?.totalFeesAllTime.toLocaleString() || "0"}
+                </div>
+              </div>
+              <div className="p-4 rounded-lg bg-slate-700/30">
+                <div className="text-sm text-slate-400 mb-1">历史总回购</div>
+                <div className="text-xl font-bold text-white">
+                  ${analytics?.totalBuybackAllTime.toLocaleString() || "0"}
+                </div>
+              </div>
             </div>
           </Card>
         </TabsContent>
@@ -289,10 +362,19 @@ export default function ReservePoolPanel() {
                 <Button
                   onClick={handleExecuteBuyback}
                   className="w-full bg-purple-600 hover:bg-purple-700"
-                  disabled
+                  disabled={buybackMutation.isPending || !poolData}
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  执行回购 (开发中)
+                  {buybackMutation.isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      执行中...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      执行回购 ($1,000 USDC)
+                    </>
+                  )}
                 </Button>
               </div>
 
@@ -309,20 +391,29 @@ export default function ReservePoolPanel() {
                 <Button
                   onClick={handleWithdrawFees}
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled
+                  disabled={withdrawMutation.isPending || !poolData}
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  提取手续费 (开发中)
+                  {withdrawMutation.isPending ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      处理中...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      提取手续费 ($5,000)
+                    </>
+                  )}
                 </Button>
               </div>
 
-              <div className="p-4 rounded-xl bg-yellow-900/20 border border-yellow-700/30">
+              <div className="p-4 rounded-xl bg-green-900/20 border border-green-700/30">
                 <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-yellow-300 mb-1">功能开发中</h4>
+                    <h4 className="font-semibold text-green-300 mb-1">Mock API 已启用</h4>
                     <p className="text-sm text-slate-300">
-                      Reserve Pool 管理功能正在开发中，等待 Codex 完成后端接口后即可启用。
+                      管理功能已可用（模拟环境）。真实功能将在 Codex 完成后端后启用。
                     </p>
                   </div>
                 </div>
@@ -334,11 +425,66 @@ export default function ReservePoolPanel() {
           <Card className="p-6 bg-slate-800/50 border-slate-700">
             <h3 className="text-lg font-semibold text-white mb-4">最近活动</h3>
             <div className="space-y-3">
-              <div className="text-center py-8 text-slate-400">
-                <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>暂无活动记录</p>
-                <p className="text-sm mt-1">后端 API 接口对接中（等待 Codex）</p>
-              </div>
+              {!activitiesData || activitiesData.activities.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>暂无活动记录</p>
+                </div>
+              ) : (
+                activitiesData.activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg"
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      activity.type === 'buyback' 
+                        ? 'bg-purple-900/30' 
+                        : activity.type === 'withdraw'
+                          ? 'bg-blue-900/30'
+                          : 'bg-green-900/30'
+                    }`}>
+                      {activity.type === 'buyback' ? (
+                        <RefreshCw className="w-4 h-4 text-purple-400" />
+                      ) : activity.type === 'withdraw' ? (
+                        <Download className="w-4 h-4 text-blue-400" />
+                      ) : (
+                        <Activity className="w-4 h-4 text-green-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-white">
+                          {activity.type === 'buyback' 
+                            ? 'POI 回购' 
+                            : activity.type === 'withdraw'
+                              ? '手续费提取'
+                              : '资金池重平衡'}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          activity.status === 'SUCCESS'
+                            ? 'bg-green-900/30 text-green-400'
+                            : activity.status === 'PENDING'
+                              ? 'bg-yellow-900/30 text-yellow-400'
+                              : 'bg-red-900/30 text-red-400'
+                        }`}>
+                          {activity.status === 'SUCCESS' ? '成功' : activity.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-400">
+                        {activity.type === 'buyback' && activity.details.amountUSDC && (
+                          <>用 ${activity.details.amountUSDC} USDC 回购了 {activity.details.amountPOI} POI</>
+                        )}
+                        {activity.type === 'withdraw' && activity.details.amount && (
+                          <>提取 ${activity.details.amount} {activity.details.asset} 到 {activity.details.to}</>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {new Date(activity.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </TabsContent>
