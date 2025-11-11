@@ -466,3 +466,134 @@ Replit → Cursor: "部署成功/失败，错误信息：XXX"
 - Replit 反馈 → Cursor 修复 → 循环
 
 **这就是我们的三 AI 协同工作模式！**
+
+---
+
+## 🔀 Git Workflow (NEW)
+
+### Branch Strategy
+
+```
+main (production stable) - Only merge when ready for production
+  ↓
+dev (development integration) - PRIMARY DEVELOPMENT BRANCH
+  ↓
+feat/* (optional) - Short-lived feature branches
+```
+
+### Primary Development Branch: dev
+
+**All development work happens on `dev` branch:**
+
+```bash
+# Daily workflow
+git checkout dev
+git pull origin dev
+
+# Make changes (frontend, backend, contracts, docs)
+git add .
+git commit -m "feat(frontend): add dashboard widget (Cursor)"
+git push origin dev
+```
+
+### When to Merge dev → main
+
+Merge `dev` to `main` when:
+- ✅ Major milestone complete (e.g., Market module fully functional)
+- ✅ All features tested and stable
+- ✅ Ready for production deployment
+- ✅ Typically every 2-4 weeks
+
+**Merge process:**
+
+```bash
+# 1. Test dev thoroughly
+git checkout dev
+# Run all tests, verify features
+
+# 2. Merge to main
+git checkout main
+git pull origin main
+git merge dev --no-ff -m "release: v2.x - [milestone]"
+git push origin main
+
+# 3. Continue on dev
+git checkout dev
+```
+
+### Commit Message Format
+
+**Always include AI attribution:**
+
+```
+<type>(<scope>): <description> (Cursor)
+
+Examples:
+feat(frontend): add user profile editor (Cursor)
+fix(backend): resolve API timeout issue (Cursor)
+docs: update setup guide (Cursor)
+refactor(ui): simplify navigation structure (Cursor)
+```
+
+### Types:
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code refactoring
+- `style`: Style changes
+- `docs`: Documentation
+- `chore`: Build/tools
+
+### Daily Development on dev
+
+**Commit frequently:**
+```bash
+git commit -m "wip: implement market order form (Cursor)"
+git commit -m "feat(api): add market stats endpoint (Cursor)"
+git commit -m "fix(ui): mobile responsive header (Cursor)"
+```
+
+**Push regularly:**
+```bash
+git push origin dev  # At least once per day
+```
+
+### Frontend + Backend Synchronization
+
+When backend API changes affect frontend:
+
+```bash
+# 1. Update backend API
+git commit -m "feat(api): update market order endpoint (Cursor)"
+
+# 2. Update frontend immediately
+git commit -m "feat(frontend): integrate new market API (Cursor)"
+
+# 3. Both commits stay on dev
+git push origin dev
+```
+
+### Working with Codex
+
+When Codex updates contracts:
+
+```bash
+# Codex pushes contract changes to dev
+# Cursor pulls and integrates:
+
+git pull origin dev
+# Update frontend to use new contract ABI/address
+git commit -m "feat(frontend): integrate new contract features (Cursor)"
+git push origin dev
+```
+
+---
+
+## 📋 Additional References
+
+For complete Git workflow details, see: `docs/GIT_WORKFLOW.md`  
+For Replit deployment workflow, see: `docs/REPLIT_WORKFLOW.md`  
+For Codex contract development, see: `.codexrules`
+
+---
+
+**这就是我们的三 AI 协同工作模式！**

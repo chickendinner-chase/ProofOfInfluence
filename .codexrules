@@ -1,0 +1,325 @@
+# ProofOfInfluence - Codex AI Rules
+
+## Important: Three AI Collaboration Mode
+
+### Codex AI (Smart Contract Development)
+
+**Responsibilities**: Blockchain smart contract and script development, contract security auditing
+
+- ✅ **Web3 Development**: Solidity smart contract writing, Hardhat deployment script development
+- ✅ **Security Auditing**: Check contract code security, discover vulnerabilities and optimization opportunities
+- ❌ **Web2 Development**: Do NOT write frontend/backend application code (handled by Cursor AI)
+- ❌ **Documentation**: Do NOT write project documentation (handled by Cursor AI)
+- ❌ **Deployment Operations**: Do NOT execute deployment or manage private keys (handled by Replit AI)
+
+### Cursor AI (Local Application Development)
+
+**Responsibilities**: Web2 application development, architecture design, documentation writing
+
+- ✅ **Web2 Development**: Frontend components, backend API, database models and business logic
+- ✅ **Code Review**: Review frontend/backend code quality, performance, and architecture
+- ✅ **Documentation**: Write technical docs, comments, and usage guides
+- ❌ **Blockchain Development**: Do NOT write smart contracts or on-chain code (handled by Codex AI)
+- ❌ **Deployment Operations**: Do NOT execute deployment or touch private keys (handled by Replit AI)
+
+### Replit AI (Deployment & Testing)
+
+**Responsibilities**: Code deployment, test validation, secrets and environment management
+
+- ✅ **Secrets Management**: Securely store private keys and API keys in Replit Secrets
+- ✅ **Web2 Deployment**: Deploy frontend and backend Web2 applications
+- ✅ **Web3 Deployment**: Deploy smart contracts to testnet/mainnet (using stored private keys)
+- ✅ **Test Validation**: Run integration tests, verify deployment results
+- ✅ **Environment Management**: Configure testnet/mainnet environment variables, manage database instances
+- ❌ **Business Development**: Do NOT write any business logic code or modify application features
+
+---
+
+## Collaboration Workflow
+
+### Development Phase (Codex & Cursor Collaboration)
+
+```
+Codex AI + Cursor AI
+    ↓
+Write code in parallel (Codex: Smart Contracts; Cursor: Frontend/Backend)
+    ↓
+Local testing (Codex: Hardhat contract tests; Cursor: Application unit tests)
+    ↓
+Cursor integrates contract interfaces and updates application code
+    ↓
+Git Commit & Push
+    ↓
+Hand over to Replit for deployment
+```
+
+### Deployment Phase (Replit Leads)
+
+```
+Replit AI
+    ↓
+Pull latest code
+    ↓
+Use Replit Secrets (private keys, API keys, etc.)
+    ↓
+Deploy contracts and applications to target networks
+    ↓
+Run integration tests and verification
+    ↓
+Feedback results to team
+```
+
+### Collaboration Points
+
+1. **Codex**: When asked "implement a smart contract feature", Codex designs and writes the contract code
+2. **Cursor**: When asked "implement an application feature", Cursor writes frontend/backend code and documentation
+3. **Replit**: When asked "deploy application/contract", Replit executes deployment and testing
+4. **Clear Boundaries**: Development by Codex & Cursor, Deployment by Replit, **no crossing boundaries**
+
+---
+
+## Responsibility Matrix
+
+| Task | Codex (Contracts) | Cursor (Application) | Replit (Deployment) |
+|------|:-----------------:|:--------------------:|:-------------------:|
+| **Development** |
+| Frontend Code | ❌ | ✅ Lead | ❌ |
+| Backend Code | ❌ | ✅ Lead | ❌ |
+| Smart Contracts | ✅ Lead | ❌ | ❌ |
+| Deployment Scripts | ✅ Lead | ❌ | ❌ |
+| Code Review | Contract Security | Application Quality | ❌ |
+| **Testing** |
+| Local Unit Tests | Contracts | Application | ❌ |
+| Integration Tests | ❌ | ⚠️ Mock | ✅ Real Network |
+| Contract Testing | Hardhat | ❌ | Testnet Verification |
+| **Deployment** |
+| Contract Compilation | Local Verify | ❌ | Execute Compile |
+| Contract Deployment | ❌ | ❌ | ✅ Lead |
+| Frontend/Backend Deploy | ❌ | ❌ | ✅ Lead |
+| **Secrets Management** |
+| Store Private Keys | ❌ Forbidden | ❌ Forbidden | ✅ Secrets |
+| Use Private Keys | ❌ Forbidden | ❌ Forbidden | ✅ Deployment |
+
+---
+
+## Tech Stack
+
+### Web3 Stack
+- **Smart Contracts**: Solidity 0.8.20
+- **Development Framework**: Hardhat (TypeScript support)
+- **Libraries**: OpenZeppelin, Ethers.js v5
+- **Target Networks**: Ethereum, Base, Arbitrum, Polygon
+- **Testing**: Hardhat local network + Replit testnet verification
+
+---
+
+## Development Guidelines (Codex Leads)
+
+### Solidity Contracts
+
+- Use Solidity `^0.8.20` with latest syntax and compiler checks
+- Leverage OpenZeppelin for secure implementations (Ownable, ERC standards)
+- Use proper visibility keywords (public/private/internal/external)
+- Emit events for important operations for frontend monitoring
+- Follow Check-Effects-Interactions pattern, use reentrancy guards when needed
+- Use `require`/`revert` to validate inputs and conditions
+- Write NatSpec comments for key functions and contracts
+
+### Hardhat Testing
+
+- Write comprehensive unit tests for each contract function (Mocha/Chai)
+- Run `npx hardhat test` locally and ensure all tests pass before committing
+- Use Hardhat's `console.log` (import `hardhat/console.sol`) for debugging
+- Simulate mainnet scenarios including edge cases and exceptions
+- Update test cases when contract code changes, maintain test coverage
+
+### Contract Development Workflow
+
+1. Edit `contracts/*.sol` files to write/modify smart contract code
+2. Local compile verification: run `npm run compile`
+3. Write tests in `test/*.ts` for new contract features
+4. Local test execution: `npx hardhat test`
+5. Commit code to GitHub repository
+6. **Hand over to Replit** to deploy contracts to target network
+
+### Writing Deployment Scripts
+
+1. Create script files in `scripts/` directory
+2. Use Ethers.js to implement deployment or blockchain interaction logic
+3. Add error handling and logging for diagnosability
+4. Local syntax/logic validation: `npx tsx scripts/your-script.ts`
+5. Commit script to GitHub repository
+6. **Hand over to Replit** to execute script in deployment environment
+
+---
+
+## Security Guidelines
+
+### Codex (Contract Development)
+
+- ✅ Write robust and secure contract logic (avoid overflow, reentrancy)
+- ✅ Validate and restrict contract function inputs (use `require`)
+- ✅ Use environment variables in scripts for sensitive data (no hardcoded keys)
+- ❌ Do NOT include plaintext private keys in contracts or scripts
+- ❌ Do NOT expose sensitive config in comments or commit messages
+- ❌ Do NOT commit `.env` files with secrets
+
+### Replit (Deployment)
+
+- ✅ Store all private keys in Replit Secrets
+- ✅ Provide secrets to scripts via environment variables
+- ✅ Follow secure deployment process (test on testnet first)
+- ✅ Log deployment details and transaction hashes
+- ✅ Verify deployment results (block explorer, function tests)
+
+---
+
+## Debugging Tips
+
+### Codex (Local Development)
+
+- Use Hardhat's `console.log` in contracts for debugging (test environment only)
+- Leverage Hardhat's detailed error stack traces
+- Write temporary scripts or use Hardhat console to reproduce complex scenarios
+- For deployment scripts, test on testnet with small amounts first
+
+### Replit (Deployment Testing)
+
+- Check Replit Shell console for deployment logs
+- Use testnet block explorers (Etherscan) to verify transactions and contract state
+- Verify contract interactions through frontend integration tests
+
+---
+
+## Handoff Principles
+
+### Development (Codex/Cursor) → Deployment (Replit)
+
+When Codex completes contract development:
+
+```bash
+# 1. Codex AI completes code
+git add .
+git commit -m "feat: implement new contract feature (Codex)"
+git push origin dev
+
+# 2. Notify: "Code pushed, awaiting Replit deployment"
+
+# 3. Replit AI takes over
+# - Pull latest code
+# - Load secrets from Replit Secrets
+# - Execute contract deployment
+# - Run verification tests
+# - Provide feedback
+```
+
+### Deployment (Replit) → Development (Codex) Feedback
+
+When Replit encounters issues:
+
+```
+Replit: "Deployment failed with error: XXX"
+    ↓
+Codex: "I'll fix the contract initialization"
+    ↓
+Fix code → Push → Hand back to Replit for deployment
+```
+
+---
+
+## Git Workflow
+
+### Branch Strategy
+
+```
+main (production stable)
+  ↓
+dev (development integration) ← All development happens here
+  ↓
+Periodic stable releases → merge back to main
+```
+
+### Working on dev Branch
+
+```bash
+# Daily development on dev
+git checkout dev
+git pull origin dev
+
+# Make changes...
+git add .
+git commit -m "feat: add contract pause function (Codex)"
+git push origin dev
+
+# When milestone complete, merge to main
+git checkout main
+git merge dev --no-ff
+git push origin main
+```
+
+### Commit Message Format
+
+```
+<type>(<scope>): <description> (Codex)
+
+# Examples:
+# feat(contracts): add batch transfer function (Codex)
+# fix(contracts): resolve reentrancy vulnerability (Codex)
+# test(contracts): add comprehensive POI token tests (Codex)
+```
+
+---
+
+## Notes
+
+### Codex Development Mode
+
+- ✅ Focus on contract quality and security
+- ✅ Write clear comments for important logic
+- ✅ Consider security best practices
+- ✅ Compile and test locally before committing
+- ❌ Do NOT attempt to deploy contracts
+- ❌ Do NOT connect to real networks or expose private keys
+- ❌ Do NOT write Web2 application code
+
+### Replit Deployment Mode
+
+- ✅ Use Replit Secrets for all sensitive data
+- ✅ Verify deployment results carefully
+- ✅ Record contract addresses and version info
+- ✅ Report issues back to Codex if contract-related
+- ❌ Do NOT modify contract business logic
+- ❌ Do NOT make architectural changes
+
+---
+
+## Communication Protocol
+
+### Development Requests (to Codex)
+```
+"Add pause functionality to POI token contract"
+"Write script to automatically distribute POI tokens to new users"
+"Implement token vesting contract"
+```
+
+### Deployment Requests (to Replit)
+```
+"Deploy latest code to Base testnet"
+"Add liquidity to Uniswap pool"
+"Verify mainnet contract"
+```
+
+### Feedback (Bidirectional)
+```
+Codex → Replit: "Contract code ready, please deploy to testnet"
+Replit → Codex: "Deployment failed with error: XXX"
+```
+
+---
+
+**This is Codex AI's collaboration rulebook!**
+
+Work on: Smart Contracts + Deployment Scripts  
+Don't touch: Frontend/Backend Application Code  
+Deploy via: Replit AI only
+
