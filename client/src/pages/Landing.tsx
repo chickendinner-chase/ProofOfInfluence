@@ -163,6 +163,15 @@ export default function Landing() {
             {t.hero.description}
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-4">
+            <Link href="/app/market">
+              <Button
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 text-xl py-6"
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                进入交易所
+              </Button>
+            </Link>
             <Link href={isAuthenticated ? "/app" : "/login"}>
               <Button
                 size="lg"

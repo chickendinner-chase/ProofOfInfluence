@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TradingChart from "@/components/TradingChart";
-import UniswapSwapCard from "@/components/UniswapSwapCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import {
@@ -408,14 +407,6 @@ export default function Market() {
 
           {/* Trading Panel */}
           <div className="space-y-6">
-            {/* Uniswap Integration */}
-            <Card className="p-6 bg-slate-800/50 border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                即时交易
-              </h3>
-              <UniswapSwapCard />
-            </Card>
-
           {/* Order Placement Form */}
           <Card id="order-form" className="p-6 bg-slate-800/50 border-slate-700">
             <h3 className="text-lg font-semibold text-white mb-4">
