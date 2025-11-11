@@ -1,0 +1,291 @@
+openapi: 3.0.0
+info:
+  title: ProofOfInfluence Task Management API
+  description: API for ChatGPT Custom GPT to manage GitHub Issues for AI collaboration
+  version: 1.0.0
+  contact:
+    name: ACEE Ventures
+    url: https://github.com/acee-chase/ProofOfInfluence
+
+servers:
+  - url: https://your-repl-name.replit.app
+    description: Production server (update with actual Replit URL)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/tasks/create:
+    post:
+      summary: Create a new task
+      description: Creates a GitHub Issue assigned to specified AI (Cursor, Codex, or Replit)
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - assignee
+              properties:
+                title:
+                  type: string
+                  description: Task title
+                  example: "Implement Market Backend API"
+                assignee:
+                  type: string
+                  enum: [cursor, codex, replit]
+                  description: AI to assign the task to
+                  example: "cursor"
+                description:
+                  type: string
+                  description: Detailed task description
+                  example: "Implement POST /api/market/orders endpoint with validation"
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+                  description: Task priority
+                  example: "high"
+                component:
+                  type: string
+                  description: Component category
+                  example: "backend"
+      responses:
+        '200':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  number:
+                    type: integer
+                    example: 42
+                  url:
+                    type: string
+                    example: "https://github.com/acee-chase/ProofOfInfluence/issues/42"
+                  title:
+                    type: string
+                  assignee:
+                    type: string
+        '400':
+          description: Invalid request
+        '500':
+          description: Server error
+
+  /api/tasks/list:
+    get:
+      summary: List tasks
+      description: Get list of tasks filtered by AI assignee and/or status
+      operationId: listTasks
+      parameters:
+        - name: assignee
+          in: query
+          schema:
+            type: string
+            enum: [cursor, codex, replit]
+          description: Filter by AI assignee
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ready, in-progress, needs-review, blocked, done]
+          description: Filter by task status
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, all]
+            default: open
+          description: Issue state
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        number:
+                          type: integer
+                        title:
+                          type: string
+                        url:
+                          type: string
+                        state:
+                          type: string
+                        labels:
+                          type: array
+                          items:
+                            type: string
+                  count:
+                    type: integer
+
+  /api/tasks/{id}:
+    get:
+      summary: Get task details
+      description: Get detailed information about a specific task including comments
+      operationId: getTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub Issue number
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  number:
+                    type: integer
+                  title:
+                    type: string
+                  body:
+                    type: string
+                  url:
+                    type: string
+                  state:
+                    type: string
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        author:
+                          type: string
+                        body:
+                          type: string
+                        created_at:
+                          type: string
+
+  /api/tasks/{id}/status:
+    patch:
+      summary: Update task status
+      description: Change task status by updating labels
+      operationId: updateTaskStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [ready, in-progress, needs-review, blocked, done]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  status:
+                    type: string
+
+  /api/tasks/{id}/comment:
+    post:
+      summary: Add comment to task
+      description: Add a comment to the GitHub Issue
+      operationId: addComment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+              properties:
+                comment:
+                  type: string
+                  example: "✅ Task complete, ready for review"
+      responses:
+        '200':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  comment_url:
+                    type: string
+
+  /api/project/status:
+    get:
+      summary: Get project status
+      description: Get overall project status summary including all AIs' tasks
+      operationId: getProjectStatus
+      responses:
+        '200':
+          description: Project status summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  open:
+                    type: integer
+                  closed:
+                    type: integer
+                  by_ai:
+                    type: object
+                    properties:
+                      cursor:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          open:
+                            type: integer
+                          in_progress:
+                            type: integer
+                      codex:
+                        type: object
+                      replit:
+                        type: object
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Use the API_SECRET_KEY from Replit Secrets
+

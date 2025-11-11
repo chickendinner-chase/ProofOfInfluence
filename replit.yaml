@@ -2,8 +2,8 @@ run = "npm run dev"
 entrypoint = "server/index.ts"
 
 [deployment]
-run = ["npm", "start"]
-build = ["npm", "run", "build"]
+run = ["sh", "-c", "npm start & cd api-server && npm start"]
+build = ["sh", "-c", "npm run build && cd api-server && npm install"]
 deploymentTarget = "autoscale"
 
 [deployment.autoscale]
@@ -11,4 +11,9 @@ deploymentTarget = "autoscale"
 # 设置为 1 常驻（秒开，但持续计费）
 minInstances = 0
 maxInstances = 3
+
+# Expose API server port
+[[ports]]
+localPort = 3001
+externalPort = 3001
 
