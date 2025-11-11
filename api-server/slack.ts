@@ -15,8 +15,54 @@ export class SlackClient {
   }
 
   async sendMessage(message: SlackMessage): Promise<any> {
-    console.log('Slack message would be sent:', message);
-    return { ok: true };
+    const payload = JSON.stringify({
+      channel: message.channel,
+      text: message.text
+    });
+
+    const options = {
+      hostname: 'slack.com',
+      path: '/api/chat.postMessage',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': `Bearer ${this.botToken}`,
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const response = JSON.parse(data);
+            if (response.ok) {
+              console.log('✅ Slack message sent successfully:', message.text);
+              resolve(response);
+            } else {
+              console.error('❌ Slack API error:', response.error);
+              reject(new Error(`Slack API error: ${response.error}`));
+            }
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        console.error('❌ Failed to send Slack message:', error);
+        reject(error);
+      });
+
+      req.write(payload);
+      req.end();
+    });
   }
 
   async notifyTaskCreated(task: any): Promise<any> {
