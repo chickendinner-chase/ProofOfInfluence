@@ -85,35 +85,65 @@ Visit `http://localhost:5000` to see the app.
 
 ## 🤖 AI Collaboration
 
-This project uses a **multi-AI collaboration system** via GitHub:
+This project uses a **multi-AI collaboration system** coordinated by ChatGPT:
 
-### Three AI Roles
+### Four AI Roles
 
+- **💬 ChatGPT** - Project Manager (task planning & coordination)
 - **🎨 Cursor AI** - Application development (frontend/backend/docs)
 - **📜 Codex AI** - Smart contract development (Solidity/Hardhat)
 - **🚀 Replit AI** - Deployment & operations (testing/staging/production)
 
-### Collaboration Method
+### Collaboration Architecture
 
-**GitHub-based coordination:**
-- **Code**: Git commits on `dev` branch
-- **Tasks**: GitHub Issues with AI labels (`@codex`, `@cursor`, `@replit`)
-- **Communication**: Issue comments
-- **Notifications**: GitHub Webhooks + deploy-notification workflow
+**ChatGPT Custom GPT + API Server:**
+```
+ChatGPT Custom GPT (Task planning)
+    ↕ REST API
+API Server (Replit:3001)
+    ↕ GitHub API
+GitHub Issues (Task management)
+    ↕ Labels & Notifications
+Cursor / Codex / Replit (Execution)
+```
 
-**Example workflow:**
+### How It Works
+
+1. **ChatGPT creates tasks** via Custom GPT Actions
+2. **API Server** creates GitHub Issues with appropriate labels
+3. **AIs monitor** their assigned Issues (`@cursor`, `@codex`, `@replit`)
+4. **AIs execute** tasks and update Issue comments
+5. **ChatGPT monitors** progress and coordinates next steps
+
+**Example interaction:**
 ```
-1. Create Issue with @codex label
-2. Codex develops contract on dev branch
-3. Codex comments: "@cursor contract ready"
-4. Cursor integrates frontend
-5. Cursor comments: "@replit deploy to staging"
-6. Replit deploys and verifies
+You → ChatGPT Custom GPT:
+"Create 3 tasks for Market module: backend API (Cursor), 
+fee contract (Codex), deploy to testnet (Replit)"
+
+ChatGPT:
+✅ Created Issue #40 for Cursor
+✅ Created Issue #41 for Codex  
+✅ Created Issue #42 for Replit
+
+Later:
+"Check Cursor's progress"
+→ "Cursor has 2 tasks in-progress, 1 completed"
 ```
+
+### Setup Custom GPT
+
+**Requirements:**
+- ChatGPT Plus subscription
+- GitHub Personal Access Token
+- Replit deployment
+
+**See**: [Custom GPT Setup Guide](docs/CUSTOM_GPT_SETUP.md)
 
 ### For Collaborators
 
-- **See**: [AI Collaboration Guide](docs/AI_COLLABORATION_WEBHOOK.md)
+- **Custom GPT Setup**: [docs/CUSTOM_GPT_SETUP.md](docs/CUSTOM_GPT_SETUP.md)
+- **AI Collaboration**: [docs/AI_COLLABORATION_WEBHOOK.md](docs/AI_COLLABORATION_WEBHOOK.md)
 - **Codex Rules**: [.codexrules](.codexrules)
 - **Cursor Rules**: [.cursorrules](.cursorrules)
 - **Git Workflow**: [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)
