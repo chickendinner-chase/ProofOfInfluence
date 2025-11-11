@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import type { Profile as ProfileRecord, Link as LinkRecord, User } from "@shared/schema";
+import CompactSwapCard from "@/components/CompactSwapCard";
 
 export type Profile = {
   name: string;
@@ -295,12 +296,19 @@ export default function PublicProfile(props?: PublicProfileProps) {
                   </button>
                 </a>
               </div>
-            </div>
-          )}
+          </div>
+        )}
 
-          <p className="text-xs md:text-sm text-muted-foreground" data-testid="text-profile-views">
-            {profile.totalViews.toLocaleString()} profile views
-          </p>
+        {/* 快速兑换 $POI - 紧凑版 */}
+        <div className="mt-6 w-full">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-900/30 to-blue-800/20 border border-blue-700/50">
+            <CompactSwapCard />
+          </div>
+        </div>
+
+        <p className="text-xs md:text-sm text-muted-foreground mt-4" data-testid="text-profile-views">
+          {profile.totalViews.toLocaleString()} profile views
+        </p>
         </div>
 
         <div className="space-y-4">
