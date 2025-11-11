@@ -98,7 +98,7 @@ npm start
 - `client/src/lib/ethersAdapter.ts` - viem 到 ethers.js 适配器（保持不变）
 - `client/src/components/WalletConnectButton.tsx` - 使用 AppKit hooks（保留 standalone 模式）
 - `client/src/components/UniswapSwapCard.tsx` - 使用 wagmi hooks（保持不变）
-- `client/src/pages/TradingApp.tsx` - 钱包状态管理（保持不变）
+- `client/src/pages/Market.tsx` - 钱包状态管理（保持不变）
 
 ## 🚀 新功能
 

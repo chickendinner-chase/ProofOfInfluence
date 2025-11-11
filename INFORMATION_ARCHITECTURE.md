@@ -283,8 +283,8 @@ function MyPage() {
 <Route path="/company" component={Company} />
 
 {/* 应用与仪表盘 */}
-<Route path="/app" component={TradingApp} />
-<Route path="/dashboard" component={Dashboard} />
+<Route path="/app" component={Dashboard} />
+<Route path="/app/market" component={Market} />
 <Route path="/profile" component={Profile} />
 
 {/* 遗留路由（向后兼容） */}

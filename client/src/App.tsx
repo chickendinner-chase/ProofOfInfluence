@@ -16,7 +16,6 @@ import Services from "@/pages/Services";
 import Tokenomics from "@/pages/Tokenomics";
 import Roadmap from "@/pages/Roadmap";
 import Profile from "@/pages/Profile";
-import TradingApp from "@/pages/TradingApp";
 import Products from "@/pages/Products";
 import ForCreators from "@/pages/ForCreators";
 import ForBrands from "@/pages/ForBrands";
@@ -68,7 +67,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/profile" component={Profile} />
       <Route path="/recharge" component={Recharge} />
-      <Route path="/trading" component={TradingApp} />
+      <Route path="/trading" component={Market} />
       
       {/* Dynamic User Profiles */}
       <Route path="/:username" component={PublicProfile} />
