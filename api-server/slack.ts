@@ -22,28 +22,28 @@ export class SlackClient {
   async notifyTaskCreated(task: any): Promise<any> {
     return this.sendMessage({
       channel: this.channels.coordination,
-      text: New task created: 
+      text: `New task created: ${task.title}`
     });
   }
 
   async notifyTaskCompleted(task: any): Promise<any> {
     return this.sendMessage({
       channel: this.channels.coordination,
-      text: Task completed: 
+      text: `Task completed: ${task.title}`
     });
   }
 
   async notifyDeployment(deployment: any): Promise<any> {
     return this.sendMessage({
       channel: this.channels.replit,
-      text: Deployment: 
+      text: `Deployment: ${deployment.status}`
     });
   }
 
   async notifyCommit(commit: any): Promise<any> {
     return this.sendMessage({
       channel: this.channels.commits,
-      text: New commit: 
+      text: `New commit: ${commit.message}`
     });
   }
 
@@ -57,7 +57,7 @@ export class SlackClient {
   async notifyTaskStatusUpdate(taskId: string, title: string, oldStatus: string, newStatus: string): Promise<any> {
     return this.sendMessage({
       channel: this.channels.coordination,
-      text: Task  status:  -> 
+      text: `Task ${taskId} status: ${oldStatus} -> ${newStatus}`
     });
   }
 }
