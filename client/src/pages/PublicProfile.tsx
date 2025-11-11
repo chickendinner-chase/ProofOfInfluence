@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import type { Profile as ProfileRecord, Link as LinkRecord, User } from "@shared/schema";
-import QuickBuyButton from "@/components/QuickBuyButton";
+import CompactSwapCard from "@/components/CompactSwapCard";
 
 export type Profile = {
   name: string;
@@ -299,10 +299,10 @@ export default function PublicProfile(props?: PublicProfileProps) {
           </div>
         )}
 
-        {/* 快速购买 $POI - 移动端优化 */}
+        {/* 快速兑换 $POI - 紧凑版 */}
         <div className="mt-6 w-full">
           <div className="p-4 rounded-xl bg-gradient-to-r from-blue-900/30 to-blue-800/20 border border-blue-700/50">
-            <QuickBuyButton />
+            <CompactSwapCard />
           </div>
         </div>
 
