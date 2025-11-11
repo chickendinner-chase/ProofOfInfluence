@@ -47,14 +47,14 @@ export class SlackClient {
     });
   }
 
-  async sendToChannel(channel: string, text: string): Promise<any> {
+  async sendToChannel(channel: string, text: string, blocks?: any): Promise<any> {
     return this.sendMessage({
       channel: this.channels[channel],
       text
     });
   }
 
-  async notifyTaskStatusUpdate(taskId: string, title: string, oldStatus: string, newStatus: string): Promise<any> {
+  async notifyTaskStatusUpdate(taskId: string, title: string, oldStatus: string, newStatus: string, note?: string): Promise<any> {
     return this.sendMessage({
       channel: this.channels.coordination,
       text: `Task ${taskId} status: ${oldStatus} -> ${newStatus}`
