@@ -83,10 +83,50 @@ Visit `http://localhost:5000` to see the app.
 - OpenZeppelin
 - Uniswap V2
 
+## 🤖 AI Collaboration
+
+This project uses a **multi-AI collaboration system** via GitHub:
+
+### Three AI Roles
+
+- **🎨 Cursor AI** - Application development (frontend/backend/docs)
+- **📜 Codex AI** - Smart contract development (Solidity/Hardhat)
+- **🚀 Replit AI** - Deployment & operations (testing/staging/production)
+
+### Collaboration Method
+
+**GitHub-based coordination:**
+- **Code**: Git commits on `dev` branch
+- **Tasks**: GitHub Issues with AI labels (`@codex`, `@cursor`, `@replit`)
+- **Communication**: Issue comments
+- **Notifications**: GitHub Webhooks + deploy-notification workflow
+
+**Example workflow:**
+```
+1. Create Issue with @codex label
+2. Codex develops contract on dev branch
+3. Codex comments: "@cursor contract ready"
+4. Cursor integrates frontend
+5. Cursor comments: "@replit deploy to staging"
+6. Replit deploys and verifies
+```
+
+### For Collaborators
+
+- **See**: [AI Collaboration Guide](docs/AI_COLLABORATION_WEBHOOK.md)
+- **Codex Rules**: [.codexrules](.codexrules)
+- **Cursor Rules**: [.cursorrules](.cursorrules)
+- **Git Workflow**: [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)
+- **Replit Workflow**: [docs/REPLIT_WORKFLOW.md](docs/REPLIT_WORKFLOW.md)
+
+---
+
 ## 📚 Documentation
 
 - **[Setup Guide](docs/SETUP.md)** - Wallet, payment, and token deployment
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and API specs
+- **[AI Collaboration](docs/AI_COLLABORATION_WEBHOOK.md)** - How AIs work together
+- **[Git Workflow](docs/GIT_WORKFLOW.md)** - Branch strategy and commit conventions
 - **[Environment Variables](docs/ENV_VARIABLES.md)** - Config reference
 - **[Deployment Checklist](docs/DEPLOYMENT_CHECKLIST.md)** - Production deployment
 - **[Design Guidelines](design_guidelines.md)** - UI/UX standards
