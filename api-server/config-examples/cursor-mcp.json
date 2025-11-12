@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "proofofinfluence-local": {
+      "command": "node",
+      "args": ["D:/chickendinner/ProofOfInfluence/api-server/dist/mcpServer.js"],
+      "env": {
+        "MCP_AI_IDENTITY": "cursor",
+        "GITHUB_TOKEN": "your-github-token-here",
+        "SLACK_BOT_TOKEN": "your-slack-token-here",
+        "SLACK_CHANNEL_COORDINATION": "C01234567",
+        "SLACK_CHANNEL_CURSOR": "C01234568",
+        "SLACK_CHANNEL_CODEX": "C01234569",
+        "SLACK_CHANNEL_REPLIT": "C01234570",
+        "SLACK_CHANNEL_COMMITS": "C01234571"
+      }
+    },
+    "proofofinfluence-cloud": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/client-http",
+        "https://your-repl.replit.app/mcp"
+      ],
+      "env": {
+        "MCP_AI_IDENTITY": "cursor"
+      }
+    }
+  }
+}
+
+
+

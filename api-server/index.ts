@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { GitHubClient } from './github.js';
 import { SlackClient } from './slack.js';
+import { CollaborationTools } from './tools.js';
+import { AIIdentity, TaskStatus } from './types.js';
+import { registerMcpHttpRoutes } from './mcpServer.js';
 
 dotenv.config();
 
@@ -73,6 +76,9 @@ if (slackToken) {
   console.log('⚠️  Slack integration disabled (SLACK_BOT_TOKEN not set)');
 }
 
+const tools = new CollaborationTools(github, slack);
+const ALLOWED_ASSIGNEES: AIIdentity[] = ['cursor', 'codex', 'replit'];
+
 // Health check endpoint (no auth required)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'ProofOfInfluence API Server' });
@@ -87,22 +93,12 @@ app.get('/openapi.yaml', (req, res) => {
 // Protected API endpoints
 app.use('/api', authenticate);
 
-// Task status tracking for async operations
-const taskStatus = new Map<string, {
-  status: 'processing' | 'completed' | 'failed';
-  taskId?: string;
-  issueNumber?: number;
-  issueUrl?: string;
-  error?: string;
-  createdAt: Date;
-}>();
+// MCP server routes
+registerMcpHttpRoutes(app, tools);
 
 /**
  * POST /api/tasks/create
- * Create a new GitHub Issue for AI task (asynchronous)
- * 
- * Returns immediately with 202 Accepted + taskId
- * Processes GitHub + Slack in background
+ * Create a new GitHub Issue for AI task
  */
 app.post('/api/tasks/create', async (req, res) => {
   try {
@@ -112,104 +108,36 @@ app.post('/api/tasks/create', async (req, res) => {
       return res.status(400).json({ error: 'title and assignee are required' });
     }
 
-    if (!['cursor', 'codex', 'replit'].includes(assignee)) {
+    if (!ALLOWED_ASSIGNEES.includes(assignee)) {
       return res.status(400).json({ error: 'assignee must be cursor, codex, or replit' });
     }
 
-    // Generate unique task ID
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Store initial status
-    taskStatus.set(taskId, {
-      status: 'processing',
-      taskId,
-      createdAt: new Date()
+    const issue = await tools.createTask({
+      title,
+      assignee,
+      description,
+      priority,
+      component,
     });
 
-    console.log(`📋 Task ${taskId} accepted, processing in background...`);
+    console.log(`✅ GitHub Issue #${issue.number} created for ${assignee}`);
 
-    // Return 202 Accepted immediately
-    res.status(202).json({
-      status: 'accepted',
-      message: 'Task accepted, processing in background',
-      taskId,
-      statusUrl: `/api/tasks/status/${taskId}`,
-      note: 'GitHub Issue is being created, please check status later or view GitHub'
-    });
-
-    // Process asynchronously in background
-    setImmediate(async () => {
-      try {
-        console.log(`🔄 Processing task ${taskId}...`);
-        
-        // Create GitHub Issue
-        const result = await github.createTask({
-          title,
-          assignee,
-          description: description || '',
-          priority,
-          component
-        });
-
-        console.log(`✅ GitHub Issue #${result.number} created for task ${taskId}`);
-
-        // Update status
-        taskStatus.set(taskId, {
-          status: 'completed',
-          taskId,
-          issueNumber: result.number,
-          issueUrl: result.url,
-          createdAt: taskStatus.get(taskId)!.createdAt
-        });
-
-        // Send Slack notification (fire and forget)
-        if (slack) {
-          try {
-            await slack.notifyTaskCreated({
-              taskId: result.number.toString(),
-              title,
-              assignee,
-              priority,
-              description
-            });
-            console.log(`💬 Slack notification sent for task ${taskId}`);
-          } catch (slackError: any) {
-            console.error(`⚠️  Slack notification failed for task ${taskId}:`, slackError.message);
-          }
-        }
-
-      } catch (error: any) {
-        console.error(`❌ Task ${taskId} failed:`, error.message);
-        
-        // Update to failed status
-        taskStatus.set(taskId, {
-          status: 'failed',
-          taskId,
-          error: error.message,
-          createdAt: taskStatus.get(taskId)!.createdAt
-        });
-      }
-    });
-
+    res.status(200).json(issue);
   } catch (error: any) {
-    console.error('Error accepting task:', error);
+    console.error('Error creating task:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 /**
  * GET /api/tasks/status/:taskId
- * Query async task status
+ * Deprecated endpoint (tasks are created synchronously now)
  */
-app.get('/api/tasks/status/:taskId', (req, res) => {
-  const { taskId } = req.params;
-  const status = taskStatus.get(taskId);
-
-  if (!status) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-
-  res.json(status);
+app.get('/api/tasks/status/:taskId', (_req, res) => {
+  res.status(410).json({
+    status: 'deprecated',
+    message: 'Task creation is synchronous. Use /api/tasks/:id instead.',
+  });
 });
 
 /**
@@ -220,11 +148,19 @@ app.get('/api/tasks/list', async (req, res) => {
   try {
     const { assignee, status, state } = req.query;
 
-    const tasks = await github.listTasks({
-      assignee: assignee as any,
-      status: status as any,
-      state: state as any
-    });
+    if (assignee && !ALLOWED_ASSIGNEES.includes(assignee as AIIdentity)) {
+      return res.status(400).json({ error: 'Invalid assignee' });
+    }
+
+    const tasks = assignee
+      ? await tools.listTasksForAI(assignee as AIIdentity, {
+          status: status as TaskStatus | undefined,
+          state: state as "open" | "closed" | "all" | undefined,
+        })
+      : await tools.listTasks({
+          status: status as TaskStatus | undefined,
+          state: state as "open" | "closed" | "all" | undefined,
+        });
 
     res.json({ tasks, count: tasks.length });
   } catch (error: any) {
@@ -245,7 +181,7 @@ app.get('/api/tasks/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid task ID' });
     }
 
-    const task = await github.getTask(issueNumber);
+    const task = await tools.getTask(issueNumber);
     res.json(task);
   } catch (error: any) {
     console.error('Error getting task:', error);
@@ -270,7 +206,10 @@ app.patch('/api/tasks/:id/status', async (req, res) => {
       return res.status(400).json({ error: 'status is required' });
     }
 
-    const result = await github.updateTaskStatus(issueNumber, status);
+    const result = await tools.updateTaskStatus(
+      issueNumber,
+      status as TaskStatus,
+    );
     res.json(result);
   } catch (error: any) {
     console.error('Error updating task status:', error);
@@ -295,7 +234,7 @@ app.post('/api/tasks/:id/comment', async (req, res) => {
       return res.status(400).json({ error: 'comment is required' });
     }
 
-    const result = await github.addComment(issueNumber, comment);
+    const result = await tools.addTaskComment(issueNumber, comment);
     res.json(result);
   } catch (error: any) {
     console.error('Error adding comment:', error);
@@ -309,7 +248,7 @@ app.post('/api/tasks/:id/comment', async (req, res) => {
  */
 app.get('/api/project/status', async (req, res) => {
   try {
-    const status = await github.getProjectStatus();
+    const status = await tools.getProjectStatus();
     res.json(status);
   } catch (error: any) {
     console.error('Error getting project status:', error);
@@ -333,31 +272,18 @@ app.post('/api/slack/task/complete', async (req, res) => {
       return res.status(400).json({ error: 'taskId, title, and completedBy are required' });
     }
 
-    // Return 202 Accepted immediately
-    res.status(202).json({ 
-      success: true, 
-      message: 'Task completion notification queued',
-      taskId 
+    await tools.notifyTaskComplete({
+      taskId,
+      title,
+      completedBy,
+      branch,
+      commit,
+      files,
+      nextAI,
+      nextAction,
     });
 
-    // Send in background
-    setImmediate(async () => {
-      try {
-        await slack!.notifyTaskCompleted({
-          taskId,
-          title,
-          completedBy,
-          branch,
-          commit,
-          files,
-          nextAI,
-          nextAction
-        });
-        console.log(`✅ Task completion notification sent for #${taskId}`);
-      } catch (error: any) {
-        console.error(`❌ Failed to send task completion notification:`, error.message);
-      }
-    });
+    res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Error queuing Slack notification:', error);
     res.status(500).json({ error: error.message });
@@ -380,22 +306,15 @@ app.post('/api/slack/task/status', async (req, res) => {
       return res.status(400).json({ error: 'taskId, title, oldStatus, and newStatus are required' });
     }
 
-    // Return 202 Accepted immediately
-    res.status(202).json({ 
-      success: true, 
-      message: 'Status update notification queued',
-      taskId 
+    await tools.notifyTaskStatusUpdate({
+      taskId,
+      title,
+      oldStatus,
+      newStatus,
+      note,
     });
 
-    // Send in background
-    setImmediate(async () => {
-      try {
-        await slack!.notifyTaskStatusUpdate(taskId, title, oldStatus, newStatus, note);
-        console.log(`✅ Status update notification sent for #${taskId}`);
-      } catch (error: any) {
-        console.error(`❌ Failed to send status update notification:`, error.message);
-      }
-    });
+    res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Error queuing Slack notification:', error);
     res.status(500).json({ error: error.message });
@@ -426,31 +345,17 @@ app.post('/api/slack/deployment', async (req, res) => {
       return res.status(400).json({ error: 'status must be started, success, or failed' });
     }
 
-    // Return 202 Accepted immediately
-    res.status(202).json({ 
-      success: true, 
-      message: 'Deployment notification queued',
+    await tools.notifyDeployment({
       environment,
-      status 
+      branch,
+      commit,
+      status,
+      url,
+      duration,
+      error,
     });
 
-    // Send in background
-    setImmediate(async () => {
-      try {
-        await slack!.notifyDeployment({
-          environment,
-          branch,
-          commit,
-          status,
-          url,
-          duration,
-          error
-        });
-        console.log(`✅ Deployment notification sent (${environment} - ${status})`);
-      } catch (err: any) {
-        console.error(`❌ Failed to send deployment notification:`, err.message);
-      }
-    });
+    res.status(200).json({ success: true });
   } catch (err: any) {
     console.error('Error queuing Slack notification:', err);
     res.status(500).json({ error: err.message });
@@ -473,29 +378,16 @@ app.post('/api/slack/commit', async (req, res) => {
       return res.status(400).json({ error: 'branch, message, author, sha, and url are required' });
     }
 
-    // Return 202 Accepted immediately
-    res.status(202).json({ 
-      success: true, 
-      message: 'Commit notification queued',
-      sha: sha.substring(0, 7)
+    await tools.notifyCommit({
+      branch,
+      message,
+      author,
+      sha,
+      url,
+      filesChanged: filesChanged || 0,
     });
 
-    // Send in background
-    setImmediate(async () => {
-      try {
-        await slack!.notifyCommit({
-          branch,
-          message,
-          author,
-          sha,
-          url,
-          filesChanged: filesChanged || 0
-        });
-        console.log(`✅ Commit notification sent (${sha.substring(0, 7)})`);
-      } catch (error: any) {
-        console.error(`❌ Failed to send commit notification:`, error.message);
-      }
-    });
+    res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Error queuing Slack notification:', error);
     res.status(500).json({ error: error.message });
@@ -522,24 +414,9 @@ app.post('/api/slack/message', async (req, res) => {
       return res.status(400).json({ error: 'invalid channel' });
     }
 
-    // Return 202 Accepted immediately to avoid client timeout
-    res.status(202).json({ 
-      success: true, 
-      message: 'Slack message queued for delivery',
-      channel,
-      preview: text.substring(0, 50) + (text.length > 50 ? '...' : '')
-    });
+    await tools.sendSlackMessage({ channel: channel as any, text, blocks });
 
-    // Send message asynchronously in background
-    setImmediate(async () => {
-      try {
-        console.log(`📤 Sending Slack message to #${channel}...`);
-        await slack!.sendToChannel(channel, text, blocks);
-        console.log(`✅ Slack message sent to #${channel}`);
-      } catch (error: any) {
-        console.error(`❌ Failed to send Slack message to #${channel}:`, error.message);
-      }
-    });
+    res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Error queuing Slack message:', error);
     res.status(500).json({ error: error.message });

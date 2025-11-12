@@ -49,6 +49,53 @@ Replit will automatically:
 
 ---
 
+## MCP Server
+
+The API server now exposes a Model Context Protocol (MCP) server so that any MCP-capable client (Cursor, Codex CLI, Replit Agent, Custom GPT, etc.) can use the same GitHub + Slack tools.
+
+### Available transports
+
+- **HTTP / Streamable HTTP**: `POST/GET /mcp` (same port as the REST API)
+- **stdio**: run locally with `npm run mcp:stdio` (set `MCP_AI_IDENTITY` before running)
+
+### Running in stdio mode
+
+```bash
+# From the repo root
+cd api-server
+MCP_AI_IDENTITY=cursor npm run mcp:stdio
+```
+
+Environment variables:
+
+- `GITHUB_TOKEN` (required)
+- `SLACK_BOT_TOKEN` + channel IDs (optional, enables Slack tools)
+- `MCP_AI_IDENTITY` – default AI identity for the current process (`cursor`, `codex`, `replit`)
+
+### Connecting over HTTP/SSE
+
+HTTP clients should send requests to `https://<host>:3001/mcp`.  
+Include `X-AI-Identity` header to identify the caller AI. Example Codex CLI configuration (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.proofofinfluence]
+url = "https://your-repl.replit.app/mcp"
+headers = { "X-AI-Identity" = "codex" }
+```
+
+Cursor、Replit Agent 等也可以使用 `mcp-config.json` 中的示例通过 `npx tsx api-server/mcpServer.ts` 启动专用实例。
+
+### Registered MCP tools
+
+- `create_task`, `get_my_tasks`, `list_tasks`, `get_project_status`
+- `update_task_status`, `add_task_comment`
+- `notify_task_complete`, `notify_task_status`, `notify_deployment`, `notify_commit`
+- `send_message_to_ai`, `broadcast_to_coordination`, `send_slack_message`
+
+Each tool returns human-readable text and structured JSON content for programmatic use.
+
+---
+
 ## API Endpoints
 
 ### Health Check
@@ -355,5 +402,178 @@ Check logs in Replit console:
 
 ---
 
-**API Server ready for Custom GPT integration!**
+## MCP Server (Model Context Protocol)
+
+The API server now includes a full MCP server implementation, enabling AI tools (Cursor, Codex, Replit) to directly access GitHub and Slack capabilities.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────┐
+│   ProofOfInfluence MCP/API Server       │
+│                                         │
+│   CollaborationTools (Unified Layer)   │
+│   ├─ GitHub Operations                 │
+│   └─ Slack Operations                  │
+│                                         │
+│   ┌────────────┐   ┌────────────┐     │
+│   │ REST API   │   │ MCP Server │     │
+│   │ (/api/*)   │   │ (/mcp)     │     │
+│   └────────────┘   └────────────┘     │
+└─────────────────────────────────────────┘
+        ↓                   ↓
+   Custom GPT       Cursor/Codex/Replit
+   (OpenAPI)            (MCP Protocol)
+```
+
+### MCP Tools Available
+
+The MCP server provides 13 tools for AI collaboration:
+
+#### GitHub Tools
+1. **create_task** - Create GitHub issue assigned to specific AI
+2. **get_my_tasks** - Get tasks for current AI
+3. **list_tasks** - List all project tasks with filters
+4. **update_task_status** - Update task status label
+5. **add_task_comment** - Add comment to GitHub issue
+6. **get_project_status** - Get overall project status
+
+#### Slack Tools
+7. **notify_task_complete** - Send task completion notification
+8. **notify_task_status** - Send status update notification
+9. **notify_deployment** - Send deployment notification
+10. **notify_commit** - Send commit notification
+11. **send_message_to_ai** - Direct message to another AI
+12. **broadcast_to_coordination** - Broadcast to coordination channel
+13. **send_slack_message** - Custom Slack message
+
+### Running MCP Server
+
+#### stdio Mode (Local AI Tools)
+
+```bash
+# Start for Cursor
+MCP_AI_IDENTITY=cursor npm run mcp:stdio
+
+# Start for Codex
+MCP_AI_IDENTITY=codex npm run mcp:stdio
+
+# Start for Replit
+MCP_AI_IDENTITY=replit npm run mcp:stdio
+```
+
+#### HTTP Mode (Cloud Deployment)
+
+The MCP server is automatically integrated into the Express server:
+```bash
+npm start
+```
+
+Access at: `http://localhost:3001/mcp` (or `https://your-repl.replit.app/mcp`)
+
+### Connecting AI Clients
+
+#### Cursor Configuration
+
+Create or edit `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "proofofinfluence": {
+      "command": "node",
+      "args": ["/path/to/api-server/dist/mcpServer.js"],
+      "env": {
+        "MCP_AI_IDENTITY": "cursor",
+        "GITHUB_TOKEN": "your-token",
+        "SLACK_BOT_TOKEN": "your-slack-token"
+      }
+    }
+  }
+}
+```
+
+See `config-examples/cursor-mcp.json` for full example.
+
+#### Codex (gpt-5-codex) Configuration
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.proofofinfluence]
+command = "node"
+args = ["/path/to/api-server/dist/mcpServer.js"]
+
+[mcp_servers.proofofinfluence.env]
+MCP_AI_IDENTITY = "codex"
+GITHUB_TOKEN = "your-token"
+```
+
+See `config-examples/codex-config.toml` for full example.
+
+#### Replit AI Configuration
+
+Already configured in root `mcp-config.json`:
+```json
+{
+  "mcpServers": {
+    "proofofinfluence-collab": {
+      "command": "npx",
+      "args": ["-y", "tsx", "api-server/mcpServer.ts"],
+      "env": {
+        "MCP_AI_IDENTITY": "replit",
+        ...
+      }
+    }
+  }
+}
+```
+
+### AI Identity Resolution
+
+The MCP server determines which AI is calling based on:
+
+1. **Environment variable** `MCP_AI_IDENTITY` (for stdio mode)
+2. **HTTP header** `X-AI-Identity` (for HTTP mode)
+3. **Explicit parameter** in tool arguments (override)
+
+Priority: Explicit parameter > HTTP header > Environment variable
+
+### Testing
+
+```bash
+# Test stdio mode
+npm run build
+node test-mcp.js
+
+# Test HTTP mode (requires server running)
+npm start &
+node test-http.js
+```
+
+### Example Usage
+
+#### Cursor AI Workflow
+
+```
+# In Cursor, with MCP configured:
+1. Query my tasks: Use get_my_tasks tool
+2. Start working: Use update_task_status to set "in-progress"
+3. Complete task: Use notify_task_complete with nextAI="replit"
+4. Notify Replit: Use send_message_to_ai
+```
+
+#### Codex AI Workflow
+
+```bash
+# In Codex CLI:
+codex> :call proofofinfluence.get_my_tasks {"status":"ready"}
+codex> :call proofofinfluence.update_task_status {"taskId":45,"status":"in-progress"}
+# ... work on contract ...
+codex> :call proofofinfluence.notify_task_complete {"taskId":"45","title":"Staking Contract","completedBy":"codex","branch":"codex/feat-staking","nextAI":"cursor"}
+```
+
+---
+
+**API Server ready for Custom GPT and MCP integration!**
 

@@ -8,6 +8,24 @@
         "."
       ]
     },
+    "proofofinfluence-collab": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "api-server/mcpServer.ts"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_CHANNEL_COORDINATION": "${SLACK_CHANNEL_COORDINATION}",
+        "SLACK_CHANNEL_CURSOR": "${SLACK_CHANNEL_CURSOR}",
+        "SLACK_CHANNEL_CODEX": "${SLACK_CHANNEL_CODEX}",
+        "SLACK_CHANNEL_REPLIT": "${SLACK_CHANNEL_REPLIT}",
+        "SLACK_CHANNEL_COMMITS": "${SLACK_CHANNEL_COMMITS}",
+        "MCP_AI_IDENTITY": "replit"
+      }
+    },
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],

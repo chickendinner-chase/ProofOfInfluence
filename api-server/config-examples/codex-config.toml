@@ -1,0 +1,26 @@
+# Codex AI Configuration for ProofOfInfluence MCP Server
+# Place this in ~/.codex/config.toml or merge with your existing config
+
+# Local stdio connection (development)
+[mcp_servers.proofofinfluence-local]
+command = "node"
+args = ["D:/chickendinner/ProofOfInfluence/api-server/dist/mcpServer.js"]
+
+[mcp_servers.proofofinfluence-local.env]
+MCP_AI_IDENTITY = "codex"
+GITHUB_TOKEN = "your-github-token-here"
+SLACK_BOT_TOKEN = "your-slack-token-here"
+SLACK_CHANNEL_COORDINATION = "C01234567"
+SLACK_CHANNEL_CURSOR = "C01234568"
+SLACK_CHANNEL_CODEX = "C01234569"
+SLACK_CHANNEL_REPLIT = "C01234570"
+SLACK_CHANNEL_COMMITS = "C01234571"
+
+# Remote HTTP connection (cloud deployment)
+[mcp_servers.proofofinfluence-cloud]
+type = "http"
+url = "https://your-repl.replit.app/mcp"
+headers = { "X-AI-Identity" = "codex" }
+
+
+
