@@ -154,7 +154,7 @@ Response:
       "title": "Implement Market API",
       "url": "https://...",
       "state": "open",
-      "labels": ["@cursor", "status:in-progress"],
+      "labels": ["ai:cursor", "status:in-progress"],
       "created_at": "2025-11-11T10:00:00Z"
     }
   ],

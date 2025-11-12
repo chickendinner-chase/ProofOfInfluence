@@ -30,8 +30,8 @@ export class GitHubClient {
       console.log('   Title:', params.title);
       console.log('   Assignee:', params.assignee);
       
-      // ✅ 简化 labels - GitHub 会自动创建不存在的标签
-      const labels = [`ai:${params.assignee}`];
+      // ✅ 使用统一的 ai: 前缀和初始状态
+      const labels = [`ai:${params.assignee}`, 'status:ready'];
       
       if (params.priority) {
         labels.push(params.priority);
@@ -82,7 +82,7 @@ export class GitHubClient {
     const labels: string[] = [];
     
     if (params.assignee) {
-      labels.push(`@${params.assignee}`);
+      labels.push(`ai:${params.assignee}`);
     }
     
     if (params.status) {
@@ -215,7 +215,7 @@ export class GitHubClient {
       const labels = issue.labels.map(l => typeof l === 'string' ? l : l.name || '');
       
       ['cursor', 'codex', 'replit'].forEach(ai => {
-        if (labels.includes(`@${ai}`)) {
+        if (labels.includes(`ai:${ai}`)) {
           summary.by_ai[ai as keyof typeof summary.by_ai].total++;
           if (issue.state === 'open') {
             summary.by_ai[ai as keyof typeof summary.by_ai].open++;
