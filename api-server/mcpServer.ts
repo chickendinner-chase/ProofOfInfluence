@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type express from "express";
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import type { McpServer as McpServerType } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp";
+import type { McpServer as McpServerType } from "@modelcontextprotocol/sdk/server/mcp";
 import type { CollaborationTools } from "./tools.js";
 import type { AIIdentity, TaskStatus } from "./types.js";
 

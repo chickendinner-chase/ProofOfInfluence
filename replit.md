@@ -197,17 +197,23 @@ Preferred communication style: Simple, everyday language.
 
 **Model Context Protocol (MCP) Integration:**
 - Configuration file: `mcp-config.json`
-- MCP servers configured for enhanced AI capabilities:
+- **Custom MCP Server** (`api-server/mcpServer.ts`):
+  - Unified collaboration server for multi-AI development
+  - **13 MCP Tools**: GitHub task management, Slack notifications, AI-to-AI communication
+  - Supports stdio (local) and HTTP/SSE (cloud) transports
+  - AI identity resolution via environment variables or HTTP headers
+  - Used by Cursor, Codex (gpt-5-codex), Replit Agent, Custom GPT
+- **Standard MCP Servers**:
   - **Filesystem Server** - Secure file operations across project directory
   - **GitHub Server** - Repository access and manipulation using `GITHUB_TOKEN`
   - **Memory Server** - Persistent knowledge graph for project context
   - **Fetch Server** - Web content retrieval (requires user confirmation)
-- MCP enables Replit Agent to:
-  - Access and analyze project files systematically
-  - Interact with GitHub repository (issues, PRs, code)
-  - Maintain project knowledge across sessions
-  - Fetch external documentation and resources
+- **Architecture**:
+  - Unified tool layer (`CollaborationTools`) shared between REST API and MCP
+  - Dual protocol support: REST API (Custom GPT) + MCP (Cursor/Codex/Replit)
+  - Configuration examples in `api-server/config-examples/`
 - Transport: stdio via NPX for all servers
+- Documentation: `api-server/README.md`, `api-server/MCP_IMPLEMENTATION_COMPLETE.md`
 
 ### Development Tools
 
