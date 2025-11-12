@@ -499,13 +499,3 @@ app.listen(PORT, () => {
 });
 
 export default app;
-
-
-    console.log(`   POST  /api/slack/deployment`);
-    console.log(`   POST  /api/slack/commit`);
-    console.log(`   POST  /api/slack/message`);
-  }
-});
-
-export default app;
-
