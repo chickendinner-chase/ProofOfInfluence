@@ -2,10 +2,12 @@ import React, { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import POITokenPrice from "@/components/POITokenPrice";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import {
   Rocket,
   Layers,
@@ -23,6 +25,9 @@ import {
   Wallet,
   BarChart3,
   DollarSign,
+  Gift,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 
 // i18n/config (ZH only for now; extendable to EN)
@@ -135,14 +140,63 @@ const zh = {
   },
 };
 
+// Campaign Stats Interface
+interface CampaignSummary {
+  totalUsers: number;
+  totalRewardsDistributed: string;
+  earlyBirdSlotsRemaining: number | null;
+}
+
 export default function Landing() {
   const [lang, setLang] = useState("zh");
   const t = useMemo(() => zh, [lang]);
   const { isAuthenticated } = useAuth();
 
+  // Fetch campaign summary stats
+  const { data: campaignStats } = useQuery<CampaignSummary>({
+    queryKey: ["/api/campaign/summary"],
+    queryFn: async () => {
+      const response = await fetch("/api/campaign/summary");
+      if (!response.ok) throw new Error("Failed to fetch campaign stats");
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <Header lang={lang} />
+
+      {/* TGE Campaign Banner */}
+      <section className="bg-gradient-to-r from-blue-600 to-purple-600 py-4">
+        <div className="max-w-7xl mx-auto px-4">
+          <Alert className="bg-transparent border-0 p-0">
+            <AlertDescription className="flex flex-col md:flex-row items-center justify-between gap-4 text-white">
+              <div className="flex items-center gap-3 flex-1">
+                <Rocket className="w-6 h-6 flex-shrink-0" />
+                <div className="text-center md:text-left">
+                  <span className="font-bold text-lg">🚀 TGE 即将启动！</span>
+                  <span className="mx-2 hidden md:inline">|</span>
+                  <span className="block md:inline">早鸟空投进行中，完成任务赚取免费 POI 代币</span>
+                </div>
+              </div>
+              <div className="flex gap-3 flex-shrink-0">
+                <Link href="/tge">
+                  <Button size="sm" variant="secondary" className="bg-white text-blue-600 hover:bg-slate-100">
+                    查看详情
+                  </Button>
+                </Link>
+                <Link href="/early-bird">
+                  <Button size="sm" variant="outline" className="border-white text-white hover:bg-white/10">
+                    <Gift className="mr-2 w-4 h-4" />
+                    领取空投
+                  </Button>
+                </Link>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </section>
 
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 py-16 md:py-24">
@@ -190,6 +244,114 @@ export default function Landing() {
               </Button>
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Campaign Stats Bar */}
+      {campaignStats && (
+        <section className="bg-slate-800/50 border-y border-slate-700 py-8">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <Users className="w-5 h-5 text-blue-400" />
+                  <h3 className="text-sm font-semibold text-slate-400 uppercase">注册用户</h3>
+                </div>
+                <p className="text-3xl font-bold text-white">
+                  {campaignStats.totalUsers.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <Coins className="w-5 h-5 text-green-400" />
+                  <h3 className="text-sm font-semibold text-slate-400 uppercase">POI 已分发</h3>
+                </div>
+                <p className="text-3xl font-bold text-white">
+                  {parseFloat(campaignStats.totalRewardsDistributed).toLocaleString()}
+                </p>
+              </div>
+
+              {campaignStats.earlyBirdSlotsRemaining !== null && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="w-5 h-5 text-yellow-400" />
+                    <h3 className="text-sm font-semibold text-slate-400 uppercase">早鸟名额剩余</h3>
+                  </div>
+                  <p className="text-3xl font-bold text-yellow-400">
+                    {campaignStats.earlyBirdSlotsRemaining.toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* How to Get Started Section */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-white mb-4">快速开始</h2>
+          <p className="text-xl text-slate-400">三个简单步骤，开启您的 POI 之旅</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="p-8 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8 text-blue-400" />
+              </div>
+              <div className="text-4xl font-bold text-blue-400">1</div>
+              <h3 className="text-2xl font-bold text-white">注册账户</h3>
+              <p className="text-slate-400 leading-relaxed">
+                创建您的 ProofOfInfluence 账户，验证邮箱即可开始
+              </p>
+              <Link href="/login">
+                <Button className="mt-4 bg-blue-600 hover:bg-blue-700">
+                  立即注册
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card className="p-8 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+                <Gift className="w-8 h-8 text-green-400" />
+              </div>
+              <div className="text-4xl font-bold text-green-400">2</div>
+              <h3 className="text-2xl font-bold text-white">参与早鸟空投</h3>
+              <p className="text-slate-400 leading-relaxed">
+                完成简单任务，赚取免费 POI 代币奖励
+              </p>
+              <Link href="/early-bird">
+                <Button className="mt-4 bg-green-600 hover:bg-green-700">
+                  开始赚取
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card className="p-8 bg-slate-800/50 border-slate-700 hover:bg-slate-800 transition-all text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto">
+                <Rocket className="w-8 h-8 text-purple-400" />
+              </div>
+              <div className="text-4xl font-bold text-purple-400">3</div>
+              <h3 className="text-2xl font-bold text-white">加入 TGE</h3>
+              <p className="text-slate-400 leading-relaxed">
+                在代币启动日交易 $POI，享受早鸟福利
+              </p>
+              <Link href="/tge">
+                <Button className="mt-4 bg-purple-600 hover:bg-purple-700">
+                  了解 TGE
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </Card>
         </div>
       </section>
 

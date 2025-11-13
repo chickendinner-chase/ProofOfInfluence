@@ -983,6 +983,14 @@ export class DatabaseStorage implements IStorage {
     return subscription;
   }
 
+  // User Statistics
+  async getTotalUsersCount(): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(users);
+    return Number(result?.count ?? 0);
+  }
+
   // Early-Bird Tasks
   async getEarlyBirdTasks(): Promise<EarlyBirdTask[]> {
     return await db

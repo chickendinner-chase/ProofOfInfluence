@@ -799,6 +799,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Campaign Summary Stats (for Landing Page)
+  app.get("/api/campaign/summary", async (req, res) => {
+    try {
+      // Get total users count
+      const totalUsers = await storage.getTotalUsersCount();
+      
+      // Get early-bird stats
+      const earlyBirdStats = await storage.getEarlyBirdStats();
+      
+      const response = {
+        totalUsers,
+        totalRewardsDistributed: earlyBirdStats.totalRewardsDistributed,
+        earlyBirdSlotsRemaining: earlyBirdStats.config?.participantCap
+          ? Math.max(0, earlyBirdStats.config.participantCap - earlyBirdStats.totalParticipants)
+          : null,
+      };
+      
+      res.json(response);
+    } catch (error) {
+      console.error("Error fetching campaign summary:", error);
+      res.status(500).json({ message: "Failed to fetch campaign summary" });
+    }
+  });
+
   // Early-Bird Routes
   // Get campaign statistics
   app.get("/api/early-bird/stats", async (req, res) => {
