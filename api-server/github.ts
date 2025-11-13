@@ -187,6 +187,38 @@ export class GitHubClient {
   }
 
   /**
+   * 重新分配任务给新的 AI
+   * 移除旧的 ai: 标签，添加新的 ai: 标签
+   */
+  async reassignTask(issueNumber: number, newAssignee: 'cursor' | 'codex' | 'replit', newStatus?: string) {
+    const issue = await this.octokit.issues.get({
+      owner: OWNER,
+      repo: REPO,
+      issue_number: issueNumber
+    });
+
+    const currentLabels = issue.data.labels
+      .map(l => typeof l === 'string' ? l : l.name || '')
+      .filter(l => !l.startsWith('ai:') && !l.startsWith('status:'));
+
+    // 添加新的 AI 和状态标签
+    const updatedLabels = [
+      ...currentLabels,
+      `ai:${newAssignee}`,
+      `status:${newStatus || 'ready'}`
+    ];
+
+    await this.octokit.issues.update({
+      owner: OWNER,
+      repo: REPO,
+      issue_number: issueNumber,
+      labels: updatedLabels
+    });
+
+    return { success: true, assignee: newAssignee, status: newStatus || 'ready' };
+  }
+
+  /**
    * Get project status summary
    */
   async getProjectStatus() {

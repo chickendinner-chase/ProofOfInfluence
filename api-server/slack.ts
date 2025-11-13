@@ -86,14 +86,10 @@ export class SlackClient {
     description?: string;
   }): Promise<void> {
     const channelName = task.assignee === 'cursor' ? 'cursor' : task.assignee === 'codex' ? 'codex' : 'replit';
-    const text = `📋 新任务 #${task.taskId}
-**${task.title}**
-分配给：${task.assignee}
-${task.priority ? `优先级：${task.priority}` : ''}
-${task.description ? `\n${task.description}` : ''}`;
-
-    await this.sendToChannel(channelName, text);
-    await this.sendToChannel('coordination', `✅ 任务 #${task.taskId} 已创建并分配给 ${task.assignee}`);
+    const priority = task.priority ? ` [${task.priority}]` : '';
+    
+    await this.sendToChannel(channelName, `📋 New #${task.taskId}${priority}: ${task.title}`);
+    await this.sendToChannel('coordination', `✅ #${task.taskId} → ${task.assignee}`);
   }
 
   async notifyTaskCompleted(task: {
@@ -129,12 +125,8 @@ ${task.description ? `\n${task.description}` : ''}`;
     newStatus: string,
     note?: string
   ): Promise<void> {
-    const text = `🔄 任务状态更新 #${taskId}
-**${title}**
-${oldStatus} → ${newStatus}
-${note ? `\n备注：${note}` : ''}`;
-
-    await this.sendToChannel('coordination', text);
+    const noteText = note ? ` (${note})` : '';
+    await this.sendToChannel('coordination', `🔄 #${taskId} ${oldStatus}→${newStatus}${noteText}`);
   }
 
   async notifyDeployment(deployment: {

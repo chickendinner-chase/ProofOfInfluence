@@ -145,7 +145,7 @@ export class CollaborationTools {
     // 添加开始工作的评论
     await this.github.addComment(
       taskId,
-      `🤖 ${ai.toUpperCase()} AI 开始处理此任务`
+      `🤖 ${ai} started`
     );
     
     // Slack 通知状态变更
@@ -178,6 +178,13 @@ export class CollaborationTools {
     });
 
     if (readyTasks.length === 0) {
+      // Slack 通知：没有待办任务
+      if (this.slack) {
+        await this.slack.sendToChannel(
+          ai,
+          `ℹ️ No ready tasks`
+        );
+      }
       return {
         started: false,
         message: `No ready tasks found for ${ai}`,
@@ -188,6 +195,14 @@ export class CollaborationTools {
     // 领取第一个任务
     const task = readyTasks[0];
     await this.claimTask(ai, task.number);
+
+    // Slack 通知：开始工作
+    if (this.slack) {
+      await this.slack.sendToChannel(
+        "coordination",
+        `🚀 ${ai} started #${task.number}`
+      );
+    }
 
     return {
       started: true,
@@ -231,27 +246,33 @@ export class CollaborationTools {
     // 获取任务详情
     const task = await this.github.getTask(taskId);
 
-    // 更新状态为 needs-review
-    await this.github.updateTaskStatus(taskId, "needs-review");
+    // 重新分配任务给下一个 AI，并设置状态为 ready
+    await this.github.reassignTask(taskId, params.nextAI, "ready");
 
     // 添加完成和交接评论
-    const handoffMessage = params.message || "任务完成，请接手处理";
+    const handoffMessage = params.message || "ready";
     await this.github.addComment(
       taskId,
-      `✅ ${ai.toUpperCase()} 已完成工作\n\n@${params.nextAI} ${handoffMessage}`
+      `✅ ${ai} done → @${params.nextAI} ${handoffMessage}`
     );
 
     // 发送 Slack 通知给下一个 AI
     if (this.slack) {
       await this.slack.sendToChannel(
         params.nextAI,
-        `🔔 ${ai} 完成了任务 #${taskId}\n**${task.title}**\n${handoffMessage}\n对我说 "开始工作" 来处理此任务\n${task.url}`
+        `🔔 ${ai}→you #${taskId}: ${handoffMessage}\n${task.url}`
       );
 
       // 通知协调频道
       await this.slack.sendToChannel(
         "coordination",
-        `🔄 任务交接: ${ai} → ${params.nextAI}\n任务 #${taskId}: ${task.title}`
+        `🔄 ${ai}✅ → ${params.nextAI}🔜 #${taskId}`
+      );
+      
+      // 通知原 AI 频道确认完成
+      await this.slack.sendToChannel(
+        ai,
+        `✅ #${taskId} → ${params.nextAI}`
       );
     }
 
