@@ -25,6 +25,7 @@ import Compliance from "@/pages/Compliance";
 import Changelog from "@/pages/Changelog";
 import Company from "@/pages/Company";
 import Market from "@/pages/Market";
+import TGE from "@/pages/TGE";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -39,6 +40,9 @@ function Router() {
       
       {/* Auth */}
       <Route path="/login" component={Login} />
+      
+      {/* TGE & Campaign Routes */}
+      <Route path="/tge" component={TGE} />
       
       {/* Information Architecture Routes */}
       <Route path="/products" component={Products} />

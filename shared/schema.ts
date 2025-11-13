@@ -450,3 +450,21 @@ export type MerchantOrder = typeof merchantOrders.$inferSelect;
 
 export type InsertTaxReport = z.infer<typeof insertTaxReportSchema>;
 export type TaxReport = typeof taxReports.$inferSelect;
+
+// TGE Email Subscriptions table
+export const tgeEmailSubscriptions = pgTable("tge_email_subscriptions", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  source: varchar("source", { length: 50 }).default("tge_page"), // tge_page, early_bird, etc.
+  subscribed: boolean("subscribed").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTgeEmailSubscriptionSchema = createInsertSchema(tgeEmailSubscriptions, {
+  email: z.string().email("Invalid email address"),
+  source: z.string().optional(),
+});
+
+export type InsertTgeEmailSubscription = z.infer<typeof insertTgeEmailSubscriptionSchema>;
+export type TgeEmailSubscription = typeof tgeEmailSubscriptions.$inferSelect;

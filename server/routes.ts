@@ -755,6 +755,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // TGE Routes
+  // Get TGE configuration
+  app.get("/api/tge/config", async (req, res) => {
+    try {
+      const config = {
+        launchDate: process.env.TGE_LAUNCH_DATE || "2025-12-31T00:00:00Z",
+        chain: process.env.TGE_CHAIN || "Base",
+        dex: process.env.TGE_DEX || "Uniswap V2",
+        initialPrice: process.env.TGE_INITIAL_PRICE || "TBD",
+      };
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching TGE config:", error);
+      res.status(500).json({ message: "Failed to fetch TGE configuration" });
+    }
+  });
+
+  // Subscribe to TGE email updates
+  app.post("/api/tge/subscribe", async (req, res) => {
+    try {
+      const { email, source } = req.body;
+      
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+
+      const subscription = await storage.subscribeTgeEmail(email, source || "tge_page");
+      res.json({ 
+        message: "Successfully subscribed to TGE updates",
+        subscription 
+      });
+    } catch (error: any) {
+      // Handle duplicate email error
+      if (error.message?.includes("duplicate") || error.code === "23505") {
+        return res.status(200).json({ 
+          message: "You are already subscribed to TGE updates" 
+        });
+      }
+      
+      console.error("Error subscribing to TGE updates:", error);
+      res.status(500).json({ message: "Failed to subscribe to TGE updates" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

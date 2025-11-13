@@ -16,6 +16,7 @@ import {
   products,
   merchantOrders,
   taxReports,
+  tgeEmailSubscriptions,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -49,6 +50,8 @@ import {
   type InsertMerchantOrder,
   type TaxReport,
   type InsertTaxReport,
+  type TgeEmailSubscription,
+  type InsertTgeEmailSubscription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, or, lte } from "drizzle-orm";
@@ -950,6 +953,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(taxReports.id, reportId))
       .returning();
     return updated;
+  }
+
+  // TGE Email Subscription
+  async subscribeTgeEmail(email: string, source?: string): Promise<TgeEmailSubscription> {
+    const [subscription] = await db
+      .insert(tgeEmailSubscriptions)
+      .values({
+        email: email.toLowerCase().trim(),
+        source: source || 'tge_page',
+      })
+      .onConflictDoUpdate({
+        target: tgeEmailSubscriptions.email,
+        set: {
+          subscribed: true,
+          updatedAt: sql`NOW()`,
+        },
+      })
+      .returning();
+    return subscription;
   }
 }
 
