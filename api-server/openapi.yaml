@@ -196,7 +196,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [ready, in-progress, needs-review, blocked, done]
+                  enum: [ready, in-progress, testing, blocked, done]
       responses:
         '200':
           description: Status updated
