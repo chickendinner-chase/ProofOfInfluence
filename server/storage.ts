@@ -22,6 +22,7 @@ import {
   earlyBirdConfig,
   referralCodes,
   referrals,
+  airdropEligibility,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -67,6 +68,8 @@ import {
   type InsertReferralCode,
   type Referral,
   type InsertReferral,
+  type AirdropEligibility,
+  type InsertAirdropEligibility,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, or, lte } from "drizzle-orm";
@@ -1241,6 +1244,77 @@ export class DatabaseStorage implements IStorage {
       .where(eq(referrals.inviteeId, userId));
     
     return !!referral;
+  }
+
+  // Airdrop
+  async checkAirdropEligibility(userIdOrAddress: string): Promise<{
+    eligible: boolean;
+    amount: number;
+    claimed: boolean;
+    claimDate?: string;
+    vestingInfo?: string;
+  }> {
+    // Try to find by userId or walletAddress
+    const [result] = await db
+      .select()
+      .from(airdropEligibility)
+      .where(
+        or(
+          eq(airdropEligibility.userId, userIdOrAddress),
+          eq(airdropEligibility.walletAddress, userIdOrAddress.toLowerCase())
+        )
+      );
+
+    if (!result) {
+      return {
+        eligible: false,
+        amount: 0,
+        claimed: false,
+      };
+    }
+
+    return {
+      eligible: result.eligible,
+      amount: result.amount,
+      claimed: result.claimed,
+      claimDate: result.claimDate?.toISOString(),
+      vestingInfo: result.vestingInfo || undefined,
+    };
+  }
+
+  async claimAirdrop(userId: string, walletAddress: string): Promise<AirdropEligibility> {
+    const [updated] = await db
+      .update(airdropEligibility)
+      .set({
+        claimed: true,
+        claimDate: sql`NOW()`,
+        updatedAt: sql`NOW()`,
+      })
+      .where(
+        and(
+          or(
+            eq(airdropEligibility.userId, userId),
+            eq(airdropEligibility.walletAddress, walletAddress.toLowerCase())
+          ),
+          eq(airdropEligibility.claimed, false)
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      throw new Error("Airdrop not found or already claimed");
+    }
+
+    return updated;
+  }
+
+  async createAirdropEligibility(data: InsertAirdropEligibility): Promise<AirdropEligibility> {
+    const [created] = await db
+      .insert(airdropEligibility)
+      .values(data)
+      .returning();
+    
+    return created;
   }
 }
 

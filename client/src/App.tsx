@@ -28,6 +28,7 @@ import Market from "@/pages/Market";
 import TGE from "@/pages/TGE";
 import EarlyBird from "@/pages/EarlyBird";
 import Referral from "@/pages/Referral";
+import Airdrop from "@/pages/Airdrop";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/tge" component={TGE} />
       <Route path="/early-bird" component={EarlyBird} />
       <Route path="/referral" component={Referral} />
+      <Route path="/airdrop" component={Airdrop} />
       
       {/* Information Architecture Routes */}
       <Route path="/products" component={Products} />

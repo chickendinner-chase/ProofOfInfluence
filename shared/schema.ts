@@ -558,3 +558,24 @@ export const insertReferralSchema = createInsertSchema(referrals);
 
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
 export type Referral = typeof referrals.$inferSelect;
+
+// Airdrop Eligibility table
+export const airdropEligibility = pgTable("airdrop_eligibility", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").unique().references(() => users.id, { onDelete: "cascade" }),
+  walletAddress: varchar("wallet_address", { length: 42 }).unique(),
+  amount: integer("amount").notNull(), // POI amount
+  eligible: boolean("eligible").default(true).notNull(),
+  claimed: boolean("claimed").default(false).notNull(),
+  claimDate: timestamp("claim_date"),
+  vestingInfo: text("vesting_info"), // Optional vesting details
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("airdrop_wallet_idx").on(table.walletAddress),
+]);
+
+export const insertAirdropEligibilitySchema = createInsertSchema(airdropEligibility);
+
+export type InsertAirdropEligibility = z.infer<typeof insertAirdropEligibilitySchema>;
+export type AirdropEligibility = typeof airdropEligibility.$inferSelect;

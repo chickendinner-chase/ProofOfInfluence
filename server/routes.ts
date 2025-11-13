@@ -1000,6 +1000,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Airdrop Routes
+  // Check airdrop eligibility
+  app.get("/api/airdrop/check", async (req: any, res) => {
+    try {
+      let userIdOrAddress: string;
+
+      // If authenticated, use userId; otherwise use query param address
+      if (req.user?.claims?.sub) {
+        userIdOrAddress = req.user.claims.sub;
+      } else if (req.query.address) {
+        userIdOrAddress = req.query.address as string;
+      } else {
+        return res.status(400).json({ message: "Address or authentication required" });
+      }
+
+      const eligibility = await storage.checkAirdropEligibility(userIdOrAddress);
+      res.json(eligibility);
+    } catch (error) {
+      console.error("Error checking airdrop eligibility:", error);
+      res.status(500).json({ message: "Failed to check airdrop eligibility" });
+    }
+  });
+
+  // Claim airdrop (authenticated)
+  app.post("/api/airdrop/claim", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { walletAddress } = req.body;
+
+      if (!walletAddress) {
+        return res.status(400).json({ message: "Wallet address is required" });
+      }
+
+      // Verify eligibility first
+      const eligibility = await storage.checkAirdropEligibility(userId);
+      if (!eligibility.eligible) {
+        return res.status(403).json({ message: "Not eligible for airdrop" });
+      }
+
+      if (eligibility.claimed) {
+        return res.status(400).json({ message: "Airdrop already claimed" });
+      }
+
+      // Mark as claimed
+      const result = await storage.claimAirdrop(userId, walletAddress);
+      
+      // TODO: Trigger actual token distribution (via smart contract or manual process)
+      // For MVP, we just mark it as claimed in the database
+      
+      res.json({
+        message: "Airdrop claimed successfully",
+        amount: result.amount,
+        claimDate: result.claimDate,
+      });
+    } catch (error: any) {
+      console.error("Error claiming airdrop:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to claim airdrop" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
