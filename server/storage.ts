@@ -20,6 +20,8 @@ import {
   earlyBirdTasks,
   userEarlyBirdProgress,
   earlyBirdConfig,
+  referralCodes,
+  referrals,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -61,6 +63,10 @@ import {
   type InsertUserEarlyBirdProgress,
   type EarlyBirdConfig,
   type InsertEarlyBirdConfig,
+  type ReferralCode,
+  type InsertReferralCode,
+  type Referral,
+  type InsertReferral,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, or, lte } from "drizzle-orm";
@@ -1106,6 +1112,135 @@ export class DatabaseStorage implements IStorage {
   async createEarlyBirdConfig(config: InsertEarlyBirdConfig): Promise<EarlyBirdConfig> {
     const [created] = await db.insert(earlyBirdConfig).values(config).returning();
     return created;
+  }
+
+  // Referral Program
+  async getOrCreateReferralCode(userId: string): Promise<ReferralCode> {
+    // Check if user already has a referral code
+    const [existing] = await db
+      .select()
+      .from(referralCodes)
+      .where(eq(referralCodes.userId, userId));
+
+    if (existing) {
+      return existing;
+    }
+
+    // Generate a unique referral code
+    const code = this.generateReferralCode();
+    const [created] = await db
+      .insert(referralCodes)
+      .values({
+        userId,
+        referralCode: code,
+      })
+      .returning();
+    
+    return created;
+  }
+
+  private generateReferralCode(): string {
+    // Generate a random 8-character alphanumeric code
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  async createReferral(inviterId: string, inviteeId: string, referralCode: string): Promise<Referral> {
+    const [referral] = await db
+      .insert(referrals)
+      .values({
+        inviterId,
+        inviteeId,
+        referralCode,
+        status: 'registered',
+        inviterRewardAmount: 10, // Default reward
+        inviteeRewardAmount: 5,  // Default reward
+      })
+      .returning();
+    
+    return referral;
+  }
+
+  async getReferralByCode(code: string): Promise<ReferralCode | undefined> {
+    const [referralCode] = await db
+      .select()
+      .from(referralCodes)
+      .where(eq(referralCodes.referralCode, code));
+    
+    return referralCode;
+  }
+
+  async getUserReferralStats(userId: string): Promise<{
+    totalInvites: number;
+    successfulReferrals: number;
+    totalEarned: number;
+    pendingRewards: number;
+  }> {
+    // Get all referrals by this user
+    const userReferrals = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.inviterId, userId));
+
+    const totalInvites = userReferrals.length;
+    const successfulReferrals = userReferrals.filter(r => r.status === 'verified' || r.status === 'activated').length;
+    const totalEarned = userReferrals
+      .filter(r => r.inviterRewarded)
+      .reduce((sum, r) => sum + r.inviterRewardAmount, 0);
+    const pendingRewards = userReferrals
+      .filter(r => !r.inviterRewarded && (r.status === 'verified' || r.status === 'activated'))
+      .reduce((sum, r) => sum + r.inviterRewardAmount, 0);
+
+    return {
+      totalInvites,
+      successfulReferrals,
+      totalEarned,
+      pendingRewards,
+    };
+  }
+
+  async getReferralLeaderboard(limit: number = 10): Promise<Array<{
+    userId: string;
+    username: string;
+    referralCount: number;
+  }>> {
+    const results = await db
+      .select({
+        userId: referrals.inviterId,
+        referralCount: sql<number>`COUNT(*)`,
+      })
+      .from(referrals)
+      .where(or(eq(referrals.status, 'verified'), eq(referrals.status, 'activated')))
+      .groupBy(referrals.inviterId)
+      .orderBy(desc(sql`COUNT(*)`))
+      .limit(limit);
+
+    // Get usernames for top referrers
+    const leaderboard = await Promise.all(
+      results.map(async (entry, index) => {
+        const user = await this.getUser(entry.userId);
+        return {
+          userId: entry.userId,
+          username: user?.username || `用户***${entry.userId.slice(-4)}`,
+          referralCount: Number(entry.referralCount),
+        };
+      })
+    );
+
+    return leaderboard;
+  }
+
+  async hasBeenReferred(userId: string): Promise<boolean> {
+    const [referral] = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.inviteeId, userId));
+    
+    return !!referral;
   }
 }
 

@@ -522,3 +522,39 @@ export const insertEarlyBirdConfigSchema = createInsertSchema(earlyBirdConfig);
 
 export type InsertEarlyBirdConfig = z.infer<typeof insertEarlyBirdConfigSchema>;
 export type EarlyBirdConfig = typeof earlyBirdConfig.$inferSelect;
+
+// Referral Program tables
+// Stores user referral codes and tracking
+export const referralCodes = pgTable("referral_codes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  referralCode: varchar("referral_code", { length: 20 }).notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertReferralCodeSchema = createInsertSchema(referralCodes);
+
+export type InsertReferralCode = z.infer<typeof insertReferralCodeSchema>;
+export type ReferralCode = typeof referralCodes.$inferSelect;
+
+// Stores referral relationships
+export const referrals = pgTable("referrals", {
+  id: serial("id").primaryKey(),
+  inviterId: varchar("inviter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  inviteeId: varchar("invitee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  referralCode: varchar("referral_code", { length: 20 }).notNull(),
+  status: varchar("status", { length: 20 }).default("registered").notNull(), // registered, verified, activated
+  inviterRewardAmount: integer("inviter_reward_amount").default(0).notNull(),
+  inviteeRewardAmount: integer("invitee_reward_amount").default(0).notNull(),
+  inviterRewarded: boolean("inviter_rewarded").default(false).notNull(),
+  inviteeRewarded: boolean("invitee_rewarded").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("referral_invitee_unique").on(table.inviteeId),
+]);
+
+export const insertReferralSchema = createInsertSchema(referrals);
+
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
+export type Referral = typeof referrals.$inferSelect;

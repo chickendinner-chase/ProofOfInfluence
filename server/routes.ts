@@ -907,6 +907,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Referral Routes
+  // Get user's referral link (authenticated)
+  app.get("/api/referral/link", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const referralCode = await storage.getOrCreateReferralCode(userId);
+      
+      // Generate full referral link
+      const baseUrl = process.env.BASE_URL || "https://proof.in";
+      const referralLink = `${baseUrl}/login?ref=${referralCode.referralCode}`;
+      
+      res.json({
+        referralCode: referralCode.referralCode,
+        referralLink,
+      });
+    } catch (error) {
+      console.error("Error fetching referral link:", error);
+      res.status(500).json({ message: "Failed to fetch referral link" });
+    }
+  });
+
+  // Get user's referral stats (authenticated)
+  app.get("/api/referral/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await storage.getUserReferralStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+      res.status(500).json({ message: "Failed to fetch referral stats" });
+    }
+  });
+
+  // Get referral leaderboard (public)
+  app.get("/api/referral/leaderboard", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const leaderboard = await storage.getReferralLeaderboard(limit);
+      
+      // Format for frontend with rank
+      const formattedLeaderboard = leaderboard.map((entry, index) => ({
+        rank: index + 1,
+        username: entry.username,
+        referralCount: entry.referralCount,
+      }));
+      
+      res.json(formattedLeaderboard);
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+
+  // Process referral code during signup (internal use)
+  app.post("/api/referral/process", isAuthenticated, async (req: any, res) => {
+    try {
+      const inviteeId = req.user.claims.sub;
+      const { referralCode } = req.body;
+      
+      if (!referralCode) {
+        return res.status(400).json({ message: "Referral code is required" });
+      }
+
+      // Check if user was already referred
+      const alreadyReferred = await storage.hasBeenReferred(inviteeId);
+      if (alreadyReferred) {
+        return res.status(400).json({ message: "User has already been referred" });
+      }
+
+      // Find the referral code
+      const code = await storage.getReferralByCode(referralCode);
+      if (!code) {
+        return res.status(404).json({ message: "Invalid referral code" });
+      }
+
+      // Don't allow self-referral
+      if (code.userId === inviteeId) {
+        return res.status(400).json({ message: "Cannot refer yourself" });
+      }
+
+      // Create referral relationship
+      const referral = await storage.createReferral(code.userId, inviteeId, referralCode);
+      
+      res.json({
+        message: "Referral processed successfully",
+        referral,
+      });
+    } catch (error) {
+      console.error("Error processing referral:", error);
+      res.status(500).json({ message: "Failed to process referral" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
