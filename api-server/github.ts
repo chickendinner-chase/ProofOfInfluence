@@ -76,7 +76,7 @@ export class GitHubClient {
    */
   async listTasks(params: {
     assignee?: 'cursor' | 'codex' | 'replit';
-    status?: 'ready' | 'in-progress' | 'needs-review' | 'blocked' | 'done';
+    status?: 'ready' | 'in-progress' | 'testing' | 'blocked' | 'done';
     state?: 'open' | 'closed' | 'all';
   } = {}) {
     const labels: string[] = [];

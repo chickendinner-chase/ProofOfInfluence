@@ -168,12 +168,15 @@ export class CollaborationTools {
 
   /**
    * 自动查询并开始第一个待处理任务
+   * Cursor 查询 ready，Replit 查询 testing
    */
   async startMyWork(ai: AIIdentity) {
-    // 查询状态为 ready 的任务
+    // Replit 查询 testing 状态（接收交接的任务）
+    const targetStatus = ai === "replit" ? "testing" : "ready";
+    
     const readyTasks = await this.github.listTasks({
       assignee: ai,
-      status: "ready",
+      status: targetStatus,
       state: "open",
     });
 
@@ -246,8 +249,8 @@ export class CollaborationTools {
     // 获取任务详情
     const task = await this.github.getTask(taskId);
 
-    // 重新分配任务给下一个 AI，并设置状态为 ready
-    await this.github.reassignTask(taskId, params.nextAI, "ready");
+    // 重新分配任务给下一个 AI，并设置状态为 testing
+    await this.github.reassignTask(taskId, params.nextAI, "testing");
 
     // 添加完成和交接评论
     const handoffMessage = params.message || "ready";
