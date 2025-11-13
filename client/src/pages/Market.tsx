@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -20,6 +23,10 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
+  AlertTriangle,
+  Info,
+  Gift,
+  Rocket,
 } from "lucide-react";
 import type { User } from "@shared/schema";
 import { marketApi } from "@/lib/api";
@@ -196,18 +203,92 @@ export default function Market() {
     );
   }
 
+  // Check if user has zero balance
+  const userBalance = parseFloat(user?.poiBalance || "0");
+  const hasZeroBalance = userBalance === 0;
+
+  // Check if TGE is active (can be controlled via env or config)
+  const isTGEActive = process.env.NODE_ENV === 'production' && process.env.TGE_ACTIVE === 'true';
+  const isPreTGE = !isTGEActive;
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Pre-TGE Notice Banner */}
+        {isPreTGE && (
+          <Alert className="mb-6 bg-blue-900/20 border-blue-500/50">
+            <Info className="h-5 w-5 text-blue-400" />
+            <AlertDescription className="text-blue-100">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <strong className="font-semibold">注意：</strong> 当前为测试环境。
+                  $POI 代币将在 TGE 启动后正式上市交易。
+                  <Link href="/tge">
+                    <span className="ml-2 underline cursor-pointer hover:text-blue-300">
+                      了解 TGE 详情 →
+                    </span>
+                  </Link>
+                </div>
+                <Badge variant="outline" className="border-blue-500 text-blue-400 flex-shrink-0">
+                  <Clock className="w-3 h-3 mr-1" />
+                  测试环境
+                </Badge>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Zero Balance Guidance */}
+        {hasZeroBalance && (
+          <Card className="mb-6 p-6 bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-700/50">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-yellow-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  您还没有 POI 代币
+                </h3>
+                <p className="text-slate-300 mb-4">
+                  参与我们的早鸟空投计划，完成简单任务即可免费获得 POI 代币。
+                  或者等待 TGE 启动后在市场上购买。
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/early-bird">
+                    <Button className="bg-green-600 hover:bg-green-700">
+                      <Gift className="mr-2 w-4 h-4" />
+                      获取免费 POI
+                    </Button>
+                  </Link>
+                  <Link href="/tge">
+                    <Button variant="outline" className="border-yellow-600 text-yellow-400 hover:bg-yellow-900/20">
+                      <Rocket className="mr-2 w-4 h-4" />
+                      了解 TGE
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            交易市场
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-white">
+              交易市场
+            </h1>
+            {isPreTGE && (
+              <Badge variant="outline" className="border-slate-600 text-slate-400">
+                测试版
+              </Badge>
+            )}
+          </div>
           <p className="text-slate-400">
             去中心化的 $POI 代币交易平台，支持实时报价和低手续费交易
+            {isPreTGE && " • 当前为测试环境，所有数据将在 TGE 后重置"}
           </p>
         </div>
 
