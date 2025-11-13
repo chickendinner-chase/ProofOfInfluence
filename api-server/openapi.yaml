@@ -91,7 +91,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [ready, in-progress, needs-review, blocked, done]
+            enum: [ready, in-progress, testing, blocked, done]
           description: Filter by task status
         - name: state
           in: query
