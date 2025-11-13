@@ -3,11 +3,11 @@ export type AIIdentity = "cursor" | "codex" | "replit";
 export type TaskPriority = "low" | "medium" | "high";
 
 export type TaskStatus =
-  | "ready"
-  | "in-progress"
-  | "needs-review"
-  | "blocked"
-  | "done";
+  | "ready"       // Custom GPT 创建任务
+  | "in-progress" // Cursor 开发中
+  | "testing"     // Replit 测试中
+  | "blocked"     // 阻塞（异常）
+  | "done";       // 完成
 
 export interface CreateTaskParams {
   title: string;

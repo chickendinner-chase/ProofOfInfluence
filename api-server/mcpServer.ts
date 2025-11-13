@@ -12,7 +12,7 @@ const AI_IDENTITY_VALUES = ["cursor", "codex", "replit"] as const;
 const TASK_STATUS_VALUES = [
   "ready",
   "in-progress",
-  "needs-review",
+  "testing",
   "blocked",
   "done",
 ] as const;
