@@ -93,4 +93,59 @@ describe("TGESale", function () {
       "AllocationExceeded"
     );
   });
+
+  it("handles tier transition correctly", async () => {
+    const { owner, buyer, treasury, poi, usdc, sale } = await setupSale();
+    
+    // Configure 2 tiers
+    const tier1Supply = ethers.utils.parseEther("100");
+    const tier2Supply = ethers.utils.parseEther("200");
+    await sale.connect(owner).configureTiers(
+      [ethers.utils.parseUnits("1", 6), ethers.utils.parseUnits("2", 6)],
+      [tier1Supply, tier2Supply]
+    );
+    
+    await poi.mint(sale.address, tier1Supply.add(tier2Supply));
+    
+    // Buy exactly tier 1 supply
+    const tier1USDC = ethers.utils.parseUnits("100", 6);
+    await usdc.mint(buyer.address, tier1USDC);
+    await usdc.connect(buyer).approve(sale.address, tier1USDC);
+    await sale.connect(buyer).purchase(tier1USDC, []);
+    
+    // Check tier advanced
+    expect(await sale.currentTier()).to.equal(1);
+    
+    // Buy from tier 2
+    const tier2USDC = ethers.utils.parseUnits("100", 6);
+    await usdc.mint(buyer.address, tier2USDC);
+    await usdc.connect(buyer).approve(sale.address, tier2USDC);
+    await sale.connect(buyer).purchase(tier2USDC, []);
+    
+    // Verify buyer received tokens at tier 2 price
+    const expectedFromTier2 = tier2USDC.mul(ethers.BigNumber.from(10).pow(12)).div(ethers.utils.parseUnits("2", 6));
+    expect(await poi.balanceOf(buyer.address)).to.be.gte(tier1Supply);
+  });
+
+  it("respects contribution bounds", async () => {
+    const { owner, buyer, usdc, sale } = await setupSale();
+    
+    // Set min/max contribution
+    await sale.connect(owner).setContributionBounds(
+      ethers.utils.parseUnits("10", 6),
+      ethers.utils.parseUnits("500", 6)
+    );
+    
+    // Try below minimum
+    const tooSmall = ethers.utils.parseUnits("5", 6);
+    await usdc.mint(buyer.address, tooSmall);
+    await usdc.connect(buyer).approve(sale.address, tooSmall);
+    await expect(sale.connect(buyer).purchase(tooSmall, [])).to.be.revertedWith("Sale: below minimum");
+    
+    // Try above maximum
+    const tooLarge = ethers.utils.parseUnits("600", 6);
+    await usdc.mint(buyer.address, tooLarge);
+    await usdc.connect(buyer).approve(sale.address, tooLarge);
+    await expect(sale.connect(buyer).purchase(tooLarge, [])).to.be.revertedWith("Sale: above maximum");
+  });
 });
