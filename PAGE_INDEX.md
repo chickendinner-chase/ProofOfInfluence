@@ -8,6 +8,7 @@
 
 ### 1. Landing - 首页
 **路由**: `/`
+**生产环境**: https://www.aceexventures.com/
 **文件**: `client/src/pages/Landing.tsx`
 **功能**: 
 - Hero 区域 + 双主题 CTA
@@ -22,6 +23,7 @@
 
 ### 2. TGE - 代币发行
 **路由**: `/tge`
+**生产环境**: https://www.aceexventures.com/tge
 **文件**: `client/src/pages/TGE.tsx`
 **功能**:
 - 实时倒计时（天/时/分/秒）
@@ -36,6 +38,7 @@
 
 ### 3. EarlyBird - 早鸟计划
 **路由**: `/early-bird`
+**生产环境**: https://www.aceexventures.com/early-bird
 **文件**: `client/src/pages/EarlyBird.tsx`
 **功能**:
 - 早鸟特权展示
@@ -49,6 +52,7 @@
 
 ### 4. Referral - 推荐计划
 **路由**: `/referral`
+**生产环境**: https://www.aceexventures.com/referral
 **文件**: `client/src/pages/Referral.tsx`
 **功能**:
 - 我的统计卡片
@@ -64,6 +68,7 @@
 
 ### 5. Airdrop - 空投活动
 **路由**: `/airdrop`
+**生产环境**: https://www.aceexventures.com/airdrop
 **文件**: `client/src/pages/Airdrop.tsx`
 **功能**:
 - 用户 XP 统计
@@ -78,6 +83,7 @@
 
 ### 6. Solutions - 解决方案
 **路由**: `/solutions`
+**生产环境**: https://www.aceexventures.com/solutions
 **文件**: `client/src/pages/Solutions.tsx`
 **功能**:
 - 4 大解决方案
@@ -91,6 +97,7 @@
 
 ### 7. Token - 代币信息
 **路由**: `/token`
+**生产环境**: https://www.aceexventures.com/token
 **文件**: `client/src/pages/Token.tsx`
 **功能**:
 - 关键指标（4个）
@@ -105,6 +112,7 @@
 
 ### 8. About - 关于我们
 **路由**: `/about`
+**生产环境**: https://www.aceexventures.com/about
 **文件**: `client/src/pages/About.tsx`
 **功能**:
 - 平台统计（3个）
@@ -118,6 +126,7 @@
 
 ### 9. UseCases - 应用案例
 **路由**: `/use-cases`
+**生产环境**: https://www.aceexventures.com/use-cases
 **文件**: `client/src/pages/UseCases.tsx`
 **功能**:
 - 3 个使用场景
@@ -132,6 +141,7 @@
 
 ### 10. Login - 登录
 **路由**: `/login`
+**生产环境**: https://www.aceexventures.com/login
 **文件**: `client/src/pages/Login.tsx`
 **功能**:
 - 邮箱/密码登录
@@ -146,6 +156,7 @@
 
 ### 11. Dashboard - 仪表盘
 **路由**: `/app`
+**生产环境**: https://www.aceexventures.com/app
 **文件**: `client/src/pages/Dashboard.tsx`
 **功能**:
 - Welcome 欢迎区
@@ -162,6 +173,7 @@
 
 ### 12. Market - 交易市场
 **路由**: `/app/market`
+**生产环境**: https://www.aceexventures.com/app/market
 **文件**: `client/src/pages/Market.tsx`
 **功能**:
 - 市场统计（4个）
@@ -176,6 +188,7 @@
 
 ### 13. Recharge - 充值
 **路由**: `/app/recharge`
+**生产环境**: https://www.aceexventures.com/app/recharge
 **文件**: `client/src/pages/Recharge.tsx`
 **功能**:
 - 步骤指示器
@@ -191,6 +204,7 @@
 
 ### 14. Profile Settings - 个人设置
 **路由**: `/app/settings`
+**生产环境**: https://www.aceexventures.com/app/settings
 **文件**: `client/src/pages/Profile.tsx`
 **功能**:
 - 基础信息编辑
@@ -206,6 +220,7 @@
 
 ### 15. PaymentSuccess - 支付成功
 **路由**: `/payment-success`
+**生产环境**: https://www.aceexventures.com/payment-success
 **文件**: `client/src/pages/PaymentSuccess.tsx`
 **功能**:
 - 成功提示
@@ -219,6 +234,7 @@
 
 ### 16. PublicProfile - 公开主页
 **路由**: `/:username`
+**生产环境**: https://www.aceexventures.com/your-name
 **文件**: `client/src/pages/PublicProfile.tsx`
 **功能**:
 - 用户资料卡片
@@ -234,6 +250,7 @@
 
 ### 17. NotFound - 404
 **路由**: `*` (fallback)
+**生产环境**: https://www.aceexventures.com/not-found
 **文件**: `client/src/pages/not-found.tsx`
 **功能**:
 - 404 错误提示

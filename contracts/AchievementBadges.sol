@@ -35,17 +35,15 @@ contract AchievementBadges is ERC1155, AccessControl {
         return super.supportsInterface(interfaceId);
     }
 
-    function _beforeTokenTransfer(
-        address operator,
+    function _update(
         address from,
         address to,
         uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
+        uint256[] memory amounts
     ) internal override {
         if (from != address(0) && to != address(0)) {
             revert("SBT: non-transferable");
         }
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        super._update(from, to, ids, amounts);
     }
 }
