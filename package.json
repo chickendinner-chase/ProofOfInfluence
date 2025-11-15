@@ -11,7 +11,9 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "compile": "hardhat compile --config hardhat.config.cjs",
+    "test": "hardhat test --config hardhat.config.cjs",
     "deploy:token": "npx tsx scripts/deploy-token.ts",
+    "deploy:poi-tge": "hardhat run scripts/deploy-poi-tge.ts --config hardhat.config.cjs",
     "deploy:liquidity": "npx tsx scripts/add-liquidity-v2.ts",
     "deploy:all": "hardhat run scripts/deploy-and-add-liquidity.ts --config hardhat.config.cjs"
   },
