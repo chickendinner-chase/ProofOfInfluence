@@ -37,7 +37,7 @@ contract TGESale is Ownable {
     bool public whitelistEnabled;
 
     uint256 public minContribution;
-    uint256 public maxContribution;
+    uint256 private _maxContribution;
 
     mapping(address => uint256) public contributedUSDC;
     mapping(address => bool) public blacklist;
@@ -51,6 +51,7 @@ contract TGESale is Ownable {
     event TierConfigured(uint256 indexed tierId, uint256 pricePerToken, uint256 tokenAmount);
     event StageAdvanced(uint256 indexed newTierId);
     event Purchased(address indexed buyer, uint256 usdcAmount, uint256 poiAmount, uint8 tier);
+    event TGEPurchased(address indexed buyer, uint256 baseAmount, uint256 poiAmount);
     event Withdraw(address indexed to, uint256 amount);
     event TreasuryUpdated(address indexed newTreasury);
     event Paused(bool status);
@@ -99,7 +100,7 @@ contract TGESale is Ownable {
      * @param usdcAmount Amount of USDC (6 decimals) contributed.
      * @param proof Merkle proof with the last element containing the encoded allocation cap.
      */
-    function purchase(uint256 usdcAmount, bytes32[] calldata proof) external {
+    function purchase(uint256 usdcAmount, bytes32[] calldata proof) public {
         if (paused) revert SalePaused();
         if (saleStart != 0 && block.timestamp < saleStart) revert SaleNotStarted();
         if (saleEnd != 0 && block.timestamp > saleEnd) revert SaleEnded();
@@ -109,8 +110,8 @@ contract TGESale is Ownable {
         if (minContribution > 0) {
             require(usdcAmount >= minContribution, "Sale: below minimum");
         }
-        if (maxContribution > 0) {
-            require(contributedUSDC[msg.sender] + usdcAmount <= maxContribution, "Sale: above maximum");
+        if (_maxContribution > 0) {
+            require(contributedUSDC[msg.sender] + usdcAmount <= _maxContribution, "Sale: above maximum");
         }
 
         if (whitelistEnabled) {
@@ -137,6 +138,7 @@ contract TGESale is Ownable {
         poiToken.safeTransfer(msg.sender, poiAmount);
 
         emit Purchased(msg.sender, usdcAmount, poiAmount, uint8(currentTier));
+        emit TGEPurchased(msg.sender, usdcAmount, poiAmount);
 
         if (tier.remainingTokens == 0 && currentTier + 1 < tiers.length) {
             currentTier += 1;
@@ -145,12 +147,19 @@ contract TGESale is Ownable {
     }
 
     /**
+     * @notice Convenience helper that forwards to {purchase} for AgentKit usage.
+     */
+    function buyWithBaseToken(uint256 usdcAmount, bytes32[] calldata proof) external {
+        purchase(usdcAmount, proof);
+    }
+
+    /**
      * @notice Sets the minimum and maximum contribution per purchase.
      */
     function setContributionBounds(uint256 minAmount, uint256 maxAmount) external onlyOwner {
         require(maxAmount == 0 || maxAmount >= minAmount, "Sale: invalid bounds");
         minContribution = minAmount;
-        maxContribution = maxAmount;
+        _maxContribution = maxAmount;
     }
 
     /**
@@ -244,9 +253,56 @@ contract TGESale is Ownable {
             tierPrice: tierPrice,
             tierRemaining: tierRemaining,
             minContribution: minContribution,
-            maxContribution: maxContribution,
+            maxContribution: _maxContribution,
             userContributed: contributedUSDC[user]
         });
+    }
+
+    /**
+     * @notice Returns the configured global max contribution.
+     */
+    function maxContribution() public view returns (uint256) {
+        return _maxContribution;
+    }
+
+    /**
+     * @notice Returns whether a purchase can succeed right now.
+     */
+    function isSaleActive() public view returns (bool) {
+        if (paused) {
+            return false;
+        }
+        if (saleStart != 0 && block.timestamp < saleStart) {
+            return false;
+        }
+        if (saleEnd != 0 && block.timestamp > saleEnd) {
+            return false;
+        }
+        if (currentTier >= tiers.length) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @notice Returns the remaining allowable contribution for a user.
+     */
+    function maxContribution(address user) external view returns (uint256) {
+        if (_maxContribution == 0) {
+            return type(uint256).max;
+        }
+        uint256 contributed = contributedUSDC[user];
+        if (contributed >= _maxContribution) {
+            return 0;
+        }
+        return _maxContribution - contributed;
+    }
+
+    /**
+     * @notice Returns the contributed USDC for a user.
+     */
+    function contributionOf(address user) external view returns (uint256) {
+        return contributedUSDC[user];
     }
 
     function _tokensForContribution(uint256 usdcAmount, uint256 pricePerToken) private pure returns (uint256) {

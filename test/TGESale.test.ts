@@ -41,25 +41,36 @@ describe("TGESale", function () {
     await sale.connect(owner).setContributionBounds(0, ethers.utils.parseUnits("1500", 6));
 
     const usdcAmount = ethers.utils.parseUnits("1000", 6);
-    await usdc.mint(buyer.address, usdcAmount);
-    await usdc.connect(buyer).approve(sale.address, usdcAmount);
+    const totalUsdc = usdcAmount.add(ethers.utils.parseUnits("1", 6));
+    await usdc.mint(buyer.address, totalUsdc);
+    await usdc.connect(buyer).approve(sale.address, totalUsdc);
 
     const expectedPoi = usdcAmount.mul(BigNumber.from(10).pow(12)).div(ethers.utils.parseUnits("2", 6));
 
-    await expect(sale.connect(buyer).purchase(usdcAmount, []))
+    await expect(sale.connect(buyer).buyWithBaseToken(usdcAmount, []))
       .to.emit(sale, "Purchased")
       .withArgs(buyer.address, usdcAmount, expectedPoi, 0);
 
-    expect(await poi.balanceOf(buyer.address)).to.equal(expectedPoi);
-    expect(await sale.contributedUSDC(buyer.address)).to.equal(usdcAmount);
+    await expect(sale.connect(buyer).buyWithBaseToken(0, [])).to.be.revertedWith("Sale: zero amount");
+
+    await expect(sale.connect(buyer).buyWithBaseToken(ethers.utils.parseUnits("1", 6), []))
+      .to.emit(sale, "TGEPurchased")
+      .withArgs(buyer.address, ethers.utils.parseUnits("1", 6), ethers.utils.parseUnits("0.5", 18));
+
+    expect(await poi.balanceOf(buyer.address)).to.equal(expectedPoi.add(ethers.utils.parseUnits("0.5", 18)));
+    expect(await sale.contributedUSDC(buyer.address)).to.equal(usdcAmount.add(ethers.utils.parseUnits("1", 6)));
+    expect(await sale.contributionOf(buyer.address)).to.equal(usdcAmount.add(ethers.utils.parseUnits("1", 6)));
+
+    const remaining = await sale["maxContribution(address)"](buyer.address);
+    expect(remaining).to.equal(ethers.utils.parseUnits("1500", 6).sub(usdcAmount).sub(ethers.utils.parseUnits("1", 6)));
 
     const view = await sale.getSaleView(buyer.address);
-    expect(view.userContributed).to.equal(usdcAmount);
+    expect(view.userContributed).to.equal(usdcAmount.add(ethers.utils.parseUnits("1", 6)));
     expect(view.currentTier).to.equal(0);
     expect(view.tierRemaining).to.equal((await sale.tiers(0)).remainingTokens);
 
     await sale.connect(owner).withdraw();
-    expect(await usdc.balanceOf(treasury.address)).to.equal(usdcAmount);
+    expect(await usdc.balanceOf(treasury.address)).to.equal(usdcAmount.add(ethers.utils.parseUnits("1", 6)));
   });
 
   it("enforces whitelist allocation when enabled", async () => {
@@ -106,36 +117,43 @@ describe("TGESale", function () {
     const now = (await ethers.provider.getBlock("latest")).timestamp;
     await sale.connect(owner).setSaleWindow(now + 3600, now + 7200);
 
+    expect(await sale.isSaleActive()).to.equal(false);
+
     const purchaseAmount = ethers.utils.parseUnits("100", 6);
     await usdc.mint(buyer.address, purchaseAmount);
     await usdc.connect(buyer).approve(sale.address, purchaseAmount);
 
     await expect(sale.connect(buyer).purchase(purchaseAmount, [])).to.be.revertedWithCustomError(
-      sale,
-      "SaleNotStarted"
+        sale,
+        "SaleNotStarted"
     );
 
     await ethers.provider.send("evm_increaseTime", [3600]);
     await ethers.provider.send("evm_mine", []);
 
+    expect(await sale.isSaleActive()).to.equal(true);
+
     await sale.connect(owner).setBlacklist(blacklisted.address, true);
     await expect(sale.connect(blacklisted).purchase(purchaseAmount, [])).to.be.revertedWithCustomError(
-      sale,
-      "Blacklisted"
+        sale,
+        "Blacklisted"
     );
 
     await sale.connect(owner).setPaused(true);
+    expect(await sale.isSaleActive()).to.equal(false);
     await expect(sale.connect(buyer).purchase(purchaseAmount, [])).to.be.revertedWithCustomError(
-      sale,
-      "SalePaused"
+        sale,
+        "SalePaused"
     );
 
     await sale.connect(owner).setPaused(false);
+    expect(await sale.isSaleActive()).to.equal(true);
     await sale.connect(buyer).purchase(purchaseAmount, []);
 
     await ethers.provider.send("evm_increaseTime", [4000]);
     await ethers.provider.send("evm_mine", []);
 
     await expect(sale.connect(buyer).purchase(1, [])).to.be.revertedWithCustomError(sale, "SaleEnded");
+    expect(await sale.isSaleActive()).to.equal(false);
   });
 });
