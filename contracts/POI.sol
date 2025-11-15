@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 contract POI is ERC20, ERC20Permit, ERC20Burnable, AccessControl, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant OFFCHAIN_DISTRIBUTOR_ROLE = keccak256("OFFCHAIN_DISTRIBUTOR_ROLE");
 
     /**
      * @notice Initializes the token, roles and optionally mints the initial supply.
@@ -31,6 +32,7 @@ contract POI is ERC20, ERC20Permit, ERC20Burnable, AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MINTER_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
+        _grantRole(OFFCHAIN_DISTRIBUTOR_ROLE, admin);
 
         if (initialSupply > 0) {
             _mint(initialRecipient, initialSupply);
@@ -43,6 +45,15 @@ contract POI is ERC20, ERC20Permit, ERC20Burnable, AccessControl, Pausable {
      * @param amount Amount of tokens to mint.
      */
     function mint(address account, uint256 amount) external onlyRole(MINTER_ROLE) {
+        _mint(account, amount);
+    }
+
+    /**
+     * @notice Mints tokens that will be distributed based on off-chain purchase flows.
+     * @param account Recipient of the newly minted tokens.
+     * @param amount Amount of tokens to mint.
+     */
+    function mintForDistribution(address account, uint256 amount) external onlyRole(OFFCHAIN_DISTRIBUTOR_ROLE) {
         _mint(account, amount);
     }
 

@@ -30,6 +30,25 @@ describe("POI", function () {
     expect(await poi.balanceOf(user.address)).to.equal(mintAmount);
   });
 
+  it("allows designated distributors to mint for off-chain flows", async () => {
+    const [admin, distributor, recipient] = await ethers.getSigners();
+    const Poi = await ethers.getContractFactory("POI");
+    const poi = await Poi.deploy(admin.address, admin.address, 0);
+    await poi.deployed();
+
+    const role = await poi.OFFCHAIN_DISTRIBUTOR_ROLE();
+    await expect(poi.connect(distributor).mintForDistribution(recipient.address, 1))
+      .to.be.revertedWithCustomError(poi, "AccessControlUnauthorizedAccount")
+      .withArgs(distributor.address, role);
+
+    await poi.connect(admin).grantRole(role, distributor.address);
+
+    const distributionAmount = ethers.utils.parseEther("25");
+    await poi.connect(distributor).mintForDistribution(recipient.address, distributionAmount);
+
+    expect(await poi.balanceOf(recipient.address)).to.equal(distributionAmount);
+  });
+
   it("supports permit authorization", async () => {
     const [admin, owner, spender] = await ethers.getSigners();
     const initialSupply = ethers.utils.parseEther("1000");

@@ -18,6 +18,15 @@ contract TGESale is Ownable {
         uint256 remainingTokens; // Remaining POI tokens for this tier (18 decimals)
     }
 
+    struct SaleView {
+        uint8 currentTier;
+        uint256 tierPrice;
+        uint256 tierRemaining;
+        uint256 minContribution;
+        uint256 maxContribution;
+        uint256 userContributed;
+    }
+
     IERC20 public immutable poiToken;
     IERC20 public immutable usdcToken;
 
@@ -25,6 +34,7 @@ contract TGESale is Ownable {
     uint256 public currentTier;
 
     bytes32 public merkleRoot;
+    bool public whitelistEnabled;
 
     uint256 public minContribution;
     uint256 public maxContribution;
@@ -34,15 +44,18 @@ contract TGESale is Ownable {
 
     address public treasury;
     bool public paused;
+    uint64 public saleStart;
+    uint64 public saleEnd;
     uint256 public totalRaised;
 
     event TierConfigured(uint256 indexed tierId, uint256 pricePerToken, uint256 tokenAmount);
     event StageAdvanced(uint256 indexed newTierId);
-    event Purchase(address indexed buyer, uint256 indexed tierId, uint256 usdcAmount, uint256 poiAmount);
+    event Purchased(address indexed buyer, uint256 usdcAmount, uint256 poiAmount, uint8 tier);
     event Withdraw(address indexed to, uint256 amount);
     event TreasuryUpdated(address indexed newTreasury);
     event Paused(bool status);
-    event MerkleRootUpdated(bytes32 root);
+    event SaleWindowUpdated(uint64 start, uint64 end);
+    event WhitelistConfigUpdated(bool enabled, bytes32 root);
     event BlacklistUpdated(address indexed account, bool status);
 
     error SalePaused();
@@ -51,6 +64,10 @@ contract TGESale is Ownable {
     error InvalidProof();
     error AllocationExceeded();
     error Blacklisted();
+    error SaleNotStarted();
+    error SaleEnded();
+    error InvalidSaleWindow();
+    error WhitelistNotConfigured();
 
     constructor(address poi, address usdc, address owner_, address treasury_) Ownable(owner_) {
         if (poi == address(0) || usdc == address(0) || treasury_ == address(0)) revert ZeroAddress();
@@ -66,6 +83,7 @@ contract TGESale is Ownable {
      */
     function configureTiers(uint256[] calldata prices, uint256[] calldata supplies) external onlyOwner {
         require(prices.length == supplies.length && prices.length > 0, "Sale: invalid tier config");
+        require(prices.length <= type(uint8).max + 1, "Sale: too many tiers");
 
         delete tiers;
         for (uint256 i = 0; i < prices.length; i++) {
@@ -83,6 +101,8 @@ contract TGESale is Ownable {
      */
     function purchase(uint256 usdcAmount, bytes32[] calldata proof) external {
         if (paused) revert SalePaused();
+        if (saleStart != 0 && block.timestamp < saleStart) revert SaleNotStarted();
+        if (saleEnd != 0 && block.timestamp > saleEnd) revert SaleEnded();
         if (blacklist[msg.sender]) revert Blacklisted();
         require(usdcAmount > 0, "Sale: zero amount");
         require(currentTier < tiers.length, "Sale: no active tier");
@@ -90,11 +110,12 @@ contract TGESale is Ownable {
             require(usdcAmount >= minContribution, "Sale: below minimum");
         }
         if (maxContribution > 0) {
-            require(usdcAmount <= maxContribution, "Sale: above maximum");
+            require(contributedUSDC[msg.sender] + usdcAmount <= maxContribution, "Sale: above maximum");
         }
 
-        (uint256 allocation, bytes32[] memory merkleProof) = _extractAllocationAndProof(proof);
-        if (merkleRoot != bytes32(0)) {
+        if (whitelistEnabled) {
+            if (merkleRoot == bytes32(0)) revert WhitelistNotConfigured();
+            (uint256 allocation, bytes32[] memory merkleProof) = _extractAllocationAndProof(proof);
             bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, allocation))));
             bool valid = MerkleProof.verify(merkleProof, merkleRoot, leaf);
             if (!valid) revert InvalidProof();
@@ -115,7 +136,7 @@ contract TGESale is Ownable {
         usdcToken.safeTransferFrom(msg.sender, address(this), usdcAmount);
         poiToken.safeTransfer(msg.sender, poiAmount);
 
-        emit Purchase(msg.sender, currentTier, usdcAmount, poiAmount);
+        emit Purchased(msg.sender, usdcAmount, poiAmount, uint8(currentTier));
 
         if (tier.remainingTokens == 0 && currentTier + 1 < tiers.length) {
             currentTier += 1;
@@ -150,11 +171,12 @@ contract TGESale is Ownable {
     }
 
     /**
-     * @notice Updates the whitelist Merkle root.
+     * @notice Updates the whitelist configuration.
      */
-    function setMerkleRoot(bytes32 root) external onlyOwner {
+    function setWhitelistConfig(bool enabled, bytes32 root) external onlyOwner {
+        whitelistEnabled = enabled;
         merkleRoot = root;
-        emit MerkleRootUpdated(root);
+        emit WhitelistConfigUpdated(enabled, root);
     }
 
     /**
@@ -186,6 +208,45 @@ contract TGESale is Ownable {
      */
     function tierCount() external view returns (uint256) {
         return tiers.length;
+    }
+
+    /**
+     * @notice Updates the allowed sale window.
+     */
+    function setSaleWindow(uint64 start, uint64 end) external onlyOwner {
+        if (end != 0 && end <= start) revert InvalidSaleWindow();
+        saleStart = start;
+        saleEnd = end;
+        emit SaleWindowUpdated(start, end);
+    }
+
+    /**
+     * @notice Returns an aggregate view of the current sale configuration for a user.
+     */
+    function getSaleView(address user) external view returns (SaleView memory) {
+        uint8 tierIndex = 0;
+        uint256 tierPrice = 0;
+        uint256 tierRemaining = 0;
+
+        if (tiers.length != 0) {
+            if (currentTier < tiers.length) {
+                tierIndex = uint8(currentTier);
+                Tier storage tier = tiers[currentTier];
+                tierPrice = tier.pricePerToken;
+                tierRemaining = tier.remainingTokens;
+            } else {
+                tierIndex = uint8(tiers.length - 1);
+            }
+        }
+
+        return SaleView({
+            currentTier: tierIndex,
+            tierPrice: tierPrice,
+            tierRemaining: tierRemaining,
+            minContribution: minContribution,
+            maxContribution: maxContribution,
+            userContributed: contributedUSDC[user]
+        });
     }
 
     function _tokensForContribution(uint256 usdcAmount, uint256 pricePerToken) private pure returns (uint256) {

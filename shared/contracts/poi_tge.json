@@ -1,0 +1,20 @@
+{
+  "network": "",
+  "chainId": null,
+  "deployer": "",
+  "contracts": {
+    "poi": "",
+    "sale": "",
+    "usdc": "",
+    "treasury": ""
+  },
+  "sale": {
+    "whitelistEnabled": false,
+    "merkleRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "minContribution": "0",
+    "maxContribution": "0",
+    "saleStart": 0,
+    "saleEnd": 0,
+    "tiers": []
+  }
+}
