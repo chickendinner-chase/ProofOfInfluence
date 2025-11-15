@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { BigNumber } from "ethers";
-import { ethers, network } from "hardhat";
+import { artifacts, ethers, network } from "hardhat";
 
 type TierConfig = {
   price: string; // USDC price per POI (6 decimals)
@@ -117,14 +117,16 @@ async function main() {
   const outputDir = path.join(__dirname, "..", "shared", "contracts");
   mkdirSync(outputDir, { recursive: true });
 
+  const tgeArtifact = await artifacts.readArtifact("TGESale");
   const artifactPath = path.join(outputDir, "poi_tge.json");
   const artifact = {
-    network: network.name,
+    name: "TGESale",
+    address: sale.address,
     chainId: network.config.chainId ?? null,
-    deployer: deployer.address,
-    contracts: {
+    network: network.name,
+    abi: tgeArtifact.abi,
+    related: {
       poi: poi.address,
-      sale: sale.address,
       usdc: usdcAddress,
       treasury,
     },

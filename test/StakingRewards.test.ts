@@ -22,7 +22,9 @@ describe("StakingRewards", function () {
     await token.connect(owner).approve(staking.address, rewardAmount);
     await staking.connect(owner).notifyRewardAmount(rewardAmount);
 
-    await staking.connect(staker).stake(stakeAmount);
+    await expect(staking.connect(staker).stake(stakeAmount))
+      .to.emit(staking, "Staked")
+      .withArgs(staker.address, stakeAmount);
 
     await ethers.provider.send("evm_increaseTime", [3600]);
     await ethers.provider.send("evm_mine", []);
@@ -31,8 +33,9 @@ describe("StakingRewards", function () {
     expect(earned).to.be.gt(0);
 
     const balanceBefore = await token.balanceOf(staker.address);
-    await staking.connect(staker).getReward();
+    await expect(staking.connect(staker).getReward()).to.emit(staking, "RewardPaid");
     expect(await token.balanceOf(staker.address)).to.be.gt(balanceBefore);
+    expect(await staking.earned(staker.address)).to.equal(0);
 
     await staking.connect(staker).withdraw(stakeAmount);
     expect(await staking.balanceOf(staker.address)).to.equal(0);
