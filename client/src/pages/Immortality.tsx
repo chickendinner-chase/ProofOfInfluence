@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AlertCircle, Brain, Zap, Coins, Activity, ArrowRight, Shield, Award, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImmortalityChat } from "@/components/ImmortalityChat";
+import { useMintBadge, useTgePurchase, useStakePoi, useUnstakePoi, useClaimReward } from "@/hooks/useContractAction";
 
 interface ImmortalityBalanceResponse {
   credits: number;
@@ -48,8 +49,18 @@ export default function Immortality() {
   const { toast } = useToast();
   const [memoryText, setMemoryText] = useState("");
   const [emotion, setEmotion] = useState("");
-  const [badgeStatus, setBadgeStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
-  const [badgeTx, setBadgeTx] = useState<string | null>(null);
+
+  // Unified contract action hooks
+  const mintBadge = useMintBadge();
+  const tgePurchase = useTgePurchase();
+  const stakePoi = useStakePoi();
+  const unstakePoi = useUnstakePoi();
+  const claimReward = useClaimReward();
+
+  // TGE & Staking local states
+  const [usdcAmount, setUsdcAmount] = useState<string>("");
+  const [stakeAmount, setStakeAmount] = useState<string>("");
+  const [unstakeAmount, setUnstakeAmount] = useState<string>("");
 
   const { data: balance, isFetching } = useQuery<ImmortalityBalanceResponse>({
     queryKey: ["/api/immortality/balance"],
@@ -190,6 +201,95 @@ export default function Immortality() {
         </div>
       </Section>
 
+      <Section title="POI 购买（TGE）" subtitle="输入 USDC 金额并进行购买；未部署或未开放将返回错误提示">
+        <ThemedCard className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <input
+              className={cn(
+                "flex-1 rounded-xl border bg-transparent p-2 text-sm outline-none",
+                theme === "cyberpunk" ? "border-cyan-500/40" : "border-slate-200",
+              )}
+              placeholder="USDC 数量（如 50）"
+              value={usdcAmount}
+              onChange={(e) => setUsdcAmount(e.target.value)}
+            />
+            <ThemedButton
+              emphasis
+              disabled={tgePurchase.isPending || !usdcAmount.trim()}
+              onClick={() => {
+                // usdcAmount 以 6 位小数最小单位传入（后端会编码）
+                const amount6 = String(Math.round(Number(usdcAmount) * 1e6));
+                tgePurchase.execute({ args: { usdcAmount: amount6, proof: [] } });
+              }}
+            >
+              {tgePurchase.isPending ? "购买中..." : "购买 POI"}
+            </ThemedButton>
+          </div>
+          {tgePurchase.isError && <div className="text-xs text-red-400">购买失败：请检查是否已部署或是否在销售窗口内</div>}
+        </ThemedCard>
+      </Section>
+
+      <Section title="POI 质押（Staking）" subtitle="质押/解押/领取奖励；如未部署将返回错误提示">
+        <ThemedCard className="p-6 space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="flex items-center gap-3">
+              <input
+                className={cn(
+                  "flex-1 rounded-xl border bg-transparent p-2 text-sm outline-none",
+                  theme === "cyberpunk" ? "border-cyan-500/40" : "border-slate-200",
+                )}
+                placeholder="质押数量（POI）如 100"
+                value={stakeAmount}
+                onChange={(e) => setStakeAmount(e.target.value)}
+              />
+              <ThemedButton
+                emphasis
+                disabled={stakePoi.isPending || !stakeAmount.trim()}
+                onClick={() => {
+                  const amount18 = String(BigInt(Math.round(Number(stakeAmount) * 1e18)));
+                  stakePoi.execute({ args: { amount: amount18 } });
+                }}
+              >
+                {stakePoi.isPending ? "质押中..." : "质押"}
+              </ThemedButton>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                className={cn(
+                  "flex-1 rounded-xl border bg-transparent p-2 text-sm outline-none",
+                  theme === "cyberpunk" ? "border-cyan-500/40" : "border-slate-200",
+                )}
+                placeholder="解押数量（POI）如 50"
+                value={unstakeAmount}
+                onChange={(e) => setUnstakeAmount(e.target.value)}
+              />
+              <ThemedButton
+                variant="outline"
+                disabled={unstakePoi.isPending || !unstakeAmount.trim()}
+                onClick={() => {
+                  const amount18 = String(BigInt(Math.round(Number(unstakeAmount) * 1e18)));
+                  unstakePoi.execute({ args: { amount: amount18 } });
+                }}
+              >
+                {unstakePoi.isPending ? "解押中..." : "解押"}
+              </ThemedButton>
+            </div>
+          </div>
+          <div>
+            <ThemedButton
+              size="sm"
+              disabled={claimReward.isPending}
+              onClick={() => claimReward.execute({ args: {} })}
+            >
+              {claimReward.isPending ? "领取中..." : "领取奖励"}
+            </ThemedButton>
+          </div>
+          {(stakePoi.isError || unstakePoi.isError || claimReward.isError) && (
+            <div className="text-xs text-red-400">操作失败：请检查是否已部署或额度是否足够</div>
+          )}
+        </ThemedCard>
+      </Section>
+
       <Section title="今日记忆" subtitle="写下此刻的情绪与片段，赛博分身会记住它们">
         <div className="grid gap-6 lg:grid-cols-2">
           <ThemedCard className="p-6 space-y-4">
@@ -275,31 +375,15 @@ export default function Immortality() {
           <div className="flex items-center gap-3">
             <ThemedButton
               emphasis
-              disabled={badgeStatus === "pending"}
-              onClick={async () => {
-                try {
-                  setBadgeStatus("pending");
-                  setBadgeTx(null);
-                  const res = await fetch("/api/immortality/actions/mint-test-badge", { method: "POST" });
-                  if (!res.ok) {
-                    throw new Error("调用失败");
-                  }
-                  const data = await res.json();
-                  setBadgeStatus("success");
-                  setBadgeTx(data.txHash);
-                  toast({ title: "徽章已铸造", description: "链上交易已提交" });
-                } catch (error: any) {
-                  setBadgeStatus("error");
-                  toast({ title: "铸造失败", description: error?.message ?? "请稍后再试", variant: "destructive" });
-                }
-              }}
+              disabled={mintBadge.isPending}
+              onClick={() => mintBadge.execute({ args: {} })}
             >
-              {badgeStatus === "pending" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {badgeStatus === "pending" ? "处理中..." : "铸造徽章"}
+              {mintBadge.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {mintBadge.isPending ? "处理中..." : "铸造徽章"}
             </ThemedButton>
-            {badgeStatus === "success" && badgeTx && (
+            {mintBadge.isSuccess && mintBadge.data?.txHash && (
               <a
-                href={`https://sepolia.basescan.org/tx/${badgeTx}`}
+                href={`https://sepolia.basescan.org/tx/${mintBadge.data.txHash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-xs text-primary hover:underline"
@@ -307,7 +391,7 @@ export default function Immortality() {
                 查看交易
               </a>
             )}
-            {badgeStatus === "error" && <span className="text-xs text-red-400">请稍后重试</span>}
+            {mintBadge.isError && <span className="text-xs text-red-400">请稍后重试</span>}
           </div>
         </ThemedCard>
       </Section>

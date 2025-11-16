@@ -6,8 +6,9 @@ import { ThemedCard, ThemedButton, ThemedInput } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Palette, Bell, Shield, Wallet, Save, LogOut, Brain, Lock } from "lucide-react";
+import { User, Mail, Palette, Bell, Shield, Wallet, Save, LogOut, Brain, Lock, Link as LinkIcon, CheckCircle2 } from "lucide-react";
 import type { User as UserType } from "@shared/schema";
+import { useAccount, useWalletClient } from "wagmi";
 
 interface PersonalityProfile {
   mbtiType?: string | null;
@@ -18,10 +19,16 @@ interface PersonalityProfile {
 export default function Profile() {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
 
   // Fetch user data (keeping existing API integration)
   const { data: user } = useQuery<UserType>({
     queryKey: ["/api/auth/user"],
+  });
+
+  const { data: identities, refetch: refetchIdentities } = useQuery<any>({
+    queryKey: ["/api/auth/identities"],
   });
 
   const [username, setUsername] = useState("");
@@ -90,6 +97,26 @@ export default function Profile() {
       title: "已退出登录",
       description: "您已安全退出",
     });
+  };
+
+  const bindWallet = async () => {
+    if (!isConnected || !address) {
+      toast({ title: "请先连接钱包", variant: "destructive" });
+      return;
+    }
+    const res = await fetch("/api/auth/identities/bind", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ provider: "wallet", walletAddress: address }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast({ title: "绑定失败", description: err?.message ?? "稍后再试", variant: "destructive" });
+      return;
+    }
+    toast({ title: "钱包已绑定" });
+    refetchIdentities();
   };
 
   return (
@@ -271,15 +298,36 @@ export default function Profile() {
             </h3>
 
             <div className="space-y-3">
+              <div className="p-4 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      <Wallet className="w-4 h-4" /> 已绑定钱包
+                    </div>
+                    <div className="text-xs opacity-70 mt-1">
+                      {identities?.identities?.filter((i: any) => i.provider === "wallet")?.length
+                        ? identities.identities
+                            .filter((i: any) => i.provider === "wallet")
+                            .map((i: any) => i.walletAddress)
+                            .join(", ")
+                        : "暂无绑定"}
+                    </div>
+                  </div>
+                  <ThemedButton variant="outline" onClick={bindWallet}>
+                    <LinkIcon className="w-4 h-4 mr-2" />
+                    一键绑定当前钱包
+                  </ThemedButton>
+                </div>
+                <div className="text-xs opacity-70 mt-2">
+                  当前钱包：{isConnected && address ? address : "未连接"}
+                </div>
+              </div>
+
               <ThemedButton variant="outline" className="w-full justify-start">
                 <Lock className="w-4 h-4 mr-2" />
                 修改密码
               </ThemedButton>
 
-              <ThemedButton variant="outline" className="w-full justify-start">
-                <Wallet className="w-4 h-4 mr-2" />
-                管理钱包
-              </ThemedButton>
             </div>
           </ThemedCard>
 

@@ -2,6 +2,7 @@ import React from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton, ThemedBadge } from "@/components/themed";
+import { AirdropCard } from "@/components/AirdropCard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import {
@@ -95,6 +96,16 @@ export default function Airdrop() {
 
   return (
     <PageLayout>
+      {/* Airdrop Claim Section */}
+      <Section
+        title="Claim Airdrop"
+        subtitle="Claim your POI tokens from Merkle Airdrop"
+      >
+        <div className="max-w-2xl mx-auto">
+          <AirdropCard />
+        </div>
+      </Section>
+
       {/* Hero Section */}
       <Section
         title="Airdrop Campaign"

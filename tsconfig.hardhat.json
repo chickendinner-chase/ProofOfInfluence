@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "incremental": false,
+    "noEmit": false,
+    "outDir": "dist/hardhat",
+    "types": ["node", "hardhat"]
+  },
+  "include": ["hardhat.config.ts", "scripts", "test", "typechain", "contracts"]
+}
+

@@ -3,54 +3,74 @@ import { ethers } from "hardhat";
 
 describe("VestingVault", function () {
   async function deployFixture() {
-    const [owner, beneficiary] = await ethers.getSigners();
+    const [owner, beneficiary, other] = await ethers.getSigners();
     const Token = await ethers.getContractFactory("MockERC20");
-    const token = await Token.deploy("Test", "TST", 18, ethers.utils.parseEther("1000000"));
+    const token = await Token.deploy("POI", "POI", 18, 0);
     await token.deployed();
 
-    const Vesting = await ethers.getContractFactory("VestingVault");
-    const vault = await Vesting.deploy(token.address, owner.address);
+    const Vault = await ethers.getContractFactory("VestingVault");
+    const vault = await Vault.deploy(token.address, owner.address);
     await vault.deployed();
 
-    const amount = ethers.utils.parseEther("1000");
-    await token.mint(vault.address, amount);
-
-    return { owner, beneficiary, token, vault, amount };
+    const total = ethers.utils.parseEther("1000");
+    await token.mint(vault.address, total.mul(2));
+    return { owner, beneficiary, other, token, vault };
   }
 
-  it("creates vesting schedule and releases tokens over time", async () => {
-    const { owner, beneficiary, token, vault, amount } = await deployFixture();
-    const cliff = 60 * 60 * 24 * 30; // 30 days
-    const duration = cliff * 4;
-
-    await vault.connect(owner).addBeneficiary(beneficiary.address, amount, cliff, duration);
-
-    expect(await vault.vestedAmount(beneficiary.address)).to.equal(0);
-
-    await ethers.provider.send("evm_increaseTime", [cliff]);
+  async function increaseTime(seconds: number) {
+    await ethers.provider.send("evm_increaseTime", [seconds]);
     await ethers.provider.send("evm_mine", []);
+  }
 
-    const vestedAfterCliff = await vault.vestedAmount(beneficiary.address);
-    expect(vestedAfterCliff).to.be.gt(0);
+  it("creates multiple schedules and releases over time", async () => {
+    const { owner, beneficiary, vault, token } = await deployFixture();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
 
-    await vault.connect(beneficiary).withdraw();
-    expect(await token.balanceOf(beneficiary.address)).to.equal(vestedAfterCliff);
+    await expect(
+      vault
+        .connect(owner)
+        .createSchedule(beneficiary.address, ethers.utils.parseEther("500"), now, 30, 300, 30, true)
+    ).to.emit(vault, "ScheduleCreated");
 
-    await ethers.provider.send("evm_increaseTime", [duration]);
-    await ethers.provider.send("evm_mine", []);
+    await expect(
+      vault
+        .connect(owner)
+        .createSchedule(beneficiary.address, ethers.utils.parseEther("250"), now, 0, 200, 20, false)
+    ).to.emit(vault, "ScheduleCreated");
 
-    await vault.connect(beneficiary).withdraw();
-    expect(await token.balanceOf(beneficiary.address)).to.equal(amount);
+    await expect(vault.connect(beneficiary).release(1)).to.be.revertedWithCustomError(vault, "NothingToRelease");
+
+    await increaseTime(60);
+    const releasable = await vault.releasableAmount(1);
+    expect(releasable).to.be.gt(0);
+
+    await expect(vault.connect(beneficiary).release(1)).to.emit(vault, "Released");
+    expect(await token.balanceOf(beneficiary.address)).to.equal(releasable);
   });
 
-  it("prevents duplicate beneficiaries", async () => {
-    const { owner, beneficiary, vault, amount } = await deployFixture();
-    const cliff = 100;
-    const duration = 500;
+  it("releases everything at end and supports revocation", async () => {
+    const { owner, beneficiary, vault, token } = await deployFixture();
+    const now = (await ethers.provider.getBlock("latest")).timestamp;
+    await vault
+      .connect(owner)
+      .createSchedule(beneficiary.address, ethers.utils.parseEther("400"), now, 0, 200, 20, true);
 
-    await vault.connect(owner).addBeneficiary(beneficiary.address, amount, cliff, duration);
+    await increaseTime(250);
+    await vault.connect(beneficiary).release(1);
+    expect(await token.balanceOf(beneficiary.address)).to.equal(ethers.utils.parseEther("400"));
+
+    await vault.connect(owner).createSchedule(beneficiary.address, ethers.utils.parseEther("300"), now, 10, 200, 10, true);
+    await increaseTime(20);
+    await expect(vault.connect(owner).revoke(2)).to.emit(vault, "Revoked");
+  });
+
+  it("rejects invalid parameters", async () => {
+    const { owner, beneficiary, vault } = await deployFixture();
     await expect(
-      vault.connect(owner).addBeneficiary(beneficiary.address, amount, cliff, duration)
-    ).to.be.revertedWithCustomError(vault, "BeneficiaryExists");
+      vault.connect(owner).createSchedule(ethers.constants.AddressZero, 1, 0, 0, 10, 1, false)
+    ).to.be.revertedWithCustomError(vault, "InvalidSchedule");
+    await expect(
+      vault.connect(owner).createSchedule(beneficiary.address, 0, 0, 0, 10, 1, false)
+    ).to.be.revertedWithCustomError(vault, "InvalidSchedule");
   });
 });

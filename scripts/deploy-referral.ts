@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { persistContract } from "./utils/deployment";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -9,6 +10,7 @@ async function main() {
   await registry.deployed();
 
   console.log(`ReferralRegistry deployed to ${registry.address}`);
+  await persistContract("ReferralRegistry", registry.address);
 }
 
 main().catch((error) => {

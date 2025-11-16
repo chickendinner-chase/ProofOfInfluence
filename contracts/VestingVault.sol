@@ -4,130 +4,156 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title VestingVault
- * @notice Manages vesting schedules with configurable cliffs and linear vesting periods.
+ * @notice Configurable vesting vault that supports multiple schedules per beneficiary with linear release and optional
+ * revocation.
  */
-contract VestingVault is Ownable {
+contract VestingVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     struct Schedule {
-        uint256 totalAllocation;
+        address beneficiary;
+        uint256 totalAmount;
         uint256 released;
-        uint64 startTimestamp;
-        uint64 cliffDuration;
-        uint64 vestingDuration;
+        uint64 start;
+        uint64 cliff;
+        uint64 duration;
+        uint64 slicePeriodSeconds;
+        bool revocable;
+        bool revoked;
     }
 
     IERC20 public immutable token;
+    uint256 private _scheduleCount;
+    mapping(uint256 => Schedule) private _schedules;
+    mapping(address => uint256[]) private _beneficiarySchedules;
 
-    mapping(address => Schedule) private _schedules;
+    event ScheduleCreated(
+        uint256 indexed scheduleId,
+        address indexed beneficiary,
+        uint256 totalAmount,
+        uint64 start,
+        uint64 cliff,
+        uint64 duration,
+        uint64 slicePeriod,
+        bool revocable
+    );
+    event Released(uint256 indexed scheduleId, address indexed beneficiary, uint256 amount);
+    event Revoked(uint256 indexed scheduleId, address indexed beneficiary, uint256 refundAmount);
 
-    event BeneficiaryAdded(address indexed beneficiary, uint256 amount, uint256 cliff, uint256 duration);
-    event TokensReleased(address indexed beneficiary, uint256 amount);
-
-    error BeneficiaryExists();
-    error InvalidParameters();
+    error InvalidSchedule();
     error NothingToRelease();
+    error NotRevocable();
+    error AlreadyRevoked();
 
-    /**
-     * @param tokenAddress Address of the token being vested.
-     * @param owner_ Address that will own the vault.
-     */
     constructor(address tokenAddress, address owner_) Ownable(owner_) {
-        require(tokenAddress != address(0), "Vault: token zero");
-        require(owner_ != address(0), "Vault: owner zero");
+        if (tokenAddress == address(0) || owner_ == address(0)) {
+            revert InvalidSchedule();
+        }
         token = IERC20(tokenAddress);
     }
 
-    /**
-     * @notice Adds a new beneficiary schedule.
-     * @param beneficiary Address of the beneficiary.
-     * @param amount Total amount to vest.
-     * @param cliff Duration of the cliff in seconds.
-     * @param duration Total vesting duration including the cliff in seconds.
-     */
-    function addBeneficiary(address beneficiary, uint256 amount, uint256 cliff, uint256 duration) external onlyOwner {
-        if (beneficiary == address(0) || amount == 0) revert InvalidParameters();
-        if (duration == 0 || duration < cliff) revert InvalidParameters();
-        if (_schedules[beneficiary].totalAllocation != 0) revert BeneficiaryExists();
+    function createSchedule(
+        address beneficiary,
+        uint256 totalAmount,
+        uint64 start,
+        uint64 cliff,
+        uint64 duration,
+        uint64 slicePeriodSeconds,
+        bool revocable
+    ) external onlyOwner returns (uint256 scheduleId) {
+        if (beneficiary == address(0) || totalAmount == 0) revert InvalidSchedule();
+        if (duration == 0 || duration < cliff) revert InvalidSchedule();
+        if (slicePeriodSeconds == 0 || slicePeriodSeconds > duration) revert InvalidSchedule();
 
-        _schedules[beneficiary] = Schedule({
-            totalAllocation: amount,
+        scheduleId = ++_scheduleCount;
+        _schedules[scheduleId] = Schedule({
+            beneficiary: beneficiary,
+            totalAmount: totalAmount,
             released: 0,
-            startTimestamp: uint64(block.timestamp),
-            cliffDuration: uint64(cliff),
-            vestingDuration: uint64(duration)
+            start: start,
+            cliff: cliff,
+            duration: duration,
+            slicePeriodSeconds: slicePeriodSeconds,
+            revocable: revocable,
+            revoked: false
         });
 
-        emit BeneficiaryAdded(beneficiary, amount, cliff, duration);
+        _beneficiarySchedules[beneficiary].push(scheduleId);
+
+        emit ScheduleCreated(scheduleId, beneficiary, totalAmount, start, cliff, duration, slicePeriodSeconds, revocable);
     }
 
-    /**
-     * @notice Returns the schedule for a beneficiary.
-     */
-    function getSchedule(address beneficiary) external view returns (Schedule memory) {
-        return _schedules[beneficiary];
+    function getSchedule(uint256 scheduleId) external view returns (Schedule memory) {
+        Schedule memory schedule = _schedules[scheduleId];
+        if (schedule.beneficiary == address(0)) revert InvalidSchedule();
+        return schedule;
     }
 
-    /**
-     * @notice Calculates the total vested amount for a beneficiary.
-     * @param beneficiary Address to query.
-     * @return Amount vested (including already withdrawn tokens).
-     */
-    function vestedAmount(address beneficiary) public view returns (uint256) {
-        Schedule memory schedule = _schedules[beneficiary];
-        if (schedule.totalAllocation == 0) {
-            return 0;
-        }
-
-        uint256 start = schedule.startTimestamp;
-        uint256 cliffTime = start + schedule.cliffDuration;
-        uint256 end = start + schedule.vestingDuration;
-
-        if (block.timestamp < cliffTime) {
-            return 0;
-        }
-
-        if (block.timestamp >= end) {
-            return schedule.totalAllocation;
-        }
-
-        uint256 vestedTime = block.timestamp - cliffTime;
-        uint256 vestingPeriod = schedule.vestingDuration - schedule.cliffDuration;
-        return (schedule.totalAllocation * vestedTime) / vestingPeriod;
+    function schedulesOf(address beneficiary) external view returns (uint256[] memory) {
+        return _beneficiarySchedules[beneficiary];
     }
 
-    /**
-     * @notice Calculates the releasable amount for a beneficiary.
-     */
-    function releasableAmount(address beneficiary) public view returns (uint256) {
-        Schedule memory schedule = _schedules[beneficiary];
-        if (schedule.totalAllocation == 0) {
+    function releasableAmount(uint256 scheduleId) public view returns (uint256) {
+        Schedule memory schedule = _schedules[scheduleId];
+        if (schedule.beneficiary == address(0)) return 0;
+        if (schedule.revoked) {
             return 0;
         }
-
-        uint256 vested = vestedAmount(beneficiary);
-        if (vested <= schedule.released) {
-            return 0;
-        }
-        return vested - schedule.released;
+        return _vestedAmount(schedule) - schedule.released;
     }
 
-    /**
-     * @notice Withdraws vested tokens for the caller.
-     */
-    function withdraw() external {
-        Schedule storage schedule = _schedules[msg.sender];
-        if (schedule.totalAllocation == 0) revert InvalidParameters();
+    function release(uint256 scheduleId) external nonReentrant {
+        Schedule storage schedule = _schedules[scheduleId];
+        if (schedule.beneficiary == address(0) || schedule.revoked) revert InvalidSchedule();
 
-        uint256 amount = releasableAmount(msg.sender);
+        uint256 amount = releasableAmount(scheduleId);
         if (amount == 0) revert NothingToRelease();
 
         schedule.released += amount;
-        token.safeTransfer(msg.sender, amount);
+        token.safeTransfer(schedule.beneficiary, amount);
+        emit Released(scheduleId, schedule.beneficiary, amount);
+    }
 
-        emit TokensReleased(msg.sender, amount);
+    function revoke(uint256 scheduleId) external onlyOwner nonReentrant {
+        Schedule storage schedule = _schedules[scheduleId];
+        if (schedule.beneficiary == address(0)) revert InvalidSchedule();
+        if (!schedule.revocable) revert NotRevocable();
+        if (schedule.revoked) revert AlreadyRevoked();
+
+        uint256 releasable = releasableAmount(scheduleId);
+        if (releasable > 0) {
+            schedule.released += releasable;
+            token.safeTransfer(schedule.beneficiary, releasable);
+            emit Released(scheduleId, schedule.beneficiary, releasable);
+        }
+
+        uint256 refund = schedule.totalAmount - schedule.released;
+        schedule.revoked = true;
+
+        if (refund > 0) {
+            token.safeTransfer(owner(), refund);
+        }
+
+        emit Revoked(scheduleId, schedule.beneficiary, refund);
+    }
+
+    function _vestedAmount(Schedule memory schedule) internal view returns (uint256) {
+        if (schedule.revoked) {
+            return schedule.released;
+        }
+        if (block.timestamp < schedule.start + schedule.cliff) {
+            return 0;
+        }
+        if (block.timestamp >= schedule.start + schedule.duration) {
+            return schedule.totalAmount;
+        }
+
+        uint256 elapsed = block.timestamp - schedule.start;
+        uint256 vestedSeconds = (elapsed / schedule.slicePeriodSeconds) * schedule.slicePeriodSeconds;
+        return (schedule.totalAmount * vestedSeconds) / schedule.duration;
     }
 }

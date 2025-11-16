@@ -683,11 +683,15 @@ export const airdropEligibility = pgTable("airdrop_eligibility", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").unique().references(() => users.id, { onDelete: "cascade" }),
   walletAddress: varchar("wallet_address", { length: 42 }).unique(),
-  amount: integer("amount").notNull(), // POI amount
+  amount: integer("amount").notNull(), // POI amount (in POI units, not wei)
   eligible: boolean("eligible").default(true).notNull(),
   claimed: boolean("claimed").default(false).notNull(),
   claimDate: timestamp("claim_date"),
   vestingInfo: text("vesting_info"), // Optional vesting details
+  // Merkle proof fields for MerkleAirdropDistributor
+  merkleIndex: integer("merkle_index"), // Index in Merkle tree
+  merkleProof: jsonb("merkle_proof"), // Array of hex strings for Merkle proof
+  roundId: integer("round_id").default(0), // Airdrop round ID
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -698,3 +702,56 @@ export const insertAirdropEligibilitySchema = createInsertSchema(airdropEligibil
 
 export type InsertAirdropEligibility = z.infer<typeof insertAirdropEligibilitySchema>;
 export type AirdropEligibility = typeof airdropEligibility.$inferSelect;
+
+// Unified identity bindings (multi-provider auth)
+export const userIdentities = pgTable("user_identities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: varchar("provider", { length: 32 }).notNull(), // email | google | apple | wallet | replit
+  providerUserId: varchar("provider_user_id", { length: 255 }), // sub/email/address
+  email: varchar("email", { length: 255 }),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  walletAddress: varchar("wallet_address", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uniq_identity_provider_uid").on(table.provider, table.providerUserId).where(sql`provider_user_id IS NOT NULL`),
+  uniqueIndex("uniq_identity_wallet").on(table.walletAddress).where(sql`wallet_address IS NOT NULL`),
+  index("idx_identity_user").on(table.userId),
+  index("idx_identity_email").on(table.email),
+]);
+
+export const insertUserIdentitySchema = createInsertSchema(userIdentities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserIdentity = z.infer<typeof insertUserIdentitySchema>;
+export type UserIdentity = typeof userIdentities.$inferSelect;
+
+// Early-Bird Registrations (minimal viable registration table)
+export const earlyBirdRegistrations = pgTable("early_bird_registrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  wallet: varchar("wallet", { length: 64 }).notNull().unique(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | verified | bounced
+  referralCode: varchar("referral_code", { length: 20 }).unique(),
+  referrerCode: varchar("referrer_code", { length: 20 }),
+  verifyToken: varchar("verify_token", { length: 64 }),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_ebr_email").on(table.email),
+  index("idx_ebr_referrer").on(table.referrerCode),
+]);
+
+export const insertEarlyBirdRegistrationSchema = createInsertSchema(earlyBirdRegistrations, {
+  email: z.string().email("Invalid email address"),
+  wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/).transform((v) => v.toLowerCase()),
+  referrerCode: z.string().optional(),
+});
+
+export type InsertEarlyBirdRegistration = z.infer<typeof insertEarlyBirdRegistrationSchema>;
+export type EarlyBirdRegistration = typeof earlyBirdRegistrations.$inferSelect;
