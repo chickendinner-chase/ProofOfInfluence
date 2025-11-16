@@ -8,6 +8,7 @@ import { VestingCard } from "@/components/VestingCard";
 import { AirdropCard } from "@/components/AirdropCard";
 import { AllowlistCard } from "@/components/AllowlistCard";
 import { ReferralCard } from "@/components/ReferralCard";
+import { BadgeCard } from "@/components/BadgeCard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
@@ -170,6 +171,13 @@ export default function Dashboard() {
       <Section title="Referral Program" subtitle="Invite friends and earn rewards">
         <div className="max-w-2xl mx-auto">
           <ReferralCard />
+        </div>
+      </Section>
+
+      {/* Badges Section */}
+      <Section title="Achievement Badges" subtitle="Collect badges by completing achievements">
+        <div className="max-w-2xl mx-auto">
+          <BadgeCard />
         </div>
       </Section>
 

@@ -28,6 +28,7 @@ export const VESTING_VAULT_ADDRESS = (import.meta.env.VITE_VESTING_VAULT_ADDRESS
 export const MERKLE_AIRDROP_ADDRESS = (import.meta.env.VITE_MERKLE_AIRDROP_ADDRESS || "0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e") as `0x${string}`;
 export const EARLY_BIRD_ALLOWLIST_ADDRESS = (import.meta.env.VITE_EARLY_BIRD_ALLOWLIST_ADDRESS || "0x75D75a4870762422D85D275b22F5A87Df78b4852") as `0x${string}`;
 export const REFERRAL_REGISTRY_ADDRESS = (import.meta.env.VITE_REFERRAL_REGISTRY_ADDRESS || ZERO_ADDRESS) as `0x${string}`;
+export const ACHIEVEMENT_BADGES_ADDRESS = (import.meta.env.VITE_ACHIEVEMENT_BADGES_ADDRESS || ZERO_ADDRESS) as `0x${string}`;
 
 // Uniswap V2 Router ABI (minimal interface for swap)
 export const UNISWAP_V2_ROUTER_ABI = [
