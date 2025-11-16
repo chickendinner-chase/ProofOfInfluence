@@ -83,6 +83,24 @@ Visit `http://localhost:5000` to see the app.
 - OpenZeppelin
 - Uniswap V2
 
+#### Contract Suite
+- **POIToken** – Access-controlled ERC20 with pausing, blacklist controls, role-managed minting/burning, and permit support. Deployment artifact: `shared/contracts/poi.json`.
+- **VestingVault** – Multi-schedule linear vesting vault with revocation support (`shared/contracts/vesting_vault.json`).
+- **MerkleAirdropDistributor** – Multi-round POI distributor secured by Merkle proofs and replay protection (`shared/contracts/merkle_airdrop.json`).
+- **EarlyBirdAllowlist** – Merkle-based allocation tracker with consumer controls for TGE integrations (`shared/contracts/early_bird_allowlist.json`).
+- **ReferralRegistry** – On-chain inviter ledger with optional POI reward streaming (`shared/contracts/referral_registry.json`).
+- **AchievementBadges** – Soulbound ERC721 achievements with configurable badge types (`shared/contracts/achievement_badges.json`).
+
+Deployment scripts under `scripts/deploy-*.ts` now call a shared helper that emits addresses and writes ABI metadata into `shared/contracts/*.json`. To deploy the full stack on Base Sepolia:
+1. `npx hardhat run scripts/deploy-token.ts --config hardhat.config.cjs --network base-sepolia`
+2. `npx hardhat run scripts/deploy-vesting.ts --config hardhat.config.cjs --network base-sepolia`
+3. `npx hardhat run scripts/deploy-airdrop.ts --config hardhat.config.cjs --network base-sepolia`
+4. `npx hardhat run scripts/deploy-early-bird.ts --config hardhat.config.cjs --network base-sepolia`
+5. `npx hardhat run scripts/deploy-referral.ts --config hardhat.config.cjs --network base-sepolia`
+6. `npx hardhat run scripts/deploy-badges.ts --config hardhat.config.cjs --network base-sepolia`
+
+Each script prints constructor parameters, waits for confirmations, and persists ABI + address metadata, which powers backend calls via `shared/contracts`.
+
 ## 🤖 AI Collaboration
 
 This project uses a **multi-AI collaboration system** coordinated by ChatGPT:

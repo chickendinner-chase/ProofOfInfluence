@@ -1,0 +1,142 @@
+{
+  "name": "MerkleAirdropDistributor",
+  "address": "0x0000000000000000000000000000000000000000",
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "abi": [
+    {
+      "inputs": [ { "internalType": "address", "name": "owner_", "type": "address" } ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    { "inputs": [], "name": "AlreadyClaimed", "type": "error" },
+    { "inputs": [], "name": "ClaimClosed", "type": "error" },
+    { "inputs": [], "name": "InvalidProof", "type": "error" },
+    { "inputs": [], "name": "TokenNotSet", "type": "error" },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint64", "name": "roundId", "type": "uint64" },
+        { "indexed": false, "internalType": "bytes32", "name": "newRoot", "type": "bytes32" }
+      ],
+      "name": "RootUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint64", "name": "roundId", "type": "uint64" },
+        { "indexed": true, "internalType": "uint256", "name": "index", "type": "uint256" },
+        { "indexed": true, "internalType": "address", "name": "account", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+      ],
+      "name": "Claimed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [ { "indexed": true, "internalType": "address", "name": "newToken", "type": "address" } ],
+      "name": "TokenUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [ { "indexed": true, "internalType": "address", "name": "newTreasury", "type": "address" } ],
+      "name": "TreasuryUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [ { "indexed": true, "internalType": "address", "name": "to", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" } ],
+      "name": "TokensRecovered",
+      "type": "event"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "index", "type": "uint256" }, { "internalType": "address", "name": "account", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }, { "internalType": "bytes32[]", "name": "merkleProof", "type": "bytes32[]" } ],
+      "name": "claim",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint64", "name": "roundId", "type": "uint64" }, { "internalType": "uint256", "name": "index", "type": "uint256" }, { "internalType": "address", "name": "account", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }, { "internalType": "bytes32[]", "name": "merkleProof", "type": "bytes32[]" } ],
+      "name": "claimFromRound",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "currentRound",
+      "outputs": [ { "internalType": "uint64", "name": "", "type": "uint64" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    { "inputs": [], "name": "pause", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+    { "inputs": [], "name": "paused", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "unpause", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+    {
+      "inputs": [ { "internalType": "uint64", "name": "roundId", "type": "uint64" } ],
+      "name": "rootOf",
+      "outputs": [ { "internalType": "bytes32", "name": "", "type": "bytes32" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint64", "name": "roundId", "type": "uint64" }, { "internalType": "uint256", "name": "index", "type": "uint256" } ],
+      "name": "isClaimed",
+      "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "token", "type": "address" } ],
+      "name": "setToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "newTreasury", "type": "address" } ],
+      "name": "setTreasury",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "bytes32", "name": "root", "type": "bytes32" } ],
+      "name": "setRoot",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint64", "name": "roundId", "type": "uint64" }, { "internalType": "bytes32", "name": "root", "type": "bytes32" } ],
+      "name": "updateRoot",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "poiToken",
+      "outputs": [ { "internalType": "address", "name": "", "type": "address" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "treasury",
+      "outputs": [ { "internalType": "address", "name": "", "type": "address" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "amount", "type": "uint256" } ],
+      "name": "withdrawRemaining",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

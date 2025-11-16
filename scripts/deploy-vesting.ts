@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { persistContract } from "./utils/deployment";
 
 async function main() {
   const tokenAddress = process.env.POI_TOKEN_ADDRESS;
@@ -14,6 +15,7 @@ async function main() {
   await vault.deployed();
 
   console.log(`VestingVault deployed to ${vault.address}`);
+  await persistContract("VestingVault", vault.address);
 }
 
 main().catch((error) => {

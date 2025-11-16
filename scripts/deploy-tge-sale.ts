@@ -85,7 +85,7 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log(`Deploying with ${deployer.address} on ${network.name}`);
 
-  const Poi = await ethers.getContractFactory("POI");
+  const Poi = await ethers.getContractFactory("POIToken");
   const poi = await Poi.deploy(deployer.address, deployer.address, 0);
   await poi.deployed();
   console.log(`POI deployed at ${poi.address}`);

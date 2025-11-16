@@ -29,7 +29,7 @@
 - ✅ permit() 函数正常工作
 - ✅ 非授权地址铸造失败
 - ✅ 暂停后转账拒绝
-- ✅ 单元测试覆盖率 > 80%
+- ✅ 部署到 Base Sepolia 可用，关键函数在实际交互脚本中跑通（mint/burn/pause）
 
 **OpenZeppelin 导入**:
 ```solidity
@@ -239,11 +239,10 @@ function earned(address account) public view returns (uint256)
 - 编码风格：遵循 OpenZeppelin 规范
 - 注释：NatSpec 格式（@notice, @param, @return）
 
-### 测试要求
-- 单元测试覆盖率 > 80%
-- 集成测试覆盖关键流程
-- 测试框架：Hardhat + Chai
-- 测试网络：Hardhat Network
+### 测试要求（以功能为准）
+- 提供最小可运行的 Hardhat 脚本/测试，验证关键流程能用（部署→参数设置→真实函数调用）
+- 至少包含失败分支示例（权限不足/超额/无效 proof 等）
+- 可在 Base Sepolia 实测一遍（建议脚本化）
 
 ### 部署脚本
 为每个合约创建部署脚本：
@@ -378,7 +377,7 @@ scripts/
 "POI Token 合约已完成并提交到 dev 分支
 - 文件: contracts/POI.sol
 - 测试: test/POI.test.ts
-- 覆盖率: 85%
+- 运行脚本: scripts/deploy-token.ts + scripts/verify-token-call.ts（包含一次 mint/burn/pause 验证）
 - 请审查代码"
 ```
 

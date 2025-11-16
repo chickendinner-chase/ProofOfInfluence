@@ -26,6 +26,8 @@ import {
   referralCodes,
   referrals,
   airdropEligibility,
+  earlyBirdRegistrations,
+  userIdentities,
   userPersonalityProfiles,
   userMemories,
   agentkitActions,
@@ -82,6 +84,10 @@ import {
   type InsertReferral,
   type AirdropEligibility,
   type InsertAirdropEligibility,
+  type UserIdentity,
+  type InsertUserIdentity,
+  type EarlyBirdRegistration,
+  type InsertEarlyBirdRegistration,
   type UserPersonalityProfile,
   type InsertUserPersonalityProfile,
   type UserMemory,
@@ -249,6 +255,18 @@ export interface IStorage {
   createAgentkitAction(action: InsertAgentkitAction): Promise<AgentkitAction>;
   updateAgentkitAction(id: string, updates: Partial<InsertAgentkitAction>): Promise<AgentkitAction>;
   getAgentkitAction(id: string): Promise<AgentkitAction | undefined>;
+
+  // Early-bird registration
+  createEarlyBirdRegistration(data: InsertEarlyBirdRegistration): Promise<EarlyBirdRegistration>;
+  getEarlyBirdRegistrationByEmail(email: string): Promise<EarlyBirdRegistration | undefined>;
+  getEarlyBirdRegistrationByWallet(wallet: string): Promise<EarlyBirdRegistration | undefined>;
+  verifyEarlyBirdRegistration(token: string): Promise<EarlyBirdRegistration | undefined>;
+
+  // Identity bindings
+  getUserIdentities(userId: string): Promise<UserIdentity[]>;
+  findIdentity(provider: string, providerUserId?: string, walletAddress?: string): Promise<UserIdentity | undefined>;
+  upsertIdentity(identity: InsertUserIdentity): Promise<UserIdentity>;
+  mergeUsers(primaryUserId: string, secondaryUserId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1492,6 +1510,107 @@ export class DatabaseStorage implements IStorage {
   async getAgentkitAction(id: string): Promise<AgentkitAction | undefined> {
     const [record] = await db.select().from(agentkitActions).where(eq(agentkitActions.id, id));
     return record;
+  }
+
+  // Early-bird registration
+  async createEarlyBirdRegistration(data: InsertEarlyBirdRegistration): Promise<EarlyBirdRegistration> {
+    const [row] = await db
+      .insert(earlyBirdRegistrations)
+      .values({ ...data, createdAt: new Date(), updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: earlyBirdRegistrations.email,
+        set: {
+          wallet: data.wallet,
+          referrerCode: data.referrerCode ?? null,
+          verifyToken: data.verifyToken ?? null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async setEarlyBirdVerifyToken(email: string, token: string): Promise<EarlyBirdRegistration | undefined> {
+    const [row] = await db
+      .update(earlyBirdRegistrations)
+      .set({ verifyToken: token, updatedAt: new Date() })
+      .where(eq(earlyBirdRegistrations.email, email.toLowerCase()))
+      .returning();
+    return row;
+  }
+
+  async getEarlyBirdRegistrationByEmail(email: string): Promise<EarlyBirdRegistration | undefined> {
+    const [row] = await db.select().from(earlyBirdRegistrations).where(eq(earlyBirdRegistrations.email, email.toLowerCase()));
+    return row;
+  }
+
+  async getEarlyBirdRegistrationByWallet(wallet: string): Promise<EarlyBirdRegistration | undefined> {
+    const [row] = await db.select().from(earlyBirdRegistrations).where(eq(earlyBirdRegistrations.wallet, wallet.toLowerCase()));
+    return row;
+  }
+
+  async verifyEarlyBirdRegistration(token: string): Promise<EarlyBirdRegistration | undefined> {
+    const [row] = await db
+      .update(earlyBirdRegistrations)
+      .set({ status: 'verified', verifiedAt: new Date(), updatedAt: new Date() })
+      .where(eq(earlyBirdRegistrations.verifyToken, token))
+      .returning();
+    return row;
+  }
+
+  // Identity bindings
+  async getUserIdentities(userId: string): Promise<UserIdentity[]> {
+    return await db.select().from(userIdentities).where(eq(userIdentities.userId, userId));
+  }
+
+  async findIdentity(provider: string, providerUserId?: string, walletAddress?: string): Promise<UserIdentity | undefined> {
+    if (walletAddress) {
+      const [row] = await db.select().from(userIdentities).where(eq(userIdentities.walletAddress, walletAddress.toLowerCase()));
+      if (row) return row;
+    }
+    if (providerUserId) {
+      const [row] = await db
+        .select()
+        .from(userIdentities)
+        .where(and(eq(userIdentities.provider, provider), eq(userIdentities.providerUserId, providerUserId)));
+      return row;
+    }
+    return undefined;
+  }
+
+  async upsertIdentity(identity: InsertUserIdentity): Promise<UserIdentity> {
+    const normalized: InsertUserIdentity = {
+      ...identity,
+      email: identity.email?.toLowerCase(),
+      walletAddress: identity.walletAddress?.toLowerCase(),
+    };
+    const [row] = await db
+      .insert(userIdentities)
+      .values({ ...normalized, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: userIdentities.id,
+        set: {
+          email: normalized.email ?? null,
+          emailVerified: normalized.emailVerified ?? false,
+          walletAddress: normalized.walletAddress ?? null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async mergeUsers(primaryUserId: string, secondaryUserId: string): Promise<void> {
+    await db
+      .update(userIdentities)
+      .set({ userId: primaryUserId, updatedAt: new Date() })
+      .where(eq(userIdentities.userId, secondaryUserId));
+
+    await db.update(userPersonalityProfiles).set({ userId: primaryUserId }).where(eq(userPersonalityProfiles.userId, secondaryUserId));
+    await db.update(userBalances).set({ userId: primaryUserId }).where(eq(userBalances.userId, secondaryUserId));
+    await db.update(userMemories).set({ userId: primaryUserId }).where(eq(userMemories.userId, secondaryUserId));
+
+    await db.delete(users).where(eq(users.id, secondaryUserId));
   }
 }
 

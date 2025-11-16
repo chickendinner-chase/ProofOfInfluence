@@ -119,7 +119,8 @@ async function main() {
   console.log("📝 1. 部署 POI Token 合约...");
 
   const POITokenFactory = new ethers.ContractFactory(abi, bytecode, wallet);
-  const poiToken = await POITokenFactory.deploy();
+  const initialSupply = ethers.utils.parseUnits(process.env.POI_INITIAL_SUPPLY ?? "1000000000", 18);
+  const poiToken = await POITokenFactory.deploy(wallet.address, wallet.address, initialSupply);
   
   console.log(`   交易已发送，等待确认...`);
   const deployReceipt = await poiToken.deployTransaction.wait(2); // 等待2个区块确认

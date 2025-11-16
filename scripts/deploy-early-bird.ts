@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { persistContract } from "./utils/deployment";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -9,6 +10,7 @@ async function main() {
   await allowlist.deployed();
 
   console.log(`EarlyBirdAllowlist deployed to ${allowlist.address}`);
+  await persistContract("EarlyBirdAllowlist", allowlist.address);
 }
 
 main().catch((error) => {

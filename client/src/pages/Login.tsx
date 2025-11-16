@@ -156,6 +156,13 @@ export default function Login() {
                   return (
                     <button
                       key={social.id}
+                      onClick={() => {
+                        if (social.id === "google" || social.id === "apple") {
+                          // TODO: Hook up to actual OAuth when enabled
+                          window.location.href = "/api/login"; // fallback to Replit OIDC for now
+                          return;
+                        }
+                      }}
                       className={cn(
                         'w-full flex items-center gap-3 p-4 rounded-lg transition-all text-left',
                         theme === 'cyberpunk'
@@ -171,6 +178,23 @@ export default function Login() {
                     </button>
                   );
                 })}
+
+                {/* Replit Auth explicit button */}
+                <button
+                  onClick={() => { window.location.href = "/api/login"; }}
+                  className={cn(
+                    'w-full flex items-center gap-3 p-4 rounded-lg transition-all text-left',
+                    theme === 'cyberpunk'
+                      ? 'border border-cyan-400/30 hover:bg-cyan-400/10 hover:border-cyan-400/50'
+                      : 'border border-slate-200 hover:bg-slate-50 hover:shadow-md'
+                  )}
+                >
+                  <Chrome className="w-6 h-6" />
+                  <div>
+                    <div className="font-semibold">Replit Auth</div>
+                    <div className="text-xs opacity-70">使用 Replit 账号登录</div>
+                  </div>
+                </button>
               </div>
 
               <div className={cn(

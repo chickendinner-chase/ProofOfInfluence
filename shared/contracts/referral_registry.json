@@ -1,0 +1,123 @@
+{
+  "name": "ReferralRegistry",
+  "address": "0x0000000000000000000000000000000000000000",
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "abi": [
+    {
+      "inputs": [ { "internalType": "address", "name": "admin", "type": "address" } ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    { "inputs": [], "name": "AlreadyRegistered", "type": "error" },
+    { "inputs": [], "name": "InvalidAmount", "type": "error" },
+    { "inputs": [], "name": "InvalidInviter", "type": "error" },
+    { "inputs": [], "name": "RewardTokenNotSet", "type": "error" },
+    { "inputs": [], "name": "UnknownReferral", "type": "error" },
+    {
+      "anonymous": false,
+      "inputs": [ { "indexed": true, "internalType": "address", "name": "inviter", "type": "address" }, { "indexed": true, "internalType": "address", "name": "invitee", "type": "address" }, { "indexed": false, "internalType": "bytes32", "name": "code", "type": "bytes32" } ],
+      "name": "Registered",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [ { "indexed": true, "internalType": "address", "name": "inviter", "type": "address" }, { "indexed": true, "internalType": "address", "name": "invitee", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" } ],
+      "name": "Rewarded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [ { "indexed": true, "internalType": "address", "name": "token", "type": "address" } ],
+      "name": "RewardTokenUpdated",
+      "type": "event"
+    },
+    { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "indexed": true, "internalType": "bytes32", "name": "previousAdminRole", "type": "bytes32" }, { "indexed": true, "internalType": "bytes32", "name": "newAdminRole", "type": "bytes32" } ], "name": "RoleAdminChanged", "type": "event" },
+    { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "indexed": true, "internalType": "address", "name": "account", "type": "address" }, { "indexed": true, "internalType": "address", "name": "sender", "type": "address" } ], "name": "RoleGranted", "type": "event" },
+    { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "indexed": true, "internalType": "address", "name": "account", "type": "address" }, { "indexed": true, "internalType": "address", "name": "sender", "type": "address" } ], "name": "RoleRevoked", "type": "event" },
+    { "inputs": [], "name": "DEFAULT_ADMIN_ROLE", "outputs": [ { "internalType": "bytes32", "name": "", "type": "bytes32" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "REGISTRAR_ROLE", "outputs": [ { "internalType": "bytes32", "name": "", "type": "bytes32" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "REWARDER_ROLE", "outputs": [ { "internalType": "bytes32", "name": "", "type": "bytes32" } ], "stateMutability": "view", "type": "function" },
+    {
+      "inputs": [ { "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "internalType": "address", "name": "account", "type": "address" } ],
+      "name": "grantRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "internalType": "address", "name": "account", "type": "address" } ],
+      "name": "revokeRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "internalType": "address", "name": "callerConfirmation", "type": "address" } ],
+      "name": "renounceRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "bytes32", "name": "role", "type": "bytes32" } ],
+      "name": "getRoleAdmin",
+      "outputs": [ { "internalType": "bytes32", "name": "", "type": "bytes32" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    { "inputs": [ { "internalType": "bytes32", "name": "role", "type": "bytes32" }, { "internalType": "address", "name": "account", "type": "address" } ], "name": "hasRole", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" },
+    {
+      "inputs": [ { "internalType": "address", "name": "inviter", "type": "address" }, { "internalType": "address", "name": "invitee", "type": "address" }, { "internalType": "bytes32", "name": "code", "type": "bytes32" } ],
+      "name": "register",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "inviter", "type": "address" }, { "internalType": "bytes32", "name": "code", "type": "bytes32" } ],
+      "name": "selfRegister",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "inviter", "type": "address" }, { "internalType": "address", "name": "invitee", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ],
+      "name": "reward",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "token", "type": "address" } ],
+      "name": "setRewardToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "invitee", "type": "address" } ],
+      "name": "getReferral",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "address", "name": "inviter", "type": "address" },
+            { "internalType": "bytes32", "name": "code", "type": "bytes32" },
+            { "internalType": "uint64", "name": "timestamp", "type": "uint64" },
+            { "internalType": "bool", "name": "exists", "type": "bool" }
+          ],
+          "internalType": "struct ReferralRegistry.Referral",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    { "inputs": [ { "internalType": "address", "name": "invitee", "type": "address" } ], "name": "hasReferral", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [ { "internalType": "address", "name": "inviter", "type": "address" } ], "name": "referralCounts", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [ { "internalType": "address", "name": "inviter", "type": "address" } ], "name": "totalRewardsEarned", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "rewardToken", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [ { "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" } ], "name": "supportsInterface", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" }
+  ]
+}

@@ -12,6 +12,12 @@ import { registerMerchantRoutes } from "./routes/merchant";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
+import { contractService } from "./services/contracts";
+import { createWalletNonce, getWalletNonce, consumeWalletNonce } from "./auth/walletNonce";
+import { approveSpender, getAllowance } from "./agentkit/erc20";
+import tgeContract from "@shared/contracts/poi_tge.json";
+import usdcContract from "@shared/contracts/poi_tge.json";
+import { getSaleStatus } from "./agentkit/tge";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const tgeSaleAddress =
@@ -101,6 +107,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Early-Bird Registration
+  app.get("/api/auth/wallet/nonce", async (req: any, res) => {
+    const address = String(req.query.address || "").toLowerCase();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      return res.status(400).json({ message: "Invalid address" });
+    }
+    const nonce = createWalletNonce(address);
+    res.json({ address, nonce, message: `Sign this nonce to prove ownership: ${nonce}` });
+  });
+
+  app.post("/api/early-bird/register", async (req: any, res) => {
+    const schema = z.object({
+      email: z.string().email(),
+      wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+      referrerCode: z.string().optional(),
+    });
+
+    let body: z.infer<typeof schema>;
+    try {
+      body = schema.parse(req.body);
+    } catch (err: any) {
+      return res.status(400).json({ message: err?.message ?? "Invalid data" });
+    }
+
+    try {
+      const email = body.email.toLowerCase();
+      const wallet = body.wallet.toLowerCase();
+
+      // Upsert registration
+      const registration = await storage.createEarlyBirdRegistration({
+        email,
+        wallet,
+        referrerCode: body.referrerCode,
+      } as any);
+
+      res.json({
+        id: registration.id,
+        status: registration.status,
+        referralCode: registration.referralCode,
+      });
+    } catch (error: any) {
+      console.error("Early-bird register error:", error);
+      res.status(500).json({ message: "Failed to register" });
+    }
+  });
+
+  app.post("/api/early-bird/register-and-claim", async (req: any, res) => {
+    const schema = z.object({
+      email: z.string().email(),
+      walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+      signature: z.string(),
+      referrerCode: z.string().optional(),
+    });
+
+    let body: z.infer<typeof schema>;
+    try {
+      body = schema.parse(req.body);
+    } catch (err: any) {
+      return res.status(400).json({ message: err?.message ?? "Invalid data" });
+    }
+
+    const wallet = body.walletAddress.toLowerCase();
+    try {
+      // Verify nonce
+      const nonce = getWalletNonce(wallet);
+      if (!nonce) {
+        return res.status(400).json({ message: "Nonce expired or not found" });
+      }
+      const message = `Sign this nonce to prove ownership: ${nonce}`;
+      const recovered = ethers.utils.verifyMessage(message, body.signature);
+      if (recovered.toLowerCase() !== wallet) {
+        return res.status(400).json({ message: "Invalid signature" });
+      }
+      if (!consumeWalletNonce(wallet, nonce)) {
+        return res.status(400).json({ message: "Nonce already used" });
+      }
+
+      // Upsert registration with verify token
+      const verifyToken = ethers.utils.hexlify(ethers.utils.randomBytes(16));
+      const registration = await storage.createEarlyBirdRegistration({
+        email: body.email.toLowerCase(),
+        wallet,
+        referrerCode: body.referrerCode,
+        verifyToken,
+      } as any);
+
+      const origin = `${req.protocol}://${req.get("host")}`;
+      const confirmUrl = `${origin}/api/auth/identities/claim?token=${verifyToken}`;
+
+      res.json({
+        id: registration.id,
+        status: registration.status,
+        token: verifyToken,
+        confirmUrl,
+      });
+    } catch (error: any) {
+      console.error("Early-bird register-and-claim error:", error);
+      res.status(500).json({ message: "Failed to register" });
+    }
+  });
+
+  app.get("/api/early-bird/verify", async (req: any, res) => {
+    const token = String(req.query.token || "");
+    if (!token) {
+      return res.status(400).json({ message: "Missing token" });
+    }
+
+    try {
+      const result = await storage.verifyEarlyBirdRegistration(token);
+      if (!result) {
+        return res.status(400).json({ message: "Invalid token" });
+      }
+      res.json({ status: "verified" });
+    } catch (error: any) {
+      console.error("Early-bird verify error:", error);
+      res.status(500).json({ message: "Failed to verify" });
+    }
+  });
+
+  app.post("/api/auth/identities/claim", isAuthenticated, async (req: any, res) => {
+    const schema = z.object({
+      token: z.string().min(8),
+    });
+
+    let body: z.infer<typeof schema>;
+    try {
+      body = schema.parse(req.body);
+    } catch (err: any) {
+      return res.status(400).json({ message: err?.message ?? "Invalid data" });
+    }
+
+    try {
+      const claimed = await storage.verifyEarlyBirdRegistration(body.token);
+      if (!claimed) {
+        return res.status(400).json({ message: "Invalid or used token" });
+      }
+
+      const userId = req.user.claims.sub;
+      // Prevent binding same wallet to different users
+      const existing = await storage.findIdentity("wallet", undefined, claimed.wallet);
+      if (existing && existing.userId !== userId) {
+        return res.status(400).json({ message: "Wallet already bound to another account" });
+      }
+
+      const identity = await storage.upsertIdentity({
+        userId,
+        provider: "wallet",
+        walletAddress: claimed.wallet,
+        email: claimed.email,
+        emailVerified: false,
+      } as any);
+
+      res.json({ status: "bound", identity });
+    } catch (error: any) {
+      console.error("Claim identity error:", error);
+      res.status(500).json({ message: "Failed to claim identity" });
     }
   });
 
@@ -312,6 +477,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error minting badge:", error);
       res.status(500).json({ message: "Failed to mint badge", details: error?.message });
+    }
+  });
+
+  // Unified contract action endpoint
+  // Supports both user-wallet mode (returns tx data) and agentkit mode (executes via backend)
+  app.post("/api/contracts/:contract/:action", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const { contract, action } = req.params;
+    const { mode = "agentkit", args = {} } = req.body;
+
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(400).json({ message: "User not found" });
+      }
+
+      // For agentkit mode, user must have linked wallet
+      if (mode === "agentkit" && !user.walletAddress) {
+        return res.status(400).json({ message: "请先绑定钱包地址" });
+      }
+
+      // Check if contract is deployed
+      if (!contractService.isContractDeployed(contract)) {
+        return res.status(400).json({ 
+          message: `Contract ${contract} is not deployed yet`,
+          contract,
+        });
+      }
+
+      // For agentkit mode, create action record
+      let actionRecord: any = null;
+      if (mode === "agentkit") {
+        const actionType = `${contract.toUpperCase()}_${action.toUpperCase()}`;
+        actionRecord = await storage.createAgentkitAction({
+          userId,
+          actionType,
+          status: "pending",
+          requestPayload: args,
+          metadata: { 
+            contract,
+            action,
+            network: process.env.AGENTKIT_DEFAULT_CHAIN || "base-sepolia" 
+          },
+        });
+      }
+
+      try {
+        const result = await contractService.call(contract, action, args, {
+          mode,
+          userWallet: user.walletAddress || undefined,
+        });
+
+        // Update action record if in agentkit mode
+        if (mode === "agentkit" && actionRecord && result.txHash) {
+          await storage.updateAgentkitAction(actionRecord.id, {
+            status: "success",
+            txHash: result.txHash,
+          });
+        }
+
+        res.json({
+          ...(actionRecord ? { actionId: actionRecord.id } : {}),
+          status: mode === "agentkit" ? "success" : "prepared",
+          mode,
+          ...result,
+        });
+      } catch (err: any) {
+        // Update action record on failure
+        if (mode === "agentkit" && actionRecord) {
+          await storage.updateAgentkitAction(actionRecord.id, {
+            status: "failed",
+            errorMessage: err?.message ?? "Unknown error",
+          });
+        }
+        throw err;
+      }
+    } catch (error: any) {
+      console.error(`Error executing ${contract}.${action}:`, error);
+      res.status(500).json({ 
+        message: `Failed to execute ${action}`,
+        contract,
+        action,
+        details: error?.message 
+      });
+    }
+  });
+
+  // Unified identity endpoints
+  app.get("/api/auth/identities", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const identities = await storage.getUserIdentities(userId);
+      res.json({ identities });
+    } catch (error: any) {
+      console.error("List identities error:", error);
+      res.status(500).json({ message: "Failed to list identities" });
+    }
+  });
+
+  // TGE public status (optional wallet query)
+  app.get("/api/tge/status", async (req: any, res) => {
+    try {
+      const wallet = (req.query.wallet as string | undefined) || undefined;
+      const status = await getSaleStatus(wallet);
+      res.json(status);
+    } catch (error: any) {
+      console.error("Get TGE status error:", error);
+      res.status(500).json({ message: "Failed to fetch TGE status" });
+    }
+  });
+
+  // AgentKit USDC approve helper (secured by allowlist)
+  app.post("/api/contracts/USDC/approve", isAuthenticated, async (req: any, res) => {
+    const schema = z.object({
+      amount: z.string().min(1), // wei-like smallest unit (6 decimals for USDC)
+      spender: z.string().optional(), // default to TGESale address
+    });
+    let body: z.infer<typeof schema>;
+    try {
+      body = schema.parse(req.body);
+    } catch (err: any) {
+      return res.status(400).json({ message: err?.message ?? "Invalid data" });
+    }
+
+    try {
+      const spender = body.spender || (tgeContract.address as string);
+      // Allowlist token address from env (preferred) or from config on server
+      const token = process.env.USDC_TOKEN_ADDRESS;
+      if (!token || token === "0x0000000000000000000000000000000000000000") {
+        return res.status(400).json({ message: "USDC token address not configured on server" });
+      }
+      if (!spender || spender === "0x0000000000000000000000000000000000000000") {
+        return res.status(400).json({ message: "TGESale address not configured" });
+      }
+
+      // Optional: check current allowance for AgentKit wallet
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const current = await getAllowance(token, /* owner is AgentKit wallet */ process.env.CDP_WALLET_ADDRESS || "0x0000000000000000000000000000000000000000", spender);
+
+      const txHash = await approveSpender(token as `0x${string}`, spender as `0x${string}`, body.amount);
+      res.json({ status: "success", txHash, previousAllowance: current });
+    } catch (error: any) {
+      console.error("USDC approve error:", error);
+      res.status(500).json({ message: "Failed to approve USDC", details: error?.message });
+    }
+  });
+
+  app.post("/api/auth/identities/bind", isAuthenticated, async (req: any, res) => {
+    const schema = z.object({
+      provider: z.enum(["email", "google", "apple", "wallet", "replit"]),
+      providerUserId: z.string().optional(),
+      email: z.string().email().optional(),
+      walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+      emailVerified: z.boolean().optional(),
+    });
+
+    let body: z.infer<typeof schema>;
+    try {
+      body = schema.parse(req.body);
+    } catch (err: any) {
+      return res.status(400).json({ message: err?.message ?? "Invalid data" });
+    }
+
+    try {
+      const userId = req.user.claims.sub;
+
+      // Prevent binding same wallet to different users
+      if (body.walletAddress) {
+        const existing = await storage.findIdentity("wallet", undefined, body.walletAddress);
+        if (existing && existing.userId !== userId) {
+          return res.status(400).json({ message: "Wallet already bound to another account" });
+        }
+      }
+
+      const identity = await storage.upsertIdentity({
+        userId,
+        provider: body.provider,
+        providerUserId: body.providerUserId,
+        email: body.email,
+        emailVerified: body.emailVerified ?? false,
+        walletAddress: body.walletAddress,
+      } as any);
+
+      res.json({ identity });
+    } catch (error: any) {
+      console.error("Bind identity error:", error);
+      res.status(500).json({ message: "Failed to bind identity" });
     }
   });
 

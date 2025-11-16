@@ -5,6 +5,8 @@ import { ThemedCard, ThemedButton, ThemedInput } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import {
   Mail,
   Wallet as WalletIcon,
@@ -18,10 +20,13 @@ import {
 export default function EarlyBird() {
   const { theme } = useTheme();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
 
   const [email, setEmail] = useState("");
-  const [wallet, setWallet] = useState("");
   const [loading, setLoading] = useState(false);
+  const wallet = (address as string | undefined) || "";
 
   // Example tasks
   const tasks = [
@@ -35,16 +40,72 @@ export default function EarlyBird() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "注册成功！",
-        description: "您已成功注册早鸟计划，请查收验证邮件。",
+    try {
+      if (!isConnected || !walletClient || !wallet) {
+        throw new Error("请先连接钱包");
+      }
+
+      // 1) fetch nonce
+      const nonceRes = await fetch(`/api/auth/wallet/nonce?address=${wallet}`, { credentials: "include" });
+      if (!nonceRes.ok) {
+        const err = await safeJson(nonceRes);
+        throw new Error(err?.message ?? "获取签名消息失败");
+      }
+      const nonceData = await nonceRes.json();
+
+      // 2) sign message
+      const message = nonceData.message as string;
+      const signature = await walletClient.signMessage({ account: address as `0x${string}`, message });
+
+      // 3) submit register-and-claim
+      const res = await fetch("/api/early-bird/register-and-claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, walletAddress: wallet, signature }),
+        credentials: "include",
       });
-      setLoading(false);
+
+      if (!res.ok) {
+        const err = await safeJson(res);
+        throw new Error(err?.message ?? "注册失败，请稍后重试");
+      }
+
+      const data = await res.json();
+
+      // If logged in, claim (bind) immediately
+      if (isAuthenticated && data?.token) {
+        const claimRes = await fetch("/api/auth/identities/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ token: data.token }),
+        });
+        if (!claimRes.ok) {
+          const err = await safeJson(claimRes);
+          throw new Error(err?.message ?? "绑定钱包失败");
+        }
+        toast({
+          title: "已登记并完成绑定",
+          description: "您的钱包已与账户关联",
+        });
+      } else {
+        toast({
+          title: "已登记",
+          description: data?.confirmUrl
+            ? `开发模式：确认链接 ${data.confirmUrl}`
+            : "请稍后在登录后完成绑定",
+        });
+      }
       setEmail("");
-      setWallet("");
-    }, 1500);
+    } catch (error: any) {
+      toast({
+        title: "提交失败",
+        description: error?.message ?? "请稍后再试",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const iconStyles = theme === 'cyberpunk'
@@ -101,7 +162,7 @@ export default function EarlyBird() {
       </Section>
 
       {/* Registration Form */}
-      <Section title="立即注册" subtitle="填写信息加入早鸟计划">
+      <Section title="绑定钱包参与早鸟" subtitle="填写邮箱并连接钱包，完成登记（不等于平台账号注册）">
         <ThemedCard className="p-6 md:p-8 max-w-2xl mx-auto">
           <form onSubmit={handleSubmit} className="space-y-6">
             <ThemedInput
@@ -114,15 +175,22 @@ export default function EarlyBird() {
               helperText="我们将发送验证邮件到此地址"
             />
 
-            <ThemedInput
-              label="钱包地址"
-              type="text"
-              placeholder="0x..."
-              value={wallet}
-              onChange={(e) => setWallet(e.target.value)}
-              required
-              helperText="用于接收空投的 EVM 兼容钱包地址"
-            />
+            <div>
+              <div className={cn('text-sm mb-2', theme === 'cyberpunk' ? 'text-cyan-200' : 'text-slate-600')}>钱包</div>
+              <div className="flex items-center justify-between gap-3">
+                <div className={cn('text-xs break-all', theme === 'cyberpunk' ? 'text-cyan-300' : 'text-slate-700')}>
+                  {wallet ? wallet : "未连接"}
+                </div>
+                <div>
+                  {/* 复用现有钱包连接按钮 */}
+                  {/* @ts-ignore */}
+                  <ThemedButton type="button" variant="outline">
+                    <span>{wallet ? "已连接" : "连接钱包"}</span>
+                  </ThemedButton>
+                </div>
+              </div>
+              <div className="mt-1 text-xs opacity-70">用于接收空投的 EVM 兼容钱包地址</div>
+            </div>
 
             <div className={cn(
               'p-4 rounded-lg text-sm',
@@ -148,9 +216,9 @@ export default function EarlyBird() {
               emphasis
               size="lg"
               className="w-full"
-              disabled={loading}
+              disabled={loading || !wallet}
             >
-              {loading ? '提交中...' : '提交注册'}
+              {loading ? '提交中...' : (isAuthenticated ? '提交并绑定' : '提交登记')}
             </ThemedButton>
           </form>
         </ThemedCard>
@@ -261,4 +329,12 @@ export default function EarlyBird() {
       </Section>
     </PageLayout>
   );
+}
+
+async function safeJson(res: Response): Promise<any | null> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }

@@ -1,0 +1,132 @@
+{
+  "name": "VestingVault",
+  "address": "0x0000000000000000000000000000000000000000",
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "abi": [
+    {
+      "inputs": [
+        { "internalType": "address", "name": "tokenAddress", "type": "address" },
+        { "internalType": "address", "name": "owner_", "type": "address" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    { "inputs": [], "name": "AlreadyRevoked", "type": "error" },
+    { "inputs": [], "name": "InvalidSchedule", "type": "error" },
+    { "inputs": [], "name": "NothingToRelease", "type": "error" },
+    { "inputs": [], "name": "NotRevocable", "type": "error" },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "scheduleId", "type": "uint256" },
+        { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "totalAmount", "type": "uint256" },
+        { "indexed": false, "internalType": "uint64", "name": "start", "type": "uint64" },
+        { "indexed": false, "internalType": "uint64", "name": "cliff", "type": "uint64" },
+        { "indexed": false, "internalType": "uint64", "name": "duration", "type": "uint64" },
+        { "indexed": false, "internalType": "uint64", "name": "slicePeriod", "type": "uint64" },
+        { "indexed": false, "internalType": "bool", "name": "revocable", "type": "bool" }
+      ],
+      "name": "ScheduleCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "scheduleId", "type": "uint256" },
+        { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+      ],
+      "name": "Released",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "uint256", "name": "scheduleId", "type": "uint256" },
+        { "indexed": true, "internalType": "address", "name": "beneficiary", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "refundAmount", "type": "uint256" }
+      ],
+      "name": "Revoked",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "beneficiary", "type": "address" },
+        { "internalType": "uint256", "name": "totalAmount", "type": "uint256" },
+        { "internalType": "uint64", "name": "start", "type": "uint64" },
+        { "internalType": "uint64", "name": "cliff", "type": "uint64" },
+        { "internalType": "uint64", "name": "duration", "type": "uint64" },
+        { "internalType": "uint64", "name": "slicePeriodSeconds", "type": "uint64" },
+        { "internalType": "bool", "name": "revocable", "type": "bool" }
+      ],
+      "name": "createSchedule",
+      "outputs": [ { "internalType": "uint256", "name": "scheduleId", "type": "uint256" } ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "scheduleId", "type": "uint256" } ],
+      "name": "getSchedule",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "address", "name": "beneficiary", "type": "address" },
+            { "internalType": "uint256", "name": "totalAmount", "type": "uint256" },
+            { "internalType": "uint256", "name": "released", "type": "uint256" },
+            { "internalType": "uint64", "name": "start", "type": "uint64" },
+            { "internalType": "uint64", "name": "cliff", "type": "uint64" },
+            { "internalType": "uint64", "name": "duration", "type": "uint64" },
+            { "internalType": "uint64", "name": "slicePeriodSeconds", "type": "uint64" },
+            { "internalType": "bool", "name": "revocable", "type": "bool" },
+            { "internalType": "bool", "name": "revoked", "type": "bool" }
+          ],
+          "internalType": "struct VestingVault.Schedule",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "scheduleId", "type": "uint256" } ],
+      "name": "releasableAmount",
+      "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "scheduleId", "type": "uint256" } ],
+      "name": "release",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "scheduleId", "type": "uint256" } ],
+      "name": "revoke",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "token",
+      "outputs": [ { "internalType": "address", "name": "", "type": "address" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "address", "name": "beneficiary", "type": "address" } ],
+      "name": "schedulesOf",
+      "outputs": [ { "internalType": "uint256[]", "name": "", "type": "uint256[]" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    { "inputs": [], "name": "owner", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
+    { "inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+    { "inputs": [ { "internalType": "address", "name": "newOwner", "type": "address" } ], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+  ]
+}
