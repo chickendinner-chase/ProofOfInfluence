@@ -1,3 +1,124 @@
+## ProofOfInfluence – Deployment Checklist
+
+This checklist covers deploying POI token + all contracts + the new platform (frontend + backend), for Base Sepolia or Base mainnet.
+
+---
+
+### 0) Prerequisites
+- Node 18+ installed
+- A fresh deployer wallet with funds on target network
+- RPC for Base or Base Sepolia
+
+---
+
+### 1) Secrets / Environment Variables
+
+Backend (.env or platform Secrets):
+- DATABASE_URL = postgres://user:pass@host:5432/db
+- BASE_RPC_URL = https://sepolia.base.org (or mainnet RPC)
+- USDC_TOKEN_ADDRESS = 0x... (Base or Base Sepolia USDC)
+- AGENTKIT_DEFAULT_CHAIN = base-sepolia (or base)
+- DEPLOYER_PRIVATE_KEY = 0x... (DO NOT COMMIT)
+- CDP_API_KEY_NAME = ...
+- CDP_API_KEY_PRIVATE_KEY = ...
+- (Optional) CDP_WALLET_ADDRESS = 0x...
+- STRIPE_SECRET_KEY = (optional, if using Stripe)
+- STRIPE_WEBHOOK_SECRET = (optional, if using webhooks)
+
+Frontend (Vite) (.env.local or platform ENV):
+- VITE_CHAIN_ID = 84532 (Base Sepolia) or 8453 (Base)
+- VITE_BASE_RPC_URL = https://sepolia.base.org
+- VITE_USDC_ADDRESS = 0x...
+- VITE_TGESALE_ADDRESS = 0x... (fill after deploy)
+- VITE_POI_ADDRESS = 0x... (fill after deploy)
+- VITE_WALLETCONNECT_PROJECT_ID = ...
+- VITE_BASESCAN_URL = https://sepolia.basescan.org (or https://basescan.org)
+
+---
+
+### 2) Install and Compile
+```bash
+npm ci
+npm run compile
+```
+
+---
+
+### 3) Deploy Contracts (record addresses)
+Deploy in this order (adjust to your scripts):
+1. POI (ERC20) → POI_ADDRESS
+2. TGESale → TGESALE_ADDRESS
+3. StakingRewards → STAKING_REWARDS_ADDRESS
+4. VestingVault (optional) → VESTING_VAULT_ADDRESS
+5. MerkleAirdropDistributor (optional) → MERKLE_AIRDROP_ADDRESS
+6. EarlyBirdAllowlist (optional) → EARLY_BIRD_ALLOWLIST_ADDRESS
+7. ReferralRegistry (optional) → REFERRAL_REGISTRY_ADDRESS
+8. AchievementBadges / ImmortalityBadge → ACHIEVEMENT_BADGES_ADDRESS / IMMORTALITY_BADGE_ADDRESS
+
+Fill addresses into:
+- shared/contracts/*.json (address field)
+- Frontend VITE_* vars (POI/TGESale/USDC/Chain/RPC)
+
+---
+
+### 4) TGESale Approvals (only if AgentKit “platform-broker” mode)
+- Approve CDP/AgentKit wallet to spend USDC to TGESale:
+  - POST /api/contracts/USDC/approve (body: { amount: "1000000000" }) or
+  - Use a script / Hardhat console to call USDC.approve(TGESale, amount)
+- In “user-wallet” mode, the frontend will guide approval automatically.
+
+---
+
+### 5) Optional: Add Liquidity (DEX)
+- Create POI/USDC pool (use existing script if present)
+- Set initial price and liquidity
+- (Optional) Fill any frontend config for Market module
+
+---
+
+### 6) Database and Backend
+```bash
+npm run db:push
+npm run server
+```
+Verify:
+```bash
+GET /api/tge/status?wallet=0x...
+```
+
+---
+
+### 7) Frontend
+```bash
+npm run dev       # local
+npm run build     # production
+npm run preview   # local preview
+```
+Deploy to your chosen hosting (Vercel/Netlify/… or Replit).
+
+---
+
+### 8) Acceptance Tests
+User Wallet Mode:
+1) Connect wallet on Immortality page
+2) TGE purchase: approve USDC → purchase → verify txHash on BaseScan
+3) Staking: stake → balance updates → withdraw → claim reward
+4) Negative cases: inactive sale / insufficient allowance or balance → friendly errors
+
+AgentKit Mode (optional):
+1) POST /api/contracts/USDC/approve (CDP wallet)
+2) POST /api/contracts/TGESale/purchase → txHash
+3) Verify on BaseScan
+
+---
+
+### 9) Common Pitfalls
+- Missing shared/contracts/*.json addresses
+- Wrong USDC address (testnet vs mainnet)
+- Sale window/tier/limits not configured
+- Missing RPC or AgentKit credentials
+- DATABASE_URL missing or db push not run
+
 # POI Token 部署检查清单
 
 部署前请逐项检查以确保顺利部署。

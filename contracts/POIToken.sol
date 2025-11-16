@@ -97,10 +97,7 @@ contract POIToken is ERC20, ERC20Permit, ERC20Burnable, AccessControl, Pausable 
         super._update(from, to, value);
     }
 
-    function _burn(address account, uint256 amount) internal override(ERC20) {
-        super._burn(account, amount);
-        emit Burned(account, amount);
-    }
+    // Note: ERC20 v5 _burn is not virtual; burn events can be emitted at call sites if needed.
 
     function supportsInterface(bytes4 interfaceId) public view override(AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);

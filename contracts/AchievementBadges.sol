@@ -53,7 +53,7 @@ contract AchievementBadges is ERC721, AccessControl {
     function mintBadge(address to, uint256 badgeType) external onlyRole(MINTER_ROLE) returns (uint256 tokenId) {
         BadgeType memory meta = _badgeTypes[badgeType];
         if (!meta.enabled) revert BadgeTypeDisabled();
-        if (to == address(0)) revert ERC721InvalidReceiver(address(0));
+        require(to != address(0), "Badges: zero address");
 
         tokenId = _nextTokenId++;
         _badgeTypeOfToken[tokenId] = badgeType;
@@ -62,12 +62,12 @@ contract AchievementBadges is ERC721, AccessControl {
     }
 
     function badgeTypeOf(uint256 tokenId) external view returns (uint256) {
-        if (!_exists(tokenId)) revert NonexistentToken();
+        if (_ownerOf(tokenId) == address(0)) revert NonexistentToken();
         return _badgeTypeOfToken[tokenId];
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        if (!_exists(tokenId)) revert NonexistentToken();
+        if (_ownerOf(tokenId) == address(0)) revert NonexistentToken();
         uint256 badgeType = _badgeTypeOfToken[tokenId];
         BadgeType memory meta = _badgeTypes[badgeType];
         return meta.uri;

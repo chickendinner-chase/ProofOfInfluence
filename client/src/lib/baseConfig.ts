@@ -23,6 +23,7 @@ export const POI_DECIMALS = 18;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export const TGESALE_ADDRESS = (import.meta.env.VITE_TGESALE_ADDRESS || ZERO_ADDRESS) as `0x${string}`;
 export const POI_TOKEN_ADDRESS = (import.meta.env.VITE_POI_ADDRESS || ZERO_ADDRESS) as `0x${string}`;
+export const STAKING_REWARDS_ADDRESS = (import.meta.env.VITE_STAKING_REWARDS_ADDRESS || ZERO_ADDRESS) as `0x${string}`;
 
 // Uniswap V2 Router ABI (minimal interface for swap)
 export const UNISWAP_V2_ROUTER_ABI = [
@@ -48,7 +49,21 @@ export const TGESALE_ABI = [
   "function maxContribution() view returns (uint256)",
   "function totalRaised() view returns (uint256)",
   "function contributedUSDC(address) view returns (uint256)",
-];
+] as const;
+
+// StakingRewards ABI
+export const STAKING_REWARDS_ABI = [
+  "function stake(uint256 amount) external",
+  "function withdraw(uint256 amount) external",
+  "function getReward() external",
+  "function exit() external",
+  "function balanceOf(address) view returns (uint256)",
+  "function earned(address) view returns (uint256)",
+  "function rewardRate() view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function periodFinish() view returns (uint256)",
+  "function rewardsDuration() view returns (uint256)",
+] as const;
 
 // Network configuration for MetaMask
 export const BASE_NETWORK_PARAMS = {

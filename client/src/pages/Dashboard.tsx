@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton } from "@/components/themed";
+import { StakingCard } from "@/components/StakingCard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
@@ -145,6 +146,11 @@ export default function Dashboard() {
             </div>
           </ThemedCard>
         </div>
+      </Section>
+
+      {/* Staking Section */}
+      <Section title="Staking" subtitle="Stake POI to earn rewards">
+        <StakingCard />
       </Section>
 
       {/* Main Content Grid */}

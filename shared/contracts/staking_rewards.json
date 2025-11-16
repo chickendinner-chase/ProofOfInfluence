@@ -1,6 +1,6 @@
 {
   "name": "StakingRewards",
-  "address": "0x0000000000000000000000000000000000000000",
+  "address": "0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d",
   "chainId": 84532,
   "network": "base-sepolia",
   "abi": [
@@ -477,7 +477,7 @@
     }
   ],
   "tokens": {
-    "staking": "0x0000000000000000000000000000000000000000",
-    "rewards": "0x0000000000000000000000000000000000000000"
+    "staking": "0x737869142C93078Dae4d78D4E8c5dbD45160565a",
+    "rewards": "0x737869142C93078Dae4d78D4E8c5dbD45160565a"
   }
 }

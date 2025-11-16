@@ -29,7 +29,7 @@ contract EarlyBirdAllowlist is Ownable {
     error ExceedsAllocation();
     error NotAuthorized();
 
-    constructor(address owner_) Ownable(owner_) {}
+constructor(address owner_) Ownable(owner_) {}
 
     function setRoot(bytes32 root) external onlyOwner {
         require(root != bytes32(0), "Allowlist: empty root");

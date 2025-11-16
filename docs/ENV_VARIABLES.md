@@ -46,8 +46,18 @@ ARBITRUM_RPC_URL=https://arb1.arbitrum.io/rpc
 # Polygon
 POLYGON_RPC_URL=https://polygon-rpc.com
 
-# POI 代币地址 (部署后填写)
-POI_TOKEN_ADDRESS=0x...
+# POI 代币地址 (Base Sepolia)
+POI_ADDRESS=0x737869142C93078Dae4d78D4E8c5dbD45160565a
+POI_TOKEN_ADDRESS=0x737869142C93078Dae4d78D4E8c5dbD45160565a
+
+# TGE 销售合约地址 (部署后填写)
+TGE_SALE_ADDRESS=0x...
+
+# Staking 奖励合约地址 (Base Sepolia)
+STAKING_REWARDS_ADDRESS=0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d
+
+# USDC 代币地址 (Base Sepolia)
+USDC_TOKEN_ADDRESS=0x...
 
 # 流动性配置
 WETH_AMOUNT=0.1        # 添加的 ETH 数量

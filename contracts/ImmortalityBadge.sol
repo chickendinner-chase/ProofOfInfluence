@@ -54,9 +54,7 @@ contract ImmortalityBadge is ERC721, AccessControl {
         if (!meta.enabled) {
             revert BadgeDisabled(badgeType);
         }
-        if (to == address(0)) {
-            revert ERC721InvalidReceiver(address(0));
-        }
+        require(to != address(0), "Badge: zero address");
         if (_hasBadge[to][badgeType]) {
             revert BadgeAlreadyClaimed(badgeType, to);
         }
