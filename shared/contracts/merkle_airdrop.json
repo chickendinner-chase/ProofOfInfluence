@@ -1,6 +1,6 @@
 {
   "name": "MerkleAirdropDistributor",
-  "address": "0x0000000000000000000000000000000000000000",
+  "address": "0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e",
   "chainId": 84532,
   "network": "base-sepolia",
   "abi": [

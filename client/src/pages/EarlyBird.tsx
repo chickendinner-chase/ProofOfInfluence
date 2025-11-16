@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton, ThemedInput } from "@/components/themed";
+import { AllowlistCard } from "@/components/AllowlistCard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -114,6 +115,16 @@ export default function EarlyBird() {
 
   return (
     <PageLayout>
+      {/* Allowlist Status Section */}
+      <Section
+        title="Allowlist Status"
+        subtitle="Check your early bird allowlist eligibility"
+      >
+        <div className="max-w-2xl mx-auto">
+          <AllowlistCard />
+        </div>
+      </Section>
+
       {/* Hero Section */}
       <Section
         title="Early-Bird Program"

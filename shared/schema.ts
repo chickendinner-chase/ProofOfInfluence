@@ -683,11 +683,15 @@ export const airdropEligibility = pgTable("airdrop_eligibility", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").unique().references(() => users.id, { onDelete: "cascade" }),
   walletAddress: varchar("wallet_address", { length: 42 }).unique(),
-  amount: integer("amount").notNull(), // POI amount
+  amount: integer("amount").notNull(), // POI amount (in POI units, not wei)
   eligible: boolean("eligible").default(true).notNull(),
   claimed: boolean("claimed").default(false).notNull(),
   claimDate: timestamp("claim_date"),
   vestingInfo: text("vesting_info"), // Optional vesting details
+  // Merkle proof fields for MerkleAirdropDistributor
+  merkleIndex: integer("merkle_index"), // Index in Merkle tree
+  merkleProof: jsonb("merkle_proof"), // Array of hex strings for Merkle proof
+  roundId: integer("round_id").default(0), // Airdrop round ID
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

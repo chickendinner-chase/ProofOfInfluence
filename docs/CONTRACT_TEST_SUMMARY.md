@@ -129,6 +129,9 @@ CHAIN_ID=84532
 POI_ADDRESS=0x737869142C93078Dae4d78D4E8c5dbD45160565a
 TGE_SALE_ADDRESS=<从部署日志获取>
 STAKING_REWARDS_ADDRESS=0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d
+VESTING_VAULT_ADDRESS=0xe4E695722C598CBa27723ab98049818b4b827924
+MERKLE_AIRDROP_ADDRESS=0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e
+EARLY_BIRD_ALLOWLIST_ADDRESS=0x75D75a4870762422D85D275b22F5A87Df78b4852
 USDC_TOKEN_ADDRESS=<Base Sepolia USDC 地址>
 
 # Deployment
@@ -144,6 +147,9 @@ VITE_BASE_RPC_URL=https://sepolia.base.org
 VITE_POI_ADDRESS=0x737869142C93078Dae4d78D4E8c5dbD45160565a
 VITE_TGESALE_ADDRESS=<从部署日志获取>
 VITE_STAKING_REWARDS_ADDRESS=0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d
+VITE_VESTING_VAULT_ADDRESS=0xe4E695722C598CBa27723ab98049818b4b827924
+VITE_MERKLE_AIRDROP_ADDRESS=0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e
+VITE_EARLY_BIRD_ALLOWLIST_ADDRESS=0x75D75a4870762422D85D275b22F5A87Df78b4852
 VITE_USDC_ADDRESS=<Base Sepolia USDC 地址>
 ```
 
@@ -172,21 +178,20 @@ TGE 购买流程:
 - [x] POIToken 部署和测试
 - [x] TGESale 部署和测试
 - [x] StakingRewards 部署和测试
+- [x] VestingVault 部署和测试
+- [x] MerkleAirdropDistributor 部署和测试
+- [x] EarlyBirdAllowlist 部署和测试
 - [x] 所有核心功能验证
 - [x] 测试脚本开发
-
-### 进行中 🚧
-- [ ] 更新 `shared/contracts/*.json` 中的地址
-- [ ] 创建前端 hooks (`usePoiToken`, `useStakingRewards`)
-- [ ] 更新 `client/src/lib/baseConfig.ts`
-- [ ] 前端 UI 集成
+- [x] 更新 `shared/contracts/*.json` 中的地址
+- [x] 创建前端 hooks (`useVestingVault`, `useAirdrop`, `useAllowlist`)
+- [x] 更新 `client/src/lib/baseConfig.ts`
+- [x] 前端集成（baseConfig.ts 已更新）
 
 ### 待开发 📋
-- [ ] VestingVault（锁仓金库）
-- [ ] MerkleAirdrop（空投分发）
-- [ ] EarlyBirdAllowlist（早鸟白名单）
 - [ ] ReferralRegistry（推荐注册表）
 - [ ] AchievementBadges（成就徽章）
+- [ ] 前端 UI 组件集成（VestingCard, AirdropCard, AllowlistCard）
 
 ## 📚 相关文档
 

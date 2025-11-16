@@ -84,20 +84,34 @@ Visit `http://localhost:5000` to see the app.
 - Uniswap V2
 
 #### Contract Suite
-- **POIToken** – Access-controlled ERC20 with pausing, blacklist controls, role-managed minting/burning, and permit support. Deployment artifact: `shared/contracts/poi.json`.
-- **VestingVault** – Multi-schedule linear vesting vault with revocation support (`shared/contracts/vesting_vault.json`).
-- **MerkleAirdropDistributor** – Multi-round POI distributor secured by Merkle proofs and replay protection (`shared/contracts/merkle_airdrop.json`).
-- **EarlyBirdAllowlist** – Merkle-based allocation tracker with consumer controls for TGE integrations (`shared/contracts/early_bird_allowlist.json`).
-- **ReferralRegistry** – On-chain inviter ledger with optional POI reward streaming (`shared/contracts/referral_registry.json`).
-- **AchievementBadges** – Soulbound ERC721 achievements with configurable badge types (`shared/contracts/achievement_badges.json`).
 
-Deployment scripts under `scripts/deploy-*.ts` now call a shared helper that emits addresses and writes ABI metadata into `shared/contracts/*.json`. To deploy the full stack on Base Sepolia:
-1. `npx hardhat run scripts/deploy-token.ts --config hardhat.config.cjs --network base-sepolia`
-2. `npx hardhat run scripts/deploy-vesting.ts --config hardhat.config.cjs --network base-sepolia`
-3. `npx hardhat run scripts/deploy-airdrop.ts --config hardhat.config.cjs --network base-sepolia`
-4. `npx hardhat run scripts/deploy-early-bird.ts --config hardhat.config.cjs --network base-sepolia`
-5. `npx hardhat run scripts/deploy-referral.ts --config hardhat.config.cjs --network base-sepolia`
-6. `npx hardhat run scripts/deploy-badges.ts --config hardhat.config.cjs --network base-sepolia`
+**已部署合约 (Base Sepolia)**:
+- **POIToken** ✅ – `0x737869142C93078Dae4d78D4E8c5dbD45160565a` – Access-controlled ERC20 with pausing, blacklist controls, role-managed minting/burning, and permit support.
+- **StakingRewards** ✅ – `0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d` – Staking rewards contract.
+- **VestingVault** ✅ – `0xe4E695722C598CBa27723ab98049818b4b827924` – Multi-schedule linear vesting vault with revocation support.
+- **MerkleAirdropDistributor** ✅ – `0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e` – Multi-round POI distributor secured by Merkle proofs and replay protection.
+- **EarlyBirdAllowlist** ✅ – `0x75D75a4870762422D85D275b22F5A87Df78b4852` – Merkle-based allocation tracker with consumer controls for TGE integrations.
+
+**待部署合约**:
+- **ReferralRegistry** – On-chain inviter ledger with optional POI reward streaming.
+- **AchievementBadges** – Soulbound ERC721 achievements with configurable badge types.
+- **TGESale** – Token generation event sale contract.
+
+**部署脚本**: 
+使用 `.cjs` 脚本进行部署（绕过 Hardhat 配置问题）：
+```bash
+# 部署已完成的合约
+node scripts/deploy-vesting-run.cjs
+node scripts/deploy-airdrop-run.cjs
+node scripts/deploy-early-bird-run.cjs
+
+# 测试已部署的合约
+node scripts/test-vesting.cjs
+node scripts/test-airdrop.cjs
+node scripts/test-early-bird.cjs
+```
+
+**合约地址**: 所有地址已更新到 `shared/contracts/*.json`。详细列表见 `docs/CONTRACT_ADDRESSES.md`。
 
 Each script prints constructor parameters, waits for confirmations, and persists ABI + address metadata, which powers backend calls via `shared/contracts`.
 
@@ -171,14 +185,32 @@ Later:
 
 ## 📚 Documentation
 
+### 核心文档
+- **[文档索引](docs/DOCUMENTATION_INDEX.md)** - 所有文档的索引和概览
+- **[合约地址清单](docs/CONTRACT_ADDRESSES.md)** - 所有已部署合约地址
+- **[部署和测试结果](docs/DEPLOYMENT_TEST_RESULTS.md)** - 最新部署状态和测试结果
+
+### 开发指南
 - **[Setup Guide](docs/SETUP.md)** - Wallet, payment, and token deployment
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and API specs
-- **[AI Collaboration](docs/AI_COLLABORATION_WEBHOOK.md)** - How AIs work together
-- **[Git Workflow](docs/GIT_WORKFLOW.md)** - Branch strategy and commit conventions
-- **[Environment Variables](docs/ENV_VARIABLES.md)** - Config reference
+- **[Contract Testing](docs/CONTRACT_TESTING.md)** - 合约测试脚本使用指南
 - **[Deployment Checklist](docs/DEPLOYMENT_CHECKLIST.md)** - Production deployment
+- **[Environment Variables](docs/ENV_VARIABLES.md)** - Config reference
+- **[Frontend Environment Variables](docs/ENV_VARIABLES_FRONTEND.md)** - 前端环境变量配置
+
+### 工作流程
+- **[Git Workflow](docs/GIT_WORKFLOW.md)** - Branch strategy and commit conventions
+- **[Replit Workflow](docs/REPLIT_WORKFLOW.md)** - Deployment and operations
+- **[AI Collaboration](docs/AI_COLLABORATION_WEBHOOK.md)** - How AIs work together
+
+### 合约文档
+- **[VestingVault](docs/contracts/VestingVault.md)** - 锁仓金库
+- **[MerkleAirdropDistributor](docs/contracts/MerkleAirdropDistributor.md)** - 空投分发
+- **[EarlyBirdAllowlist](docs/contracts/EarlyBirdAllowlist.md)** - 早鸟白名单
+
+### 设计指南
 - **[Design Guidelines](design_guidelines.md)** - UI/UX standards
-- **[Local Development](LOCAL_DEVELOPMENT.md)** - Dev environment setup
+- **[Design System Guide](docs/DESIGN_SYSTEM_GUIDE.md)** - Design system documentation
 
 ## 🗂️ Project Structure
 

@@ -1428,6 +1428,9 @@ export class DatabaseStorage implements IStorage {
     claimed: boolean;
     claimDate?: string;
     vestingInfo?: string;
+    index?: number;
+    proof?: string[];
+    roundId?: number;
   }> {
     // Try to find by userId or walletAddress
     const [result] = await db
@@ -1454,6 +1457,9 @@ export class DatabaseStorage implements IStorage {
       claimed: result.claimed,
       claimDate: result.claimDate?.toISOString(),
       vestingInfo: result.vestingInfo || undefined,
+      index: result.merkleIndex || undefined,
+      proof: (result.merkleProof as string[]) || undefined,
+      roundId: result.roundId || undefined,
     };
   }
 

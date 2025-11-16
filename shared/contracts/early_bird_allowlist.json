@@ -1,6 +1,6 @@
 {
   "name": "EarlyBirdAllowlist",
-  "address": "0x0000000000000000000000000000000000000000",
+  "address": "0x75D75a4870762422D85D275b22F5A87Df78b4852",
   "chainId": 84532,
   "network": "base-sepolia",
   "abi": [

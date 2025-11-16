@@ -421,8 +421,15 @@ ACEE | 首页 | 🛒 现货交易 | 💼 RWA市场 | ProjectX | 资源▼ | [钱
 
 ---
 
-**Document Version**: 2.0  
-**Last Updated**: 2025-11-09  
+**Document Version**: 2.1  
+**Last Updated**: 2025-11-16  
 **Maintained by**: Development Team
+
+## 最近更新
+
+- ✅ 完成 VestingVault, MerkleAirdropDistributor, EarlyBirdAllowlist 合约部署
+- ✅ 创建前端 hooks：useVestingVault, useAirdrop, useAllowlist
+- ✅ 更新合约地址到 shared/contracts/*.json
+- ✅ 更新前端配置 baseConfig.ts
 
 

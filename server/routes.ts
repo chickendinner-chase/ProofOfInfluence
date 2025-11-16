@@ -9,6 +9,8 @@ import { stripe } from "./stripe";
 import { registerMarketRoutes } from "./routes/market";
 import { registerReservePoolRoutes } from "./routes/reservePool";
 import { registerMerchantRoutes } from "./routes/merchant";
+import { registerAirdropRoutes } from "./routes/airdrop";
+import { registerReferralContractRoutes } from "./routes/referral";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
@@ -62,6 +64,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMarketRoutes(app);
   registerReservePoolRoutes(app);
   registerMerchantRoutes(app);
+  registerAirdropRoutes(app);
+  registerReferralContractRoutes(app);
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -1686,7 +1690,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const eligibility = await storage.checkAirdropEligibility(userIdOrAddress);
-      res.json(eligibility);
+      
+      // Format response for frontend
+      if (eligibility.eligible && !eligibility.claimed && eligibility.index !== undefined) {
+        // Format amount from POI units to wei string for frontend
+        const { formatAmountToWei } = require("./services/merkleAirdrop");
+        const amountWei = formatAmountToWei(eligibility.amount);
+        
+        res.json({
+          eligible: true,
+          amount: amountWei, // Return as wei string for frontend
+          index: eligibility.index,
+          proof: eligibility.proof || [],
+          roundId: eligibility.roundId || 0,
+        });
+      } else {
+        res.json({
+          eligible: false,
+          amount: "0",
+          index: undefined,
+          proof: [],
+          roundId: undefined,
+        });
+      }
     } catch (error) {
       console.error("Error checking airdrop eligibility:", error);
       res.status(500).json({ message: "Failed to check airdrop eligibility" });
