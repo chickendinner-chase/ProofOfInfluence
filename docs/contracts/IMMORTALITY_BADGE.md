@@ -13,12 +13,14 @@ The `ImmortalityBadge` contract is a role-gated ERC-721 collection that powers t
 
 ## Key Functions
 - `configureBadgeType(uint256 badgeType, BadgeMeta meta)` – enables/disables badge types, marks them transferable or soulbound, and optionally sets a custom token URI.
-- `mintBadge(address to, uint256 badgeType)` – mints the requested badge type to the recipient. Reverts if the badge type is disabled or already claimed by the recipient.
+- `mintBadge(address to, uint256 badgeType) external onlyRole(MINTER_ROLE) returns (uint256 tokenId)` – canonical minting entry point used by backend/AgentKit integrations. Reverts if the badge type is disabled or already claimed by the recipient.
 - `hasBadge(address account, uint256 badgeType)` – view helper for frontend/API usage.
 - `badgeTypeOf(uint256 tokenId)` – exposes which badge type a token represents.
 
 ## Constants
 - `BADGE_TYPE_TEST = 1` – the required type for the MVP's "Test Immortality Badge".
+
+`badgeType = 1` is wired end-to-end today. Partner integrations can safely call `mintBadge(user, 1)` off-chain via AgentKit (or any other MINTER_ROLE holder). Additional badge types will be introduced later but remain reserved for now.
 
 ## Events
 - `BadgeMinted(address to, uint256 badgeType, uint256 tokenId)` – emitted whenever a badge is minted.

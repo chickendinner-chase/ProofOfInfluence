@@ -23,6 +23,19 @@ interface UserMemory {
   createdAt: string;
 }
 
+interface AgentkitActionResponse {
+  actionId: string;
+  status: string;
+  txHash?: string;
+  usdcAmount?: string;
+  amountWei?: string;
+  rewardWei?: string;
+}
+
+type AgentActionStatus = "idle" | "pending" | "success" | "error";
+
+const BASE_SEPOLIA_EXPLORER = import.meta.env.VITE_BASE_SEPOLIA_EXPLORER || "https://sepolia.basescan.org";
+
 const mockHistory = [
   {
     id: "mint_2031",
@@ -50,6 +63,17 @@ export default function Immortality() {
   const [emotion, setEmotion] = useState("");
   const [badgeStatus, setBadgeStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
   const [badgeTx, setBadgeTx] = useState<string | null>(null);
+  const [tgeStatus, setTgeStatus] = useState<AgentActionStatus>("idle");
+  const [tgeTx, setTgeTx] = useState<string | null>(null);
+  const [tgeAmount, setTgeAmount] = useState<string | null>(null);
+  const [stakeAmount, setStakeAmount] = useState("100");
+  const [stakeStatus, setStakeStatus] = useState<AgentActionStatus>("idle");
+  const [stakeTx, setStakeTx] = useState<string | null>(null);
+  const [unstakeAmount, setUnstakeAmount] = useState("");
+  const [unstakeStatus, setUnstakeStatus] = useState<AgentActionStatus>("idle");
+  const [unstakeTx, setUnstakeTx] = useState<string | null>(null);
+  const [claimStatus, setClaimStatus] = useState<AgentActionStatus>("idle");
+  const [claimTx, setClaimTx] = useState<string | null>(null);
 
   const { data: balance, isFetching } = useQuery<ImmortalityBalanceResponse>({
     queryKey: ["/api/immortality/balance"],
@@ -97,6 +121,43 @@ export default function Immortality() {
     theme === "cyberpunk"
       ? "掌控 AI Agent、法币 Credits 与链上身份，一切尽在同一面板。"
       : "充值 Credits、升级你的 AI Agent、随时把记忆和社交证明上链。";
+
+  const explorerBaseUrl = BASE_SEPOLIA_EXPLORER;
+
+  const formatUsdcAmount = (amount: string | null) => {
+    if (!amount) {
+      return null;
+    }
+    const display = Number(amount) / 1_000_000;
+    if (Number.isNaN(display)) {
+      return null;
+    }
+    return display.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  };
+
+  async function callAgentkitAction<T>(
+    url: string,
+    payload?: Record<string, unknown>,
+  ): Promise<T> {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: payload ? { "Content-Type": "application/json" } : undefined,
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      throw new Error(data?.message ?? "调用失败");
+    }
+
+    return data as T;
+  }
 
   const consciousnessCTA = (
     <div className="space-y-4">
@@ -299,7 +360,7 @@ export default function Immortality() {
             </ThemedButton>
             {badgeStatus === "success" && badgeTx && (
               <a
-                href={`https://sepolia.basescan.org/tx/${badgeTx}`}
+                href={`${explorerBaseUrl}/tx/${badgeTx}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-xs text-primary hover:underline"
@@ -308,6 +369,234 @@ export default function Immortality() {
               </a>
             )}
             {badgeStatus === "error" && <span className="text-xs text-red-400">请稍后重试</span>}
+          </div>
+        </ThemedCard>
+      </Section>
+
+      <Section title="AgentKit 链上动作" subtitle="一键执行 TGE 认购、POI 质押与奖励领取">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ThemedCard className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Coins className="w-5 h-5" />
+              <span className="font-semibold">TGE 最小认购</span>
+            </div>
+            <p className="text-sm opacity-80">
+              后端会根据 TGESale 配置计算最小可执行的 USDC 数量，并通过 AgentKit 钱包完成 `buyWithBaseToken` 调用。
+              该动作仅在允许名单与额度范围内执行。
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <ThemedButton
+                emphasis
+                disabled={tgeStatus === "pending"}
+                onClick={async () => {
+                  try {
+                    setTgeStatus("pending");
+                    setTgeTx(null);
+                    setTgeAmount(null);
+                    const data = await callAgentkitAction<AgentkitActionResponse>(
+                      "/api/immortality/actions/tge-buy-minimal",
+                    );
+                    setTgeStatus("success");
+                    setTgeTx(data.txHash ?? null);
+                    setTgeAmount(data.usdcAmount ?? null);
+                    toast({ title: "最小认购已提交", description: "链上交易已广播" });
+                  } catch (error: any) {
+                    setTgeStatus("error");
+                    toast({ title: "认购失败", description: error?.message ?? "请稍后再试", variant: "destructive" });
+                  }
+                }}
+              >
+                {tgeStatus === "pending" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {tgeStatus === "pending" ? "处理中..." : "执行 USDC 购买"}
+              </ThemedButton>
+              {tgeStatus === "success" && tgeTx && (
+                <a
+                  href={`${explorerBaseUrl}/tx/${tgeTx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline"
+                >
+                  查看交易
+                </a>
+              )}
+              {tgeStatus === "error" && <span className="text-xs text-red-400">请稍后重试</span>}
+            </div>
+            {tgeStatus === "success" && formatUsdcAmount(tgeAmount) && (
+              <p className="text-xs opacity-60">
+                本次提交 {formatUsdcAmount(tgeAmount)} USDC，等待链上确认。
+              </p>
+            )}
+          </ThemedCard>
+
+          <ThemedCard className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              <span className="font-semibold">POI 质押 / 解押</span>
+            </div>
+            <p className="text-sm opacity-80">
+              通过 AgentKit 调用 StakingRewards 合约的 `stake` 与 `withdraw`。输入想要操作的 POI 数量，后台会验证余额并提交交易。
+            </p>
+            <div className="space-y-3">
+              <label className="text-xs uppercase opacity-70">质押数量 (POI)</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={cn(
+                    "flex-1 rounded-xl border bg-transparent p-2 text-sm focus:outline-none focus:ring-2",
+                    theme === "cyberpunk"
+                      ? "border-cyan-500/40 focus:ring-cyan-400/40"
+                      : "border-slate-200 focus:ring-blue-200",
+                  )}
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(e.target.value)}
+                />
+                <ThemedButton
+                  disabled={stakeStatus === "pending"}
+                  onClick={async () => {
+                    const normalized = stakeAmount.trim();
+                    const numericValue = Number(normalized);
+                    if (!normalized || !Number.isFinite(numericValue) || numericValue <= 0) {
+                      toast({ title: "请输入有效的质押数量", variant: "destructive" });
+                      return;
+                    }
+                    try {
+                      setStakeStatus("pending");
+                      setStakeTx(null);
+                      const data = await callAgentkitAction<AgentkitActionResponse>(
+                        "/api/immortality/actions/stake-poi",
+                        { amountPoi: normalized },
+                      );
+                      setStakeStatus("success");
+                      setStakeTx(data.txHash ?? null);
+                      toast({ title: "质押请求已提交", description: "链上交易已广播" });
+                    } catch (error: any) {
+                      setStakeStatus("error");
+                      toast({ title: "质押失败", description: error?.message ?? "请稍后重试", variant: "destructive" });
+                    }
+                  }}
+                >
+                  {stakeStatus === "pending" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {stakeStatus === "pending" ? "处理中..." : "确认质押"}
+                </ThemedButton>
+              </div>
+              {stakeStatus === "success" && stakeTx && (
+                <a
+                  href={`${explorerBaseUrl}/tx/${stakeTx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline"
+                >
+                  查看质押交易
+                </a>
+              )}
+              {stakeStatus === "error" && <span className="text-xs text-red-400">质押失败，请重试</span>}
+            </div>
+
+            <div className="space-y-3 border-t border-white/10 pt-4">
+              <label className="text-xs uppercase opacity-70">解押数量 (POI)</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={cn(
+                    "flex-1 rounded-xl border bg-transparent p-2 text-sm focus:outline-none focus:ring-2",
+                    theme === "cyberpunk"
+                      ? "border-cyan-500/40 focus:ring-cyan-400/40"
+                      : "border-slate-200 focus:ring-blue-200",
+                  )}
+                  value={unstakeAmount}
+                  onChange={(e) => setUnstakeAmount(e.target.value)}
+                />
+                <ThemedButton
+                  variant="outline"
+                  disabled={unstakeStatus === "pending"}
+                  onClick={async () => {
+                    const normalized = unstakeAmount.trim();
+                    const numericValue = Number(normalized);
+                    if (!normalized || !Number.isFinite(numericValue) || numericValue <= 0) {
+                      toast({ title: "请输入有效的解押数量", variant: "destructive" });
+                      return;
+                    }
+                    try {
+                      setUnstakeStatus("pending");
+                      setUnstakeTx(null);
+                      const data = await callAgentkitAction<AgentkitActionResponse>(
+                        "/api/immortality/actions/unstake-poi",
+                        { amountPoi: normalized },
+                      );
+                      setUnstakeStatus("success");
+                      setUnstakeTx(data.txHash ?? null);
+                      toast({ title: "解押请求已提交", description: "链上交易已广播" });
+                    } catch (error: any) {
+                      setUnstakeStatus("error");
+                      toast({ title: "解押失败", description: error?.message ?? "请稍后重试", variant: "destructive" });
+                    }
+                  }}
+                >
+                  {unstakeStatus === "pending" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {unstakeStatus === "pending" ? "处理中..." : "执行解押"}
+                </ThemedButton>
+              </div>
+              {unstakeStatus === "success" && unstakeTx && (
+                <a
+                  href={`${explorerBaseUrl}/tx/${unstakeTx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline"
+                >
+                  查看解押交易
+                </a>
+              )}
+              {unstakeStatus === "error" && <span className="text-xs text-red-400">解押失败，请重试</span>}
+            </div>
+          </ThemedCard>
+        </div>
+
+        <ThemedCard className="p-6 space-y-4 mt-6">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5" />
+            <span className="font-semibold">领取 POI 奖励</span>
+          </div>
+          <p className="text-sm opacity-80">
+            后端会读取 `earned(address)` 仅在存在待领取奖励时才提交 `getReward()`，避免浪费 Gas。
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <ThemedButton
+              emphasis
+              disabled={claimStatus === "pending"}
+              onClick={async () => {
+                try {
+                  setClaimStatus("pending");
+                  setClaimTx(null);
+                  const data = await callAgentkitAction<AgentkitActionResponse>(
+                    "/api/immortality/actions/claim-poi-reward",
+                  );
+                  setClaimStatus("success");
+                  setClaimTx(data.txHash ?? null);
+                  toast({ title: "奖励领取中", description: "链上交易已广播" });
+                } catch (error: any) {
+                  setClaimStatus("error");
+                  toast({ title: "领取失败", description: error?.message ?? "请稍后重试", variant: "destructive" });
+                }
+              }}
+            >
+              {claimStatus === "pending" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {claimStatus === "pending" ? "处理中..." : "领取奖励"}
+            </ThemedButton>
+            {claimStatus === "success" && claimTx && (
+              <a
+                href={`${explorerBaseUrl}/tx/${claimTx}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-primary hover:underline"
+              >
+                查看交易
+              </a>
+            )}
+            {claimStatus === "error" && <span className="text-xs text-red-400">暂无可领取或交易失败</span>}
           </div>
         </ThemedCard>
       </Section>

@@ -9,7 +9,7 @@ The `TGESale` contract manages POI token sales, enforces contribution limits, an
 
 ## Key Functions
 - `purchase(uint256 usdcAmount, bytes32[] proof)` – legacy entry point used by frontends.
-- `buyWithBaseToken(uint256 usdcAmount, bytes32[] proof)` – thin wrapper intended for AgentKit calls.
+- `buyWithBaseToken(uint256 usdcAmount, bytes32[] proof)` – thin wrapper intended for AgentKit calls. This is the function referenced by `AGENT_ACTION_TGE_BUY_MINIMAL` and the `/api/immortality/actions/tge-buy-minimal` backend route.
 - `isSaleActive()` – returns `true` if the sale is not paused, within the configured window, and has remaining supply.
 - `maxContribution()` – global cap per wallet (0 = unlimited).
 - `maxContribution(address user)` – returns the remaining allowance for a specific user.
@@ -27,4 +27,5 @@ The `TGESale` contract manages POI token sales, enforces contribution limits, an
 ## AgentKit Usage
 - Validate `isSaleActive()` and `maxContribution(user)` before constructing a purchase.
 - Pass whitelist proofs via the `proof` parameter when required. The final element should encode the allocation cap, matching the contract's `_extractAllocationAndProof` helper.
+- Encode all purchases via `buyWithBaseToken(uint256 usdcAmount, bytes32[] proof)` using the ABI emitted to `shared/contracts/poi_tge.json` to avoid function-name mismatches.
 - Log every AgentKit-driven purchase in `agentkit_actions` using the action type `TGE_PURCHASE` (or similar) for ledgering.

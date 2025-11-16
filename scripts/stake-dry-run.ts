@@ -31,14 +31,20 @@ async function main() {
     throw new Error("Caller balance is insufficient to stake");
   }
 
-  await token.approve(stakingAddress, stakeAmount);
+  const approveTx = await token.approve(stakingAddress, stakeAmount);
+  const approveReceipt = await approveTx.wait();
+  console.log(`Approved staking contract in tx ${approveReceipt.transactionHash}`);
+
   console.log(`Staking ${ethers.utils.formatEther(stakeAmount)} POI on ${network.name}`);
-  await (await staking.stake(stakeAmount)).wait();
+  const stakeReceipt = await (await staking.stake(stakeAmount)).wait();
+  console.log(`Stake confirmed in tx ${stakeReceipt.transactionHash}`);
 
   await maybeAdvanceTime();
-  await (await staking.getReward()).wait();
+  const rewardReceipt = await (await staking.getReward()).wait();
+  console.log(`Reward claimed in tx ${rewardReceipt.transactionHash}`);
   await maybeAdvanceTime();
-  await (await staking.withdraw(stakeAmount)).wait();
+  const withdrawReceipt = await (await staking.withdraw(stakeAmount)).wait();
+  console.log(`Withdraw confirmed in tx ${withdrawReceipt.transactionHash}`);
   console.log("Completed stake → reward → withdraw dry run");
 }
 

@@ -9,7 +9,7 @@ import { stripe } from "./stripe";
 import { registerMarketRoutes } from "./routes/market";
 import { registerReservePoolRoutes } from "./routes/reservePool";
 import { registerMerchantRoutes } from "./routes/merchant";
-import { mintTestBadge } from "./agentkit";
+import { mintTestBadge, buyMinimalTgeAllocation, stakePoi, unstakePoi, claimPoiRewards } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
 
@@ -172,6 +172,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .optional(),
   });
 
+  const poiAmountSchema = z.object({
+    amountPoi: z
+      .string()
+      .min(1, "amountPoi is required")
+      .refine((value) => {
+        const numeric = Number(value);
+        return !Number.isNaN(numeric) && numeric > 0;
+      }, "POI 数量必须大于 0"),
+  });
+
   app.get("/api/me/personality", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -312,6 +322,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error minting badge:", error);
       res.status(500).json({ message: "Failed to mint badge", details: error?.message });
+    }
+  });
+
+  app.post("/api/immortality/actions/tge-buy-minimal", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    try {
+      const user = await storage.getUser(userId);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: "请先绑定钱包地址" });
+      }
+
+      const action = await storage.createAgentkitAction({
+        userId,
+        actionType: "TGE_BUY_MINIMAL",
+        status: "pending",
+        requestPayload: { mode: "minimal" },
+        metadata: { network: process.env.AGENTKIT_DEFAULT_CHAIN || "base-sepolia" },
+      });
+
+      try {
+        const { txHash, usdcAmount } = await buyMinimalTgeAllocation(user.walletAddress);
+        await storage.updateAgentkitAction(action.id, {
+          status: "success",
+          txHash,
+          metadata: {
+            ...((action.metadata as Record<string, unknown>) ?? {}),
+            usdcAmount,
+          },
+        });
+        res.json({ actionId: action.id, status: "success", txHash, usdcAmount });
+      } catch (err: any) {
+        await storage.updateAgentkitAction(action.id, {
+          status: "failed",
+          errorMessage: err?.message ?? "Unknown error",
+        });
+        throw err;
+      }
+    } catch (error: any) {
+      console.error("Error executing TGE purchase:", error);
+      res.status(500).json({ message: error?.message ?? "Failed to execute TGE purchase" });
+    }
+  });
+
+  app.post("/api/immortality/actions/stake-poi", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    try {
+      const parsed = poiAmountSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid request" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: "请先绑定钱包地址" });
+      }
+
+      const action = await storage.createAgentkitAction({
+        userId,
+        actionType: "STAKE_POI",
+        status: "pending",
+        requestPayload: { amountPoi: parsed.data.amountPoi },
+        metadata: { network: process.env.AGENTKIT_DEFAULT_CHAIN || "base-sepolia" },
+      });
+
+      try {
+        const { txHash, amountWei } = await stakePoi(user.walletAddress, parsed.data.amountPoi);
+        await storage.updateAgentkitAction(action.id, {
+          status: "success",
+          txHash,
+          metadata: {
+            ...((action.metadata as Record<string, unknown>) ?? {}),
+            amountWei,
+          },
+        });
+        res.json({ actionId: action.id, status: "success", txHash, amountWei });
+      } catch (err: any) {
+        await storage.updateAgentkitAction(action.id, {
+          status: "failed",
+          errorMessage: err?.message ?? "Unknown error",
+        });
+        throw err;
+      }
+    } catch (error: any) {
+      console.error("Error staking POI:", error);
+      res.status(500).json({ message: error?.message ?? "Failed to stake POI" });
+    }
+  });
+
+  app.post("/api/immortality/actions/unstake-poi", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    try {
+      const parsed = poiAmountSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid request" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: "请先绑定钱包地址" });
+      }
+
+      const action = await storage.createAgentkitAction({
+        userId,
+        actionType: "UNSTAKE_POI",
+        status: "pending",
+        requestPayload: { amountPoi: parsed.data.amountPoi },
+        metadata: { network: process.env.AGENTKIT_DEFAULT_CHAIN || "base-sepolia" },
+      });
+
+      try {
+        const { txHash, amountWei } = await unstakePoi(user.walletAddress, parsed.data.amountPoi);
+        await storage.updateAgentkitAction(action.id, {
+          status: "success",
+          txHash,
+          metadata: {
+            ...((action.metadata as Record<string, unknown>) ?? {}),
+            amountWei,
+          },
+        });
+        res.json({ actionId: action.id, status: "success", txHash, amountWei });
+      } catch (err: any) {
+        await storage.updateAgentkitAction(action.id, {
+          status: "failed",
+          errorMessage: err?.message ?? "Unknown error",
+        });
+        throw err;
+      }
+    } catch (error: any) {
+      console.error("Error unstaking POI:", error);
+      res.status(500).json({ message: error?.message ?? "Failed to unstake POI" });
+    }
+  });
+
+  app.post("/api/immortality/actions/claim-poi-reward", isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    try {
+      const user = await storage.getUser(userId);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: "请先绑定钱包地址" });
+      }
+
+      const action = await storage.createAgentkitAction({
+        userId,
+        actionType: "CLAIM_POI_REWARD",
+        status: "pending",
+        requestPayload: {},
+        metadata: { network: process.env.AGENTKIT_DEFAULT_CHAIN || "base-sepolia" },
+      });
+
+      try {
+        const { txHash, rewardWei } = await claimPoiRewards(user.walletAddress);
+        await storage.updateAgentkitAction(action.id, {
+          status: "success",
+          txHash,
+          metadata: {
+            ...((action.metadata as Record<string, unknown>) ?? {}),
+            rewardWei,
+          },
+        });
+        res.json({ actionId: action.id, status: "success", txHash, rewardWei });
+      } catch (err: any) {
+        await storage.updateAgentkitAction(action.id, {
+          status: "failed",
+          errorMessage: err?.message ?? "Unknown error",
+        });
+        throw err;
+      }
+    } catch (error: any) {
+      console.error("Error claiming POI rewards:", error);
+      res.status(500).json({ message: error?.message ?? "Failed to claim POI rewards" });
     }
   });
 
