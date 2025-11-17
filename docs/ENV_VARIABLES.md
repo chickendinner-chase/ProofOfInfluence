@@ -6,15 +6,20 @@
 # 数据库配置
 DATABASE_URL=postgresql://user:password@host:5432/database
 
-# Replit Auth
+# Session 配置（用于钱包认证和 Replit Auth）
 SESSION_SECRET=your-session-secret-here
+
+# Replit Auth（可选，仅在 Replit 环境使用）
+# REPL_ID=  # 在 Render 上不设置，留空即可使用钱包认证
 
 # Stripe 支付
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 
 # 应用配置
-BASE_URL=https://your-app.repl.co
+BASE_URL=https://your-app.onrender.com  # Render
+# 或 https://your-app.repl.co  # Replit
+APP_DOMAIN=proofofinfluence.onrender.com  # 用于钱包登录 message
 ```
 
 ## Web3 部署配置 (新增)
@@ -113,10 +118,21 @@ TGESALE_ADDRESS=0xYourTGESaleContract (供服务端使用)
 
 服务端会优先读取 `TGESALE_ADDRESS` / `TGE_RPC_URL`，若不存在则回退到上方 Vite 变量或默认值。
 
-## 在 Replit 中配置
+## 在 Render 中配置
+
+1. 在 Render Dashboard → Environment 中添加环境变量
+2. **必需设置**:
+   - `DATABASE_URL` - PostgreSQL 连接字符串
+   - `SESSION_SECRET` - 随机生成的 session secret
+   - `APP_DOMAIN` - 应用域名（用于钱包登录 message）
+3. **不要设置** `REPL_ID`（留空，这样会使用钱包认证）
+4. 其他 RPC URL 和 API Keys 根据需要添加
+
+## 在 Replit 中配置（如果使用）
 
 1. 点击左侧栏的 **Secrets** (🔒 图标)
 2. 添加以下 secrets:
+   - `REPL_ID` - Replit OAuth Client ID（如果使用 Replit Auth）
    - `PRIVATE_KEY` - 你的钱包私钥
    - `NETWORK` - 部署网络 (例: `sepolia`)
    - `WETH_AMOUNT` - 可选，默认 0.1
@@ -127,6 +143,7 @@ TGESALE_ADDRESS=0xYourTGESaleContract (供服务端使用)
 ⚠️ **安全提醒**: 
 - 永远不要在代码中硬编码私钥
 - 不要将 `.env` 文件提交到 Git
-- 使用 Replit Secrets 管理敏感信息
+- 使用 Render Secrets 或 Replit Secrets 管理敏感信息
+- 在 Render 上部署时，**不要设置 `REPL_ID`**，系统会自动使用钱包认证
 
 
