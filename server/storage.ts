@@ -270,6 +270,16 @@ export interface IStorage {
   findIdentity(provider: string, providerUserId?: string, walletAddress?: string): Promise<UserIdentity | undefined>;
   upsertIdentity(identity: InsertUserIdentity): Promise<UserIdentity>;
   mergeUsers(primaryUserId: string, secondaryUserId: string): Promise<void>;
+
+  // Badge operations
+  getBadgesByOwner(owner: string): Promise<Badge[]>;
+  getBadgeByTokenId(tokenId: string): Promise<Badge | undefined>;
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  updateBadge(tokenId: string, updates: Partial<InsertBadge>): Promise<Badge>;
+  
+  // Event sync state
+  getEventSyncState(contractName: string): Promise<EventSyncState | undefined>;
+  upsertEventSyncState(state: InsertEventSyncState): Promise<EventSyncState>;
 }
 
 export class DatabaseStorage implements IStorage {
