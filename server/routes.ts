@@ -123,49 +123,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
       return res.status(400).json({ message: "Invalid address" });
     }
+    
     const nonce = createWalletNonce(address);
-    res.json({ address, nonce, message: `Sign this nonce to prove ownership: ${nonce}` });
+    
+    // SIWE-style message format
+    const domain = process.env.APP_DOMAIN || req.hostname || "proofofinfluence.com";
+    const message = [
+      "Login to ProofOfInfluence",
+      `Domain: ${domain}`,
+      `Wallet: ${address}`,
+      `Nonce: ${nonce}`,
+      `Time: ${new Date().toISOString()}`,
+    ].join("\n");
+    
+    res.json({ address, nonce, message });
   });
 
   app.post("/api/auth/wallet/login", async (req: any, res) => {
     try {
-      const { walletAddress, signature } = req.body;
+      const { address, signature, message } = req.body as {
+        address?: string;
+        signature?: string;
+        message?: string;
+      };
 
-      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-        return res.status(400).json({ message: "Invalid wallet address" });
+      if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        return res.status(400).json({ message: "Invalid address" });
       }
 
       if (!signature) {
         return res.status(400).json({ message: "Signature is required" });
       }
 
-      const normalized = walletAddress.toLowerCase();
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
 
-      // Get and verify nonce
-      const nonce = getWalletNonce(normalized);
-      if (!nonce) {
+      const normalized = address.toLowerCase();
+
+      // 1) Get and verify nonce
+      const expectedNonce = getWalletNonce(normalized);
+      if (!expectedNonce) {
         return res.status(401).json({ message: "Nonce expired or not found. Please request a new nonce." });
       }
 
-      // Verify signature
-      const message = `Sign this nonce to prove ownership: ${nonce}`;
+      // Check if message contains the expected nonce
+      if (!message.includes(expectedNonce)) {
+        return res.status(401).json({ message: "Nonce mismatch. Message does not contain expected nonce." });
+      }
+
+      // 2) Verify signature using the message provided by frontend
       let recovered: string;
       try {
-        recovered = ethers.utils.verifyMessage(message, signature);
+        recovered = ethers.utils.verifyMessage(message, signature).toLowerCase();
       } catch (error) {
         return res.status(401).json({ message: "Invalid signature format." });
       }
 
-      if (recovered.toLowerCase() !== normalized) {
-        return res.status(401).json({ message: "Signature verification failed. Signature does not match wallet address." });
+      if (recovered !== normalized) {
+        return res.status(401).json({ message: "Signature verification failed. Signature does not match address." });
       }
 
-      // Consume nonce to prevent replay attacks
-      if (!consumeWalletNonce(normalized, nonce)) {
+      // 3) Consume nonce to prevent replay attacks
+      if (!consumeWalletNonce(normalized, expectedNonce)) {
         return res.status(401).json({ message: "Nonce already used. Please request a new nonce." });
       }
 
-      // Get or create user
+      // 4) Get or create user
       let user = await storage.getUserByWallet(normalized);
       if (!user) {
         // Create new user with wallet address
@@ -181,13 +205,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.updateUserWallet(user.id, normalized);
       }
 
-      // Set wallet user in session
+      // 5) Set wallet user in session
       const { setWalletAuthUser } = await import("./auth/walletAuth");
       setWalletAuthUser(req, {
         id: user.id,
         walletAddress: normalized,
         email: user.email,
         role: user.role,
+      });
+
+      // 6) Explicitly save session to ensure it's written to store
+      await new Promise<void>((resolve, reject) => {
+        (req.session as any).save((err: any) => (err ? reject(err) : resolve()));
       });
 
       res.json({
