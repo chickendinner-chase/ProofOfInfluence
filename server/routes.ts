@@ -3,7 +3,8 @@ import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import { ethers } from "ethers";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./replitAuth";
+import { isAuthenticated } from "./auth";
 import { insertProfileSchema, insertLinkSchema } from "@shared/schema";
 import { stripe } from "./stripe";
 import { registerMarketRoutes } from "./routes/market";
@@ -138,41 +139,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Signature is required" });
       }
 
-      const { authenticateWallet } = await import("./auth/walletAuth");
-      const walletUser = await authenticateWallet(walletAddress, signature);
+      const normalized = walletAddress.toLowerCase();
 
-      if (!walletUser) {
-        return res.status(401).json({ message: "Authentication failed. Invalid signature or expired nonce." });
+      // Get and verify nonce
+      const nonce = getWalletNonce(normalized);
+      if (!nonce) {
+        return res.status(401).json({ message: "Nonce expired or not found. Please request a new nonce." });
       }
 
-      // Create session using Passport
-      req.login(walletUser, (err: any) => {
-        if (err) {
-          console.error("[WalletAuth] Session creation failed:", err);
-          return res.status(500).json({ message: "Failed to create session" });
-        }
+      // Verify signature
+      const message = `Sign this nonce to prove ownership: ${nonce}`;
+      let recovered: string;
+      try {
+        recovered = ethers.utils.verifyMessage(message, signature);
+      } catch (error) {
+        return res.status(401).json({ message: "Invalid signature format." });
+      }
 
-        // Get user from database for response
-        storage.getUserByWallet(walletAddress.toLowerCase())
-          .then((user) => {
-            res.json({
-              user: user || {
-                id: walletUser.claims.sub,
-                walletAddress: walletUser.claims.wallet_address,
-              },
-              authenticated: true,
-            });
-          })
-          .catch((error) => {
-            console.error("[WalletAuth] Failed to fetch user:", error);
-            res.json({
-              user: {
-                id: walletUser.claims.sub,
-                walletAddress: walletUser.claims.wallet_address,
-              },
-              authenticated: true,
-            });
-          });
+      if (recovered.toLowerCase() !== normalized) {
+        return res.status(401).json({ message: "Signature verification failed. Signature does not match wallet address." });
+      }
+
+      // Consume nonce to prevent replay attacks
+      if (!consumeWalletNonce(normalized, nonce)) {
+        return res.status(401).json({ message: "Nonce already used. Please request a new nonce." });
+      }
+
+      // Get or create user
+      let user = await storage.getUserByWallet(normalized);
+      if (!user) {
+        // Create new user with wallet address
+        const userId = `wallet_${normalized.slice(2, 10)}_${Date.now()}`;
+        // First create user with minimal data
+        user = await storage.upsertUser({
+          id: userId,
+        });
+        // Then update wallet address
+        user = await storage.updateUserWallet(userId, normalized);
+      } else {
+        // Update last login time (updateUserWallet also updates updatedAt)
+        user = await storage.updateUserWallet(user.id, normalized);
+      }
+
+      // Set wallet user in session
+      const { setWalletAuthUser } = await import("./auth/walletAuth");
+      setWalletAuthUser(req, {
+        id: user.id,
+        walletAddress: normalized,
+        email: user.email,
+        role: user.role,
+      });
+
+      res.json({
+        user: {
+          id: user.id,
+          walletAddress: normalized,
+          email: user.email,
+          role: user.role,
+        },
+        authenticated: true,
       });
     } catch (error: any) {
       console.error("[WalletAuth] Login error:", error);

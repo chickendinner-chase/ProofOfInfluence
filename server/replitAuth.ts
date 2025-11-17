@@ -5,18 +5,22 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { getWalletAuthUser } from "./auth/walletAuth";
 
 // Check if Replit Auth is enabled
 export const isReplitAuthEnabled = (): boolean => {
-  return !!process.env.REPL_ID && process.env.REPL_ID.trim() !== "";
+  return !!(
+    process.env.REPL_ID &&
+    process.env.SESSION_SECRET &&
+    process.env.DATABASE_URL
+  );
 };
 
-const getOidcConfig = memoize(
+// Export getOidcConfig for use in unified auth middleware
+export const getOidcConfig = memoize(
   async () => {
     if (!isReplitAuthEnabled()) {
       throw new Error("Replit Auth is not enabled: REPL_ID is not set");
@@ -51,7 +55,8 @@ export function getSession() {
   });
 }
 
-function updateUserSession(
+// Export updateUserSession for use in unified auth middleware
+export function updateUserSession(
   user: any,
   tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
@@ -177,62 +182,3 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // Auth bypass: Allow bypassing auth if explicitly enabled (for migration from Replit)
-  // This is useful when migrating away from Replit Auth to another auth system
-  const authBypass = process.env.DEV_MODE_AUTH_BYPASS === 'true' || process.env.AUTH_BYPASS === 'true';
-  
-  // Priority 1: Check Replit Auth (if enabled)
-  if (isReplitAuthEnabled()) {
-    const user = req.user as any;
-
-    if (req.isAuthenticated() && user?.expires_at) {
-      const now = Math.floor(Date.now() / 1000);
-      if (now <= user.expires_at) {
-        return next();
-      }
-
-      // Try to refresh token
-      const refreshToken = user.refresh_token;
-      if (refreshToken) {
-        try {
-          const config = await getOidcConfig();
-          const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-          updateUserSession(user, tokenResponse);
-          return next();
-        } catch (error) {
-          // Refresh failed, fall through to wallet auth
-        }
-      }
-    }
-  }
-
-  // Priority 2: Check wallet authentication
-  const walletUser = getWalletAuthUser(req);
-  if (walletUser) {
-    // Set user in request for compatibility
-    (req as any).user = walletUser;
-    return next();
-  }
-
-  // Priority 3: Check auth bypass
-  if (authBypass) {
-    console.warn("[Auth] Authentication bypass enabled (DEV_MODE_AUTH_BYPASS or AUTH_BYPASS is set)");
-    // Create a mock user for development/testing
-    if (!req.user) {
-      (req as any).user = {
-        claims: {
-          sub: process.env.AUTH_BYPASS_USER_ID || 'dev-user',
-          email: process.env.AUTH_BYPASS_USER_EMAIL || 'dev@example.com',
-          first_name: process.env.AUTH_BYPASS_USER_FIRST_NAME || 'Dev',
-          last_name: process.env.AUTH_BYPASS_USER_LAST_NAME || 'User',
-        },
-        expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-      };
-    }
-    return next();
-  }
-  
-  // No valid authentication found
-  return res.status(401).json({ message: "Unauthorized" });
-};
