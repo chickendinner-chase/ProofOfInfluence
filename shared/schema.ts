@@ -787,3 +787,22 @@ export const eventSyncState = pgTable("event_sync_state", {
 export const insertEventSyncStateSchema = createInsertSchema(eventSyncState);
 export type InsertEventSyncState = z.infer<typeof insertEventSyncStateSchema>;
 export type EventSyncState = typeof eventSyncState.$inferSelect;
+
+// Test wallets for automated scenario runner
+export const testWallets = pgTable(
+  "test_wallets",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    agentWalletId: text("agent_wallet_id").notNull(),
+    address: text("address").notNull(),
+    label: text("label").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("test_wallets_label_idx").on(table.label),
+    index("test_wallets_address_idx").on(table.address),
+  ],
+);
+
+export type InsertTestWallet = typeof testWallets.$inferInsert;
+export type TestWallet = typeof testWallets.$inferSelect;

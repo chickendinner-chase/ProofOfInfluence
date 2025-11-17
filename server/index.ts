@@ -5,6 +5,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import testRouter from "./routes/test";
 
 const app = express();
 
@@ -95,6 +96,8 @@ app.use('/api-gpt', createProxyMiddleware({
     }
   }
 }));
+
+app.use("/api/test", testRouter);
 
 (async () => {
   const server = await registerRoutes(app);
