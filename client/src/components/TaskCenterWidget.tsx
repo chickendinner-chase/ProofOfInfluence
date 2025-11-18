@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { ROUTES } from "@/routes";
 import {
   CheckCircle2,
   Circle,
@@ -63,7 +64,7 @@ const DEFAULT_TASKS: Task[] = [
     title: "首次交易",
     description: "在市场上完成第一笔 POI 代币交易",
     reward: 20,
-    actionLink: "/app/market",
+    actionLink: ROUTES.APP_TRADE,
     actionText: "开始交易",
   },
   {

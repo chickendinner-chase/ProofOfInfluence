@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useWalletClient, usePublicClient } from "wagmi";
 import { useToast } from "@/hooks/use-toast";
+import { useAgentContractAction } from "./useAgentContractAction";
+import { useUserContractAction } from "./useUserContractAction";
 
-interface ContractActionOptions {
+export interface ContractActionOptions {
   contract: string;
   action: string;
-  mode?: "user-wallet" | "agentkit";
+  mode: "user-wallet" | "agentkit"; // Required - must be explicitly specified
   onSuccess?: (data: any) => void;
   onError?: (error: Error) => void;
 }
@@ -20,17 +22,32 @@ interface ExecuteOptions {
  * Supports two modes:
  * - user-wallet: User signs transaction with their connected wallet (MetaMask)
  * - agentkit: Backend executes transaction via AgentKit CDP wallet
+ * 
+ * IMPORTANT: This hook should not be used directly.
+ * Use useUserContractAction() or useAgentContractAction() instead.
  */
 export function useContractAction(options: ContractActionOptions) {
-  const { contract, action, mode: defaultMode = "agentkit" } = options;
+  const { contract, action, mode } = options;
+  
+  // Enforce explicit mode specification
+  if (!mode || (mode !== "user-wallet" && mode !== "agentkit")) {
+    throw new Error(
+      `useContractAction requires explicit mode ("user-wallet" or "agentkit"). ` +
+      `Use useUserContractAction() or useAgentContractAction() instead.`
+    );
+  }
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
   const mutation = useMutation({
-    mutationFn: async ({ args, mode = defaultMode }: ExecuteOptions) => {
-      if (mode === "agentkit") {
+    mutationFn: async ({ args, mode: executionMode = mode }: ExecuteOptions) => {
+      // Use executionMode (from execute call) or fallback to hook's mode
+      const finalMode = executionMode || mode;
+      
+      if (finalMode === "agentkit") {
         // AgentKit mode: Backend executes via CDP wallet
         const response = await fetch(`/api/contracts/${contract}/${action}`, {
           method: "POST",
@@ -78,7 +95,7 @@ export function useContractAction(options: ContractActionOptions) {
           await publicClient.waitForTransactionReceipt({ hash });
         }
 
-        return { txHash: hash, status: "success", mode: "user-wallet" };
+        return { txHash: hash, status: "success", mode: finalMode };
       }
     },
     onSuccess: (data) => {
@@ -130,52 +147,76 @@ async function safeJson(res: Response): Promise<any | null> {
 
 /**
  * Specialized hooks for common contract actions
+ * 
+ * These hooks are now split into two families:
+ * - User actions: require user wallet signature (useUserContractAction)
+ * - Agent actions: executed by backend/AgentKit (useAgentContractAction)
  */
 
-// Badge minting
-export function useMintBadge(options?: { onSuccess?: (data: any) => void }) {
-  return useContractAction({
+// ============================================================================
+// Agent Actions (AgentKit mode)
+// ============================================================================
+
+/**
+ * Mint badge via AgentKit
+ * Backend wallet has MINTER_ROLE and can mint to user's address
+ */
+export function useMintBadge(options?: { onSuccess?: (data: any) => void; onError?: (error: Error) => void }) {
+  return useAgentContractAction({
     contract: "ImmortalityBadge",
     action: "mintBadge",
-    mode: "agentkit",
     ...options,
   });
 }
 
-// TGE purchase
-export function useTgePurchase(options?: { onSuccess?: (data: any) => void }) {
-  return useContractAction({
+// ============================================================================
+// User Actions (user-wallet mode)
+// ============================================================================
+
+/**
+ * Purchase POI tokens via TGE sale
+ * User must sign with their own wallet
+ */
+export function useTgePurchase(options?: { onSuccess?: (data: any) => void; onError?: (error: Error) => void }) {
+  return useUserContractAction({
     contract: "TGESale",
     action: "purchase",
-    mode: "agentkit",
     ...options,
   });
 }
 
-// Staking
-export function useStakePoi(options?: { onSuccess?: (data: any) => void }) {
-  return useContractAction({
+/**
+ * Stake POI tokens
+ * User must sign with their own wallet
+ */
+export function useStakePoi(options?: { onSuccess?: (data: any) => void; onError?: (error: Error) => void }) {
+  return useUserContractAction({
     contract: "StakingRewards",
     action: "stake",
-    mode: "agentkit",
     ...options,
   });
 }
 
-export function useUnstakePoi(options?: { onSuccess?: (data: any) => void }) {
-  return useContractAction({
+/**
+ * Unstake/withdraw POI tokens
+ * User must sign with their own wallet
+ */
+export function useUnstakePoi(options?: { onSuccess?: (data: any) => void; onError?: (error: Error) => void }) {
+  return useUserContractAction({
     contract: "StakingRewards",
     action: "unstake",
-    mode: "agentkit",
     ...options,
   });
 }
 
-export function useClaimReward(options?: { onSuccess?: (data: any) => void }) {
-  return useContractAction({
+/**
+ * Claim staking rewards
+ * User must sign with their own wallet
+ */
+export function useClaimReward(options?: { onSuccess?: (data: any) => void; onError?: (error: Error) => void }) {
+  return useUserContractAction({
     contract: "StakingRewards",
     action: "claimReward",
-    mode: "agentkit",
     ...options,
   });
 }

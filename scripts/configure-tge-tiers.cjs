@@ -61,6 +61,8 @@ async function main() {
   console.log(`TGESale: ${tgeAddress}`);
   console.log(`Tier prices (USDC 6dp): ${pricesRaw || "(parsed via ENV)"}`);
   console.log(`Tier supplies (POI 18dp): ${suppliesRaw || "(parsed via ENV)"}`);
+  console.log(`Parsed prices:`, prices.map(p => p.toString()));
+  console.log(`Parsed supplies:`, supplies.map(s => s.toString()));
 
   const sale = await hre.ethers.getContractAt("TGESale", tgeAddress, wallet);
 
@@ -76,7 +78,28 @@ async function main() {
     throw new Error(`Owner mismatch. Contract owner=${owner}, wallet=${wallet.address}`);
   }
 
-  console.log("Sending configureTiers...");
+  // Debug: Try static call first to see if it would succeed
+  console.log("Testing configureTiers with static call...");
+  try {
+    await sale.callStatic.configureTiers(prices, supplies);
+    console.log("✓ Static call succeeded, proceeding with transaction...");
+  } catch (e) {
+    console.error("✗ Static call failed:");
+    console.error(`  Error: ${e.message || e}`);
+    if (e.error && e.error.data) {
+      console.error(`  Revert data: ${e.error.data}`);
+      // Try to decode revert reason
+      try {
+        const reason = hre.ethers.utils.toUtf8String("0x" + e.error.data.slice(138));
+        console.error(`  Revert reason: ${reason}`);
+      } catch (e2) {
+        // Ignore decode errors
+      }
+    }
+    throw new Error("Static call failed, aborting transaction");
+  }
+
+  console.log("Sending configureTiers transaction...");
   let tx;
   try {
     tx = await sale.configureTiers(prices, supplies);
@@ -86,7 +109,12 @@ async function main() {
   }
   console.log(`Tx sent: ${tx.hash}`);
   const receipt = await tx.wait();
-  console.log(`configureTiers confirmed in block ${receipt.blockNumber}`);
+  
+  if (receipt.status === 0) {
+    throw new Error(`Transaction reverted (status: ${receipt.status})`);
+  }
+  
+  console.log(`✓ configureTiers confirmed in block ${receipt.blockNumber}`);
 
   // Display resulting tier count
   const count = await sale.tierCount();

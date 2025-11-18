@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import StripePayment from "@/components/StripePayment";
 import { Shield, Wallet, Coins, ArrowRight } from "lucide-react";
+import { ROUTES } from "@/routes";
 
 interface ImmortalityBalanceResponse {
   credits: number;
@@ -138,7 +139,7 @@ export default function Recharge() {
             </p>
           </div>
           <ThemedButton asChild emphasis>
-            <a href="/market">
+            <a href={ROUTES.APP_TRADE}>
               去购买 POI
               <ArrowRight className="w-4 h-4 ml-2" />
             </a>

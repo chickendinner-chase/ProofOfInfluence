@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { MerkleTree } from "merkletreejs";
 
 /**
  * Build Merkle leaf (double hash) as used by MerkleAirdropDistributor
@@ -14,74 +15,101 @@ export function buildLeaf(index: number, account: string, amount: string): strin
 }
 
 /**
- * Build Merkle root from leaves (simple case: single leaf)
- * For production, use a proper MerkleTree library like merkletreejs
+ * Build MerkleTree from leaves using merkletreejs
+ * Supports MerkleAirdropDistributor format only
  */
-export function buildRootFromLeaves(leaves: string[]): string {
+export function buildMerkleTree(leaves: string[]): MerkleTree {
   if (leaves.length === 0) {
-    return ethers.utils.hexZeroPad("0x0", 32);
+    throw new Error("Cannot build Merkle tree from empty leaves array");
   }
-  
-  if (leaves.length === 1) {
-    return leaves[0];
-  }
-  
-  // Simple binary tree implementation
-  let currentLevel = leaves;
-  
-  while (currentLevel.length > 1) {
-    const nextLevel: string[] = [];
-    
-    for (let i = 0; i < currentLevel.length; i += 2) {
-      if (i + 1 < currentLevel.length) {
-        // Pair exists
-        const combined = ethers.utils.keccak256(
-          ethers.utils.hexConcat([
-            currentLevel[i] < currentLevel[i + 1]
-              ? currentLevel[i]
-              : currentLevel[i + 1],
-            currentLevel[i] < currentLevel[i + 1]
-              ? currentLevel[i + 1]
-              : currentLevel[i],
-          ])
-        );
-        nextLevel.push(combined);
-      } else {
-        // Odd one out
-        nextLevel.push(currentLevel[i]);
-      }
-    }
-    
-    currentLevel = nextLevel;
-  }
-  
-  return currentLevel[0];
+
+  // merkletreejs uses keccak256 by default, which matches our double-hashed leaves
+  // Create tree with sorted leaves (OpenZeppelin MerkleProof standard)
+  return new MerkleTree(leaves, ethers.utils.keccak256, { sortPairs: true });
 }
 
 /**
- * Generate Merkle proof for a given leaf (simplified)
- * Note: For production, use merkletreejs or similar library
- * This is a simplified version for MVP
+ * Generate Merkle proof for a given leaf using merkletreejs
  */
 export function generateMerkleProof(
-  leaves: string[],
-  targetLeaf: string
+  tree: MerkleTree,
+  leaf: string
 ): string[] {
-  const leafIndex = leaves.indexOf(targetLeaf);
-  if (leafIndex === -1) {
-    throw new Error("Leaf not found in tree");
+  const proof = tree.getProof(leaf);
+  // Convert Buffer[] to string[]
+  return proof.map((p) => "0x" + p.data.toString("hex"));
+}
+
+/**
+ * Verify Merkle proof against root using merkletreejs
+ */
+export function verifyMerkleProof(
+  tree: MerkleTree,
+  leaf: string,
+  proof: string[]
+): boolean {
+  // Convert string[] proof back to Buffer[]
+  const proofBuffers = proof.map((p) => Buffer.from(p.slice(2), "hex"));
+  return tree.verify(proofBuffers, leaf, tree.getRoot());
+}
+
+/**
+ * Build MerkleTree from airdrop eligibility records
+ * Each record becomes a leaf using buildLeaf(index, walletAddress, amountWei)
+ */
+export function buildMerkleTreeFromEligibilities(
+  eligibilities: Array<{ walletAddress: string; amount: number }>
+): { tree: MerkleTree; root: string; leaves: string[] } {
+  if (eligibilities.length === 0) {
+    throw new Error("Cannot build tree from empty eligibilities");
   }
+
+  const leaves: string[] = [];
   
-  // Simplified proof generation
-  // For production, implement proper Merkle tree traversal
-  // This returns empty array for single leaf (which works with our contract)
-  if (leaves.length === 1) {
-    return [];
+  for (let i = 0; i < eligibilities.length; i++) {
+    const eligibility = eligibilities[i];
+    const amountWei = formatAmountToWei(eligibility.amount);
+    const leaf = buildLeaf(i, eligibility.walletAddress, amountWei);
+    leaves.push(leaf);
   }
-  
-  // TODO: Implement proper Merkle proof generation
-  // For now, return empty array (works for simple single-leaf trees)
-  return [];
+
+  const tree = buildMerkleTree(leaves);
+  const root = "0x" + tree.getRoot().toString("hex");
+
+  return { tree, root, leaves };
+}
+
+/**
+ * Generate Merkle proofs for all eligibilities in a batch
+ */
+export function generateProofsForBatch(
+  tree: MerkleTree,
+  eligibilities: Array<{ walletAddress: string; amount: number }>
+): Array<{ index: number; proof: string[]; amountWei: string }> {
+  const results: Array<{ index: number; proof: string[]; amountWei: string }> = [];
+
+  for (let i = 0; i < eligibilities.length; i++) {
+    const eligibility = eligibilities[i];
+    const amountWei = formatAmountToWei(eligibility.amount);
+    const leaf = buildLeaf(i, eligibility.walletAddress, amountWei);
+    const proof = generateMerkleProof(tree, leaf);
+
+    results.push({
+      index: i,
+      proof,
+      amountWei,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Validate that tree root matches expected root
+ */
+export function validateRoot(tree: MerkleTree, expectedRoot: string): boolean {
+  const actualRoot = "0x" + tree.getRoot().toString("hex");
+  return actualRoot.toLowerCase() === expectedRoot.toLowerCase();
 }
 
 /**

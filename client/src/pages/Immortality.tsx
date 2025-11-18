@@ -11,6 +11,7 @@ import { AlertCircle, Brain, Zap, Coins, Activity, ArrowRight, Shield, Award, Lo
 import { useToast } from "@/hooks/use-toast";
 import { ImmortalityChat } from "@/components/ImmortalityChat";
 import { useMintBadge, useTgePurchase, useStakePoi, useUnstakePoi, useClaimReward } from "@/hooks/useContractAction";
+import { ROUTES } from "@/routes";
 
 interface ImmortalityBalanceResponse {
   credits: number;
@@ -50,8 +51,10 @@ export default function Immortality() {
   const [memoryText, setMemoryText] = useState("");
   const [emotion, setEmotion] = useState("");
 
-  // Unified contract action hooks
+  // Agent Actions (executed by backend/AgentKit)
   const mintBadge = useMintBadge();
+
+  // User Actions (require user wallet signature)
   const tgePurchase = useTgePurchase();
   const stakePoi = useStakePoi();
   const unstakePoi = useUnstakePoi();
@@ -132,7 +135,7 @@ export default function Immortality() {
           意识上链（即将开放）
         </ThemedButton>
         <ThemedButton variant="outline" asChild>
-          <Link href="/recharge">充值 Credits</Link>
+          <Link href={ROUTES.APP_RECHARGE}>充值 Credits</Link>
         </ThemedButton>
       </div>
     </div>
@@ -186,13 +189,13 @@ export default function Immortality() {
             </div>
             <div className="flex flex-wrap gap-3">
               <ThemedButton emphasis asChild>
-                <Link href="/recharge">
+                <Link href={ROUTES.APP_RECHARGE}>
                   充值 Credits
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </ThemedButton>
               <ThemedButton variant="outline" asChild>
-                <Link href="/market">链上购买 POI</Link>
+                <Link href={ROUTES.APP_TRADE}>链上购买 POI</Link>
               </ThemedButton>
             </div>
           </ThemedCard>
@@ -201,7 +204,10 @@ export default function Immortality() {
         </div>
       </Section>
 
-      <Section title="POI 购买（TGE）" subtitle="输入 USDC 金额并进行购买；未部署或未开放将返回错误提示">
+      <Section 
+        title="POI 购买（TGE）" 
+        subtitle="输入 USDC 金额并进行购买；需要用户钱包签名；未部署或未开放将返回错误提示"
+      >
         <ThemedCard className="p-6 space-y-4">
           <div className="flex items-center gap-3">
             <input
@@ -229,7 +235,10 @@ export default function Immortality() {
         </ThemedCard>
       </Section>
 
-      <Section title="POI 质押（Staking）" subtitle="质押/解押/领取奖励；如未部署将返回错误提示">
+      <Section 
+        title="POI 质押（Staking）" 
+        subtitle="质押/解押/领取奖励；需要用户钱包签名；如未部署将返回错误提示"
+      >
         <ThemedCard className="p-6 space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="flex items-center gap-3">
@@ -362,7 +371,10 @@ export default function Immortality() {
         </div>
       </Section>
 
-      <Section title="测试徽章" subtitle="让赛博分身在 Base Sepolia 上为你铸下一枚纪念徽章">
+      <Section 
+        title="测试徽章" 
+        subtitle="让赛博分身在 Base Sepolia 上为你铸下一枚纪念徽章（由后端 AgentKit 执行，无需用户签名）"
+      >
         <ThemedCard className="p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5" />
@@ -411,7 +423,7 @@ export default function Immortality() {
               Stripe 充值成功后会立即写入 `fiat_transactions`、`user_balances` 与 `immortality_ledger`。
               所有 Credits 增减都可追溯。
             </p>
-            <Link href="/recharge">
+            <Link href={ROUTES.APP_RECHARGE}>
               <a className="text-xs font-semibold text-primary hover:underline">查看账本指南 →</a>
             </Link>
           </ThemedCard>
@@ -436,7 +448,7 @@ export default function Immortality() {
               如果你已有 Base 网络的钱包，可以直接使用 TGESale 合约购买 POI。Credits 与 POI 会共享同一经济体系。
             </p>
             <ThemedButton asChild size="sm" className="mt-2">
-              <Link href="/market">前往 TGESale</Link>
+              <Link href={ROUTES.APP_TRADE}>前往 TGESale</Link>
             </ThemedButton>
           </ThemedCard>
         </div>

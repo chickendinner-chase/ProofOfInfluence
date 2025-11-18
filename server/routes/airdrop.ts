@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { ethers } from "ethers";
 import { storage } from "../storage";
-import { buildLeaf, formatAmountToWei } from "../services/merkleAirdrop";
+import {
+  buildMerkleTreeFromEligibilities,
+  generateProofsForBatch,
+  formatAmountToWei,
+} from "../services/merkleAirdrop";
 import type { Express } from "express";
 
 /**
@@ -56,35 +60,40 @@ export function registerAirdropRoutes(app: Express) {
 
       const body = schema.parse(req.body);
 
-      // Generate Merkle tree leaves
-      const leaves: string[] = [];
-      const eligibilityData: Array<{
-        walletAddress: string;
-        amount: number;
-        userId: string | null;
-        merkleIndex: number;
-        merkleProof: string[];
-        roundId: number;
-      }> = [];
+      if (body.recipients.length === 0) {
+        return res.status(400).json({ message: "Recipients array cannot be empty" });
+      }
 
-      for (let i = 0; i < body.recipients.length; i++) {
-        const recipient = body.recipients[i];
-        const amountWei = formatAmountToWei(recipient.amount);
-        const leaf = buildLeaf(i, recipient.walletAddress, amountWei);
-        
-        leaves.push(leaf);
-        eligibilityData.push({
+      // Build Merkle tree from eligibilities
+      const { tree, root, leaves } = buildMerkleTreeFromEligibilities(
+        body.recipients.map((r) => ({
+          walletAddress: r.walletAddress,
+          amount: r.amount,
+        }))
+      );
+
+      // Generate proofs for all eligibilities
+      const proofResults = generateProofsForBatch(
+        tree,
+        body.recipients.map((r) => ({
+          walletAddress: r.walletAddress,
+          amount: r.amount,
+        }))
+      );
+
+      // Create eligibility records with proofs
+      const eligibilityData = body.recipients.map((recipient, i) => {
+        const proofResult = proofResults[i];
+        return {
           walletAddress: recipient.walletAddress.toLowerCase(),
           amount: recipient.amount,
           userId: recipient.userId || null,
-          merkleIndex: i,
-          merkleProof: [], // Simplified - empty proof for single leaf trees
+          merkleIndex: proofResult.index,
+          merkleProof: proofResult.proof,
           roundId: body.roundId,
-        });
-      }
+        };
+      });
 
-      // For now, we'll create records with empty proofs
-      // In production, use a proper MerkleTree library to generate proofs
       const created = await Promise.all(
         eligibilityData.map((data) =>
           storage.createAirdropEligibility({
@@ -94,10 +103,6 @@ export function registerAirdropRoutes(app: Express) {
           })
         )
       );
-
-      // Calculate Merkle root (for contract deployment)
-      const { buildRootFromLeaves } = await import("../services/merkleAirdrop");
-      const root = buildRootFromLeaves(leaves);
 
       res.json({
         created: created.length,

@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 import { getRequestUserId, hasRequiredRole } from "./utils";
 
 const ADMIN_ROLES = ["admin"];

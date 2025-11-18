@@ -12,7 +12,11 @@ async function main() {
   const wallet = new hre.ethers.Wallet(pk, hre.ethers.provider);
   console.log(`Deploying POI token with ${wallet.address}`);
 
-  const initialSupply = hre.ethers.utils.parseUnits(process.env.POI_INITIAL_SUPPLY || "1000000000", 18);
+  // Load config from tokenomics.config.json (with env override)
+  const { getPOITokenConfig } = require("./utils/tokenomics.cjs");
+  const poiConfig = getPOITokenConfig();
+  const initialSupply = hre.ethers.utils.parseUnits(poiConfig.initialSupply, 18);
+  console.log(`Initial supply: ${poiConfig.initialSupply} POI`);
   const Token = await hre.ethers.getContractFactory("POIToken", wallet);
   // admin = deployer, treasury = deployer by default; override via env if needed
   const admin = process.env.POI_ADMIN || wallet.address;

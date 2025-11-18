@@ -5,6 +5,7 @@ import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/routes";
 import {
   CheckCircle2,
   ArrowRight,
@@ -115,7 +116,7 @@ export default function PaymentSuccess() {
             </h3>
 
             <div className="space-y-3">
-              <Link href="/app/market">
+              <Link href={ROUTES.APP_TRADE}>
                 <ThemedButton emphasis className="w-full justify-between">
                   <span>前往交易市场</span>
                   <ArrowRight className="w-4 h-4" />

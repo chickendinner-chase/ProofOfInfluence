@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { ethers } from "ethers";
 import { storage } from "../storage";
+import { triggerSync } from "../services/badgeSync";
 import type { Express } from "express";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
+
+// Get provider from environment (for manual sync endpoint)
+function getProvider(): ethers.providers.Provider | null {
+  const rpcUrl = process.env.BASE_RPC_URL || process.env.BASE_SEPOLIA_RPC_URL;
+  if (!rpcUrl) {
+    return null;
+  }
+  return new ethers.providers.JsonRpcProvider(rpcUrl);
+}
 
 /**
  * Register badge-related routes that integrate with AchievementBadges contract
@@ -22,11 +32,18 @@ export function registerBadgeRoutes(app: Express) {
         return res.status(400).json({ message: "钱包地址未找到" });
       }
 
-      // TODO: Query AchievementBadges contract events or use an indexer
-      // For now, return placeholder
+      // Query badges from database (indexed from events)
+      const badges = await storage.getBadgesByOwner(walletAddress);
+      const tokenIds = badges.map((badge) => BigInt(badge.tokenId).toString());
+
       res.json({
-        tokenIds: [],
-        note: "需要从合约事件或索引器获取 token IDs",
+        tokenIds,
+        badges: badges.map((badge) => ({
+          tokenId: badge.tokenId,
+          badgeType: badge.badgeType,
+          tokenURI: badge.tokenURI,
+          mintedAt: badge.mintedAt.toISOString(),
+        })),
       });
     } catch (error: any) {
       console.error("Error fetching badge tokens:", error);
@@ -37,15 +54,23 @@ export function registerBadgeRoutes(app: Express) {
   // Get badge details by token ID (public)
   app.get("/api/badges/:tokenId", async (req: any, res) => {
     try {
-      const tokenId = BigInt(req.params.tokenId);
+      const tokenId = req.params.tokenId;
 
-      // TODO: Query AchievementBadges contract
-      // For now, return placeholder
+      // Query badge from database
+      const badge = await storage.getBadgeByTokenId(tokenId);
+
+      if (!badge) {
+        return res.status(404).json({ message: "Badge not found" });
+      }
+
       res.json({
-        tokenId: tokenId.toString(),
-        badgeType: null,
-        tokenURI: null,
-        note: "需要连接 AchievementBadges 合约地址",
+        tokenId: badge.tokenId,
+        badgeType: badge.badgeType,
+        tokenURI: badge.tokenURI,
+        owner: badge.owner,
+        mintedAt: badge.mintedAt.toISOString(),
+        blockNumber: badge.blockNumber,
+        transactionHash: badge.transactionHash,
       });
     } catch (error: any) {
       console.error("Error fetching badge details:", error);
@@ -53,23 +78,65 @@ export function registerBadgeRoutes(app: Express) {
     }
   });
 
+  // Manual sync endpoint (admin - for testing)
+  app.post("/api/admin/badges/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const provider = getProvider();
+      if (!provider) {
+        return res.status(500).json({ message: "RPC provider not configured" });
+      }
+
+      const result = await triggerSync(provider);
+
+      res.json({
+        message: "Sync completed",
+        indexed: result.indexed,
+        lastBlock: result.lastBlock,
+      });
+    } catch (error: any) {
+      console.error("Error triggering badge sync:", error);
+      res.status(500).json({ message: error.message || "Failed to trigger sync" });
+    }
+  });
+
   // Mint badge (admin only - for testing)
   app.post("/api/badges/mint", isAuthenticated, async (req: any, res) => {
     try {
       const schema = z.object({
-        to: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-        badgeType: z.number().min(1),
+        to: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+        badgeType: z.number().min(1).optional(),
       });
 
       const body = schema.parse(req.body);
+      const userId = req.user.claims.sub;
 
-      // TODO: Call AchievementBadges contract's mintBadge function
-      // This would require AgentKit or user wallet signing
+      // Get user's wallet address
+      const user = await storage.getUser(userId);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: "请先绑定钱包地址" });
+      }
+
+      // Use contract service to mint badge via AgentKit
+      const { contractService } = await import("../services/contracts");
+      
+      const recipient = body.to || user.walletAddress;
+      const badgeType = body.badgeType || 1;
+
+      const result = await contractService.call(
+        "AchievementBadges",
+        "mintBadge",
+        { to: recipient, badgeType },
+        {
+          mode: "agentkit",
+          userWallet: user.walletAddress,
+        }
+      );
+
       res.json({
-        message: "徽章铸造请求已提交",
-        to: body.to,
-        badgeType: body.badgeType,
-        note: "需要用户在前端通过钱包签名完成链上铸造",
+        message: "徽章铸造成功",
+        to: recipient,
+        badgeType,
+        txHash: result.txHash,
       });
     } catch (error: any) {
       console.error("Error minting badge:", error);

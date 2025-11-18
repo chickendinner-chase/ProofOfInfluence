@@ -12,6 +12,7 @@ import { BadgeCard } from "@/components/BadgeCard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
+import { ROUTES } from "@/routes";
 import {
   Wallet,
   TrendingUp,
@@ -80,9 +81,9 @@ export default function Dashboard() {
               {theme === 'cyberpunk' ? 'LIVE • Trading Dashboard' : 'Your Dashboard Overview'}
             </p>
           </div>
-          <Link href="/app/market">
+          <Link href={ROUTES.APP_TRADE}>
             <ThemedButton emphasis>
-              Go to Market
+              {theme === 'cyberpunk' ? '前往现货交易' : 'Go to Spot Trade'}
             </ThemedButton>
           </Link>
         </div>
@@ -219,12 +220,14 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="mt-4 flex gap-2">
-              <Link href="/app/recharge">
+              <Link href={ROUTES.APP_RECHARGE}>
                 <ThemedButton size="sm">Deposit</ThemedButton>
               </Link>
               <ThemedButton size="sm" variant="outline">Withdraw</ThemedButton>
-              <Link href="/app/market">
-                <ThemedButton size="sm" variant="outline">Trade</ThemedButton>
+              <Link href={ROUTES.APP_TRADE}>
+                <ThemedButton size="sm" variant="outline">
+                  {theme === 'cyberpunk' ? '交易' : 'Trade'}
+                </ThemedButton>
               </Link>
             </div>
           </ThemedCard>
@@ -275,7 +278,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <Link href="/airdrop">
+            <Link href={ROUTES.AIRDROP}>
               <ThemedButton className="w-full mt-4" variant="outline">
                 View All Tasks
               </ThemedButton>
@@ -339,25 +342,25 @@ export default function Dashboard() {
       {/* Quick Links */}
       <Section>
         <div className="grid gap-4 md:grid-cols-4">
-          <Link href="/referral">
+          <Link href={ROUTES.REFERRAL}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">Referral Program</h4>
               <p className="text-xs opacity-70">Invite friends & earn</p>
             </ThemedCard>
           </Link>
-          <Link href="/tge">
+          <Link href={ROUTES.TGE}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">TGE Launch</h4>
               <p className="text-xs opacity-70">Join token sale</p>
             </ThemedCard>
           </Link>
-          <Link href="/app/settings">
+          <Link href={ROUTES.APP_SETTINGS}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">Settings</h4>
               <p className="text-xs opacity-70">Manage your account</p>
             </ThemedCard>
           </Link>
-          <Link href="/token">
+          <Link href={ROUTES.TOKEN}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">Token Info</h4>
               <p className="text-xs opacity-70">Learn about $POI</p>

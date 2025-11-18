@@ -155,9 +155,10 @@ Implemented complete TGE (Token Generation Event) cold start campaign for ProofO
 - Airdrop info cards
 
 **Backend:**
-- GET /api/airdrop/check - Check eligibility
-- POST /api/airdrop/claim - Claim airdrop
+- GET /api/airdrop/check - Check eligibility and get Merkle proofs
 - airdrop_eligibility table
+
+**Note**: Airdrop claims are executed via direct user-wallet contract calls. The backend only provides eligibility checking and proof generation. See `docs/AIRDROP_API.md` for details.
 
 ---
 

@@ -84,7 +84,8 @@ contract TGESale is Ownable {
      */
     function configureTiers(uint256[] calldata prices, uint256[] calldata supplies) external onlyOwner {
         require(prices.length == supplies.length && prices.length > 0, "Sale: invalid tier config");
-        require(prices.length <= type(uint8).max + 1, "Sale: too many tiers");
+        // type(uint8).max is 255 (uint8). Convert to uint256 before adding to avoid overflow in checked arithmetic.
+        require(prices.length <= uint256(type(uint8).max) + 1, "Sale: too many tiers");
 
         delete tiers;
         for (uint256 i = 0; i < prices.length; i++) {

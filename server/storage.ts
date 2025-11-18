@@ -31,6 +31,8 @@ import {
   userPersonalityProfiles,
   userMemories,
   agentkitActions,
+  badges,
+  eventSyncState,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -94,6 +96,10 @@ import {
   type InsertUserMemory,
   type AgentkitAction,
   type InsertAgentkitAction,
+  type Badge,
+  type InsertBadge,
+  type EventSyncState,
+  type InsertEventSyncState,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, or, lte } from "drizzle-orm";
@@ -106,6 +112,7 @@ export interface IStorage {
   // User management
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
+  findOrCreateUserByWallet(walletAddress: string): Promise<User>;
   updateUserWallet(userId: string, walletAddress: string): Promise<User>;
   updateUserUsername(userId: string, username: string): Promise<User>;
   
@@ -163,10 +170,6 @@ export interface IStorage {
   getFeeCredit(userId: string): Promise<PoiFeeCredit | undefined>;
   createFeeCredit(feeCredit: InsertPoiFeeCredit): Promise<PoiFeeCredit>;
   updateFeeCreditBalance(userId: string, amountCents: number): Promise<PoiFeeCredit>;
-  
-  // POI Burn Intent operations
-  createBurnIntent(burnIntent: InsertPoiBurnIntent): Promise<PoiBurnIntent>;
-  getBurnIntentByTxHash(txHash: string): Promise<PoiBurnIntent | undefined>;
   
   // POI Fee Credit Lock operations
   createFeeCreditLock(lock: InsertPoiFeeCreditLock): Promise<PoiFeeCreditLock>;
@@ -299,6 +302,33 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByWallet(walletAddress: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.walletAddress, walletAddress));
+    return user;
+  }
+
+  async findOrCreateUserByWallet(walletAddress: string): Promise<User> {
+    const normalized = walletAddress.toLowerCase();
+    
+    // Try to find existing user
+    let user = await this.getUserByWallet(normalized);
+    
+    if (user) {
+      // Update last login time
+      const [updated] = await db
+        .update(users)
+        .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, user.id))
+        .returning();
+      return updated || user;
+    }
+    
+    // Create new user
+    const userId = `wallet_${normalized.slice(2, 10)}_${Date.now()}`;
+    user = await this.upsertUser({
+      id: userId,
+      walletAddress: normalized,
+      role: "user",
+    });
+    
     return user;
   }
 
@@ -607,23 +637,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(poiFeeCredits.userId, userId))
       .returning();
     return updated;
-  }
-
-  // POI Burn Intent operations
-  async createBurnIntent(burnIntent: InsertPoiBurnIntent): Promise<PoiBurnIntent> {
-    const [newBurnIntent] = await db
-      .insert(poiBurnIntents)
-      .values(burnIntent)
-      .returning();
-    return newBurnIntent;
-  }
-
-  async getBurnIntentByTxHash(txHash: string): Promise<PoiBurnIntent | undefined> {
-    const [burnIntent] = await db
-      .select()
-      .from(poiBurnIntents)
-      .where(eq(poiBurnIntents.burnTxHash, txHash));
-    return burnIntent;
   }
 
   // POI Fee Credit Lock operations
@@ -1463,31 +1476,6 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async claimAirdrop(userId: string, walletAddress: string): Promise<AirdropEligibility> {
-    const [updated] = await db
-      .update(airdropEligibility)
-      .set({
-        claimed: true,
-        claimDate: sql`NOW()`,
-        updatedAt: sql`NOW()`,
-      })
-      .where(
-        and(
-          or(
-            eq(airdropEligibility.userId, userId),
-            eq(airdropEligibility.walletAddress, walletAddress.toLowerCase())
-          ),
-          eq(airdropEligibility.claimed, false)
-        )
-      )
-      .returning();
-
-    if (!updated) {
-      throw new Error("Airdrop not found or already claimed");
-    }
-
-    return updated;
-  }
 
   async createAirdropEligibility(data: InsertAirdropEligibility): Promise<AirdropEligibility> {
     const [created] = await db
@@ -1617,6 +1605,60 @@ export class DatabaseStorage implements IStorage {
     await db.update(userMemories).set({ userId: primaryUserId }).where(eq(userMemories.userId, secondaryUserId));
 
     await db.delete(users).where(eq(users.id, secondaryUserId));
+  }
+
+  // Badge operations
+  async createBadge(data: InsertBadge): Promise<Badge> {
+    const [badge] = await db.insert(badges).values(data).returning();
+    return badge;
+  }
+
+  async getBadgesByOwner(owner: string): Promise<Badge[]> {
+    return await db
+      .select()
+      .from(badges)
+      .where(eq(badges.owner, owner.toLowerCase()))
+      .orderBy(desc(badges.mintedAt));
+  }
+
+  async getBadgeByTokenId(tokenId: string): Promise<Badge | undefined> {
+    const [badge] = await db.select().from(badges).where(eq(badges.tokenId, tokenId));
+    return badge;
+  }
+
+  // Event sync state operations
+  async getOrCreateSyncState(contractName: string): Promise<EventSyncState> {
+    const [existing] = await db
+      .select()
+      .from(eventSyncState)
+      .where(eq(eventSyncState.contractName, contractName));
+
+    if (existing) {
+      return existing;
+    }
+
+    const [newState] = await db
+      .insert(eventSyncState)
+      .values({ contractName, lastBlockNumber: null })
+      .returning();
+    return newState;
+  }
+
+  async updateLastIndexedBlock(contractName: string, lastBlockNumber: string): Promise<EventSyncState> {
+    const [updated] = await db
+      .update(eventSyncState)
+      .set({ lastBlockNumber, updatedAt: new Date() })
+      .where(eq(eventSyncState.contractName, contractName))
+      .returning();
+    return updated;
+  }
+
+  async getLastIndexedBlock(contractName: string): Promise<string | null> {
+    const [state] = await db
+      .select()
+      .from(eventSyncState)
+      .where(eq(eventSyncState.contractName, contractName));
+    return state?.lastBlockNumber || null;
   }
 }
 

@@ -1,8 +1,8 @@
 {
   "name": "ImmortalityBadge",
-  "address": "0x0000000000000000000000000000000000000000",
+  "address": "0xbd637B458edbdb1dB420d220BF92F7bd02382000",
   "chainId": 84532,
-  "network": "base-sepolia",
+  "network": "unknown",
   "abi": [
     {
       "inputs": [
@@ -892,5 +892,9 @@
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ]
+  ],
+  "metadata": {
+    "baseUri": "",
+    "admin": "0xdc6a8738c0b8AB2ED33d98b04E9f20280fBA8F55"
+  }
 }

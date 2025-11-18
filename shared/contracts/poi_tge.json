@@ -1,6 +1,6 @@
 {
   "name": "TGESale",
-  "address": "0x0000000000000000000000000000000000000000",
+  "address": "0x323b3197911603692729c6a5F7375d9AC8c3bA93",
   "chainId": 84532,
   "network": "base-sepolia",
   "abi": [
@@ -868,17 +868,28 @@
     }
   ],
   "related": {
-    "poi": "0x0000000000000000000000000000000000000000",
-    "usdc": "0x0000000000000000000000000000000000000000",
-    "treasury": "0x0000000000000000000000000000000000000000"
+    "poi": "0x737869142C93078Dae4d78D4E8c5dbD45160565a",
+    "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "treasury": "0xe3a38072244665339b097F2b2f134fA19E8E113E"
   },
   "sale": {
     "whitelistEnabled": false,
     "merkleRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "minContribution": "0",
     "maxContribution": "0",
-    "saleStart": 0,
-    "saleEnd": 0,
-    "tiers": []
+    "saleStart": 1763339996,
+    "saleEnd": 1763426336,
+    "tiers": [
+      {
+        "index": 0,
+        "pricePerToken": "2000000",
+        "remainingTokens": "500000000000000000000000"
+      },
+      {
+        "index": 1,
+        "pricePerToken": "3000000",
+        "remainingTokens": "250000000000000000000000"
+      }
+    ]
   }
 }

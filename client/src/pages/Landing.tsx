@@ -5,6 +5,7 @@ import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton, ThemedBadge } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/routes";
 import {
   Zap,
   Globe,
@@ -112,12 +113,12 @@ export default function Landing() {
 
             {/* CTA Buttons */}
             <div className="mt-6 flex gap-3 flex-wrap">
-              <Link href="/Immortality">
+              <Link href={ROUTES.APP_IMMORTALITY}>
                 <ThemedButton emphasis>
                   {theme === 'cyberpunk' ? 'Launch Immortality' : 'Enter Immortality'}
                 </ThemedButton>
               </Link>
-              <Link href="/market">
+              <Link href={ROUTES.APP_TRADE}>
                 <ThemedButton variant="outline">
                   {theme === 'cyberpunk' ? 'Buy POI' : 'Go to TGESale'}
                 </ThemedButton>
@@ -252,13 +253,13 @@ export default function Landing() {
             加入早鸟计划，获取独家空投和推荐奖励
           </p>
           <div className="flex justify-center gap-3">
-            <Link href="/tge">
+            <Link href={ROUTES.TGE}>
               <ThemedButton emphasis size="lg">
                 参与 TGE
                 <ArrowRight className="w-4 h-4 ml-2" />
               </ThemedButton>
             </Link>
-            <Link href="/early-bird">
+            <Link href={ROUTES.EARLY_BIRD}>
               <ThemedButton variant="outline" size="lg">
                 注册早鸟
               </ThemedButton>
@@ -270,25 +271,25 @@ export default function Landing() {
       {/* Quick Links */}
       <Section title="快速导航" subtitle="探索 ProofOfInfluence 生态系统">
         <div className="grid gap-4 md:grid-cols-4">
-          <Link href="/solutions">
+          <Link href={ROUTES.SOLUTIONS}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">解决方案</h4>
               <p className="text-xs opacity-70">了解我们的产品</p>
             </ThemedCard>
           </Link>
-          <Link href="/token">
+          <Link href={ROUTES.TOKEN}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">Token 文档</h4>
               <p className="text-xs opacity-70">$POI 代币经济</p>
             </ThemedCard>
           </Link>
-          <Link href="/use-cases">
+          <Link href={ROUTES.USE_CASES}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">应用案例</h4>
               <p className="text-xs opacity-70">真实场景应用</p>
             </ThemedCard>
           </Link>
-          <Link href="/about">
+          <Link href={ROUTES.ABOUT}>
             <ThemedCard hover className="p-5 cursor-pointer">
               <h4 className="font-semibold mb-1">关于我们</h4>
               <p className="text-xs opacity-70">了解团队愿景</p>

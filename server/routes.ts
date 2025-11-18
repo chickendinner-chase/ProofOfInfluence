@@ -3,7 +3,8 @@ import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import { ethers } from "ethers";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./replitAuth";
+import { isAuthenticated } from "./auth";
 import { insertProfileSchema, insertLinkSchema } from "@shared/schema";
 import { stripe } from "./stripe";
 import { registerMarketRoutes } from "./routes/market";
@@ -12,6 +13,7 @@ import { registerMerchantRoutes } from "./routes/merchant";
 import { registerAirdropRoutes } from "./routes/airdrop";
 import { registerReferralContractRoutes } from "./routes/referral";
 import { registerBadgeRoutes } from "./routes/badge";
+import { registerAuthRoutes } from "./routes/auth";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
@@ -59,8 +61,11 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Replit Auth
+  // Setup Replit Auth (session, passport initialization)
   await setupAuth(app);
+
+  // Register unified OAuth routes
+  registerAuthRoutes(app);
 
   registerMarketRoutes(app);
   registerReservePoolRoutes(app);
@@ -72,29 +77,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const user = await storage.getUser(userId);
-      
+      if (!user) {
+        // This is a serious error: user should have been created during login
+        console.error("[Auth] User not found for authenticated request", {
+          userId,
+          walletAddress: req.user.walletAddress,
+        });
+        return res.status(500).json({ message: "User not found in database" });
+      }
+
       // Auto-create profile on first login if it doesn't exist
-      if (user) {
-        const existingProfile = await storage.getProfile(userId);
-        if (!existingProfile) {
-          const defaultName = user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.firstName || user.email?.split('@')[0] || 'User';
-          
-          await storage.createProfile({
-            userId,
-            name: defaultName,
-            bio: null,
-            avatarUrl: user.profileImageUrl || null,
-            googleUrl: null,
-            twitterUrl: null,
-            weiboUrl: null,
-            tiktokUrl: null,
-            isPublic: false, // Profile is private by default until user sets username
-          });
-        }
+      const existingProfile = await storage.getProfile(userId);
+      if (!existingProfile) {
+        const defaultName = user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.firstName || user.email?.split('@')[0] || 'User';
+        
+        await storage.createProfile({
+          userId,
+          name: defaultName,
+          bio: null,
+          avatarUrl: user.profileImageUrl || null,
+          googleUrl: null,
+          twitterUrl: null,
+          weiboUrl: null,
+          tiktokUrl: null,
+          isPublic: false, // Profile is private by default until user sets username
+        });
       }
       
       // Development mode: Grant admin access to all users if DEV_MODE_ADMIN is enabled
@@ -103,28 +118,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isDevelopment = process.env.NODE_ENV === 'development';
       const devModeAdmin = process.env.DEV_MODE_ADMIN === 'true';
       
-      if (user && isDevelopment && devModeAdmin) {
+      if (isDevelopment && devModeAdmin) {
         // Override user role to admin in development mode for testing
         user.role = 'admin';
         console.log(`[DEV MODE] Admin access granted to user ${user.email || user.id}`);
       }
       
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
+      res.json({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        walletAddress: req.user.walletAddress || user.walletAddress || null,
+        // TODO: 其他 profile 字段可以后续补
+      });
+    } catch (err) {
+      console.error("[Auth] Failed to fetch auth user:", err);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  // Early-Bird Registration
+  // Wallet Authentication
   app.get("/api/auth/wallet/nonce", async (req: any, res) => {
     const address = String(req.query.address || "").toLowerCase();
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
       return res.status(400).json({ message: "Invalid address" });
     }
+    
     const nonce = createWalletNonce(address);
-    res.json({ address, nonce, message: `Sign this nonce to prove ownership: ${nonce}` });
+    
+    // SIWE-style message format
+    const domain = process.env.APP_DOMAIN || req.hostname || "proofofinfluence.com";
+    const message = [
+      "Login to ProofOfInfluence",
+      `Domain: ${domain}`,
+      `Wallet: ${address}`,
+      `Nonce: ${nonce}`,
+      `Time: ${new Date().toISOString()}`,
+    ].join("\n");
+    
+    res.json({ address, nonce, message });
   });
+
+  app.post("/api/auth/wallet/login", async (req: any, res) => {
+    try {
+      const { address, walletAddress, signature, message } = req.body as {
+        address?: string;
+        walletAddress?: string;
+        signature?: string;
+        message?: string;
+      };
+
+      // 支持两种字段名：address 或 walletAddress（前端发送的是 walletAddress）
+      const finalAddress = address || walletAddress;
+
+      if (!finalAddress || !/^0x[a-fA-F0-9]{40}$/.test(finalAddress)) {
+        return res.status(400).json({ message: "Invalid address" });
+      }
+
+      if (!signature) {
+        return res.status(400).json({ message: "Signature is required" });
+      }
+
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const normalized = finalAddress.toLowerCase();
+
+      // 1) Get and verify nonce
+      const expectedNonce = getWalletNonce(normalized);
+      if (!expectedNonce) {
+        return res.status(401).json({ message: "Nonce expired or not found. Please request a new nonce." });
+      }
+
+      // Check if message contains the expected nonce
+      if (!message.includes(expectedNonce)) {
+        return res.status(401).json({ message: "Nonce mismatch. Message does not contain expected nonce." });
+      }
+
+      // 2) Verify signature using the message provided by frontend
+      let recovered: string;
+      try {
+        recovered = ethers.utils.verifyMessage(message, signature).toLowerCase();
+      } catch (error) {
+        return res.status(401).json({ message: "Invalid signature format." });
+      }
+
+      if (recovered !== normalized) {
+        return res.status(401).json({ message: "Signature verification failed. Signature does not match address." });
+      }
+
+      // 3) Consume nonce to prevent replay attacks
+      if (!consumeWalletNonce(normalized, expectedNonce)) {
+        return res.status(401).json({ message: "Nonce already used. Please request a new nonce." });
+      }
+
+      // 4) Find or create user in database
+      // This ensures DB always has the user before session is set
+      const user = await storage.findOrCreateUserByWallet(normalized);
+
+      // 5) Set wallet user in session
+      const { setWalletAuthUser } = await import("./auth/walletAuth");
+      setWalletAuthUser(req, {
+        id: user.id,
+        walletAddress: normalized,
+        email: user.email,
+        role: user.role,
+      });
+
+      // 6) Explicitly save session to ensure it's written to store
+      await new Promise<void>((resolve, reject) => {
+        (req.session as any).save((err: any) => (err ? reject(err) : resolve()));
+      });
+
+      // Return user directly (not wrapped in { user, authenticated })
+      res.json({
+        id: user.id,
+        walletAddress: normalized,
+        email: user.email,
+        role: user.role,
+      });
+    } catch (error: any) {
+      console.error("[WalletAuth] Login error:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  // Early-Bird Registration
 
   app.post("/api/early-bird/register", async (req: any, res) => {
     const schema = z.object({
@@ -777,16 +897,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { walletAddress, signature } = req.body;
 
-      // TODO: Add signature verification for production
-      // For MVP: storing wallet address without full signature verification
-      // Future: Implement nonce-based challenge and verify signature server-side
-      // using ethers.js: verifyMessage(nonce, signature) === walletAddress
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+
+      const wallet = walletAddress.toLowerCase();
+
+      // Verify signature if provided
+      if (signature) {
+        // Verify nonce
+        const nonce = getWalletNonce(wallet);
+        if (!nonce) {
+          return res.status(400).json({ message: "Nonce expired or not found. Please request a new nonce." });
+        }
+
+        const message = `Sign this nonce to prove ownership: ${nonce}`;
+        const recovered = ethers.utils.verifyMessage(message, signature);
+        
+        if (recovered.toLowerCase() !== wallet) {
+          return res.status(400).json({ message: "Invalid signature. Signature does not match wallet address." });
+        }
+
+        // Consume nonce to prevent replay attacks
+        if (!consumeWalletNonce(wallet, nonce)) {
+          return res.status(400).json({ message: "Nonce already used. Please request a new nonce." });
+        }
+      } else {
+        // If no signature provided, warn but allow (for backward compatibility during transition)
+        console.warn(`Wallet connection without signature for user ${userId}, wallet ${wallet}`);
+      }
       
-      const user = await storage.updateUserWallet(userId, walletAddress);
+      const user = await storage.updateUserWallet(userId, wallet);
       res.json(user);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error connecting wallet:", error);
-      res.status(400).json({ message: "Failed to connect wallet" });
+      res.status(400).json({ message: error.message || "Failed to connect wallet" });
     }
   });
 
@@ -1125,18 +1270,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/poi/me/tier", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      // TODO: Get actual POI balance from blockchain/wallet
-      // For MVP, return mock balance or from transactions
-      const mockPoiBalance = 0; // Replace with actual balance lookup
-      
-      const tier = await storage.getUserTier(mockPoiBalance);
-      res.json({ tier, poiBalance: mockPoiBalance });
-    } catch (error) {
-      console.error("Error fetching user tier:", error);
-      res.status(500).json({ message: "Failed to fetch user tier" });
-    }
+    // TODO: Implement real POI tier logic when POI-based perks/levels are defined.
+    // For now this endpoint is a placeholder and always returns tier "none".
+    // Frontend currently queries POI balance directly on-chain via usePoiToken hook.
+    
+    res.json({
+      tier: "none",
+      poiBalance: null,
+      rulesVersion: 0
+    });
   });
 
   // POI Fee Credit routes
@@ -1154,53 +1296,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/poi/fee-credits/burn-intent", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { burnTxHash } = req.body;
-
-      if (!burnTxHash) {
-        return res.status(400).json({ message: "burnTxHash is required" });
-      }
-
-      // Check if this transaction has already been processed
-      const existing = await storage.getBurnIntentByTxHash(burnTxHash);
-      if (existing) {
-        return res.status(400).json({ 
-          message: "This burn transaction has already been processed",
-          code: "POI_BURN_ALREADY_PROCESSED"
-        });
-      }
-
-      // TODO: Verify transaction on blockchain
-      // For MVP, using mock values
-      const mockPoiAmount = 1000; // POI burned
-      const mockSnapshotRate = 0.05; // $0.05 per POI
-      const creditedCents = Math.floor(mockPoiAmount * mockSnapshotRate * 100);
-
-      // Create burn intent record
-      const burnIntent = await storage.createBurnIntent({
-        userId,
-        burnTxHash,
-        poiAmount: mockPoiAmount,
-        creditedCents,
-        snapshotRate: mockSnapshotRate.toString(),
-        status: 'credited',
-      });
-
-      // Update user's fee credit balance
-      await storage.updateFeeCreditBalance(userId, creditedCents);
-
-      res.json({
-        creditedCents,
-        snapshotRate: mockSnapshotRate,
-        burnIntent,
-      });
-    } catch (error) {
-      console.error("Error processing burn intent:", error);
-      res.status(500).json({ message: "Failed to process burn intent" });
-    }
-  });
 
   // Checkout routes
   app.post("/api/checkout/quote", async (req, res) => {
@@ -1721,44 +1816,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Claim airdrop (authenticated)
-  app.post("/api/airdrop/claim", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { walletAddress } = req.body;
-
-      if (!walletAddress) {
-        return res.status(400).json({ message: "Wallet address is required" });
-      }
-
-      // Verify eligibility first
-      const eligibility = await storage.checkAirdropEligibility(userId);
-      if (!eligibility.eligible) {
-        return res.status(403).json({ message: "Not eligible for airdrop" });
-      }
-
-      if (eligibility.claimed) {
-        return res.status(400).json({ message: "Airdrop already claimed" });
-      }
-
-      // Mark as claimed
-      const result = await storage.claimAirdrop(userId, walletAddress);
-      
-      // TODO: Trigger actual token distribution (via smart contract or manual process)
-      // For MVP, we just mark it as claimed in the database
-      
-      res.json({
-        message: "Airdrop claimed successfully",
-        amount: result.amount,
-        claimDate: result.claimDate,
-      });
-    } catch (error: any) {
-      console.error("Error claiming airdrop:", error);
-      res.status(500).json({ 
-        message: error.message || "Failed to claim airdrop" 
-      });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;

@@ -7,6 +7,7 @@ const path = require("path");
 const envPath = path.resolve(__dirname, "../.env");
 require("dotenv").config({ path: envPath });
 const { ethers } = require("ethers");
+const { persistContract } = require("./utils/persist-contract.cjs");
 
 async function main() {
   const pk = process.env.PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY;
@@ -37,6 +38,25 @@ async function main() {
     const tx = await registry.setRewardToken(tokenAddress);
     await tx.wait();
     console.log(`✅ Reward token set`);
+  }
+
+  // Persist contract address
+  const network = await provider.getNetwork();
+  persistContract(
+    "ReferralRegistry",
+    registry.address,
+    network.chainId,
+    network.name,
+    {
+      rewardToken: tokenAddress || null,
+    }
+  );
+
+  // Verify contract code exists
+  const code = await provider.getCode(registry.address);
+  console.log(`Code size at ${registry.address}: ${code.length / 2 - 1} bytes`);
+  if (!code || code === "0x" || code === "0X") {
+    throw new Error(`No contract code at ${registry.address}. Deployment likely failed.`);
   }
 }
 

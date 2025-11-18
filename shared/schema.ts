@@ -755,3 +755,35 @@ export const insertEarlyBirdRegistrationSchema = createInsertSchema(earlyBirdReg
 
 export type InsertEarlyBirdRegistration = z.infer<typeof insertEarlyBirdRegistrationSchema>;
 export type EarlyBirdRegistration = typeof earlyBirdRegistrations.$inferSelect;
+
+// Badges table for AchievementBadges event indexing
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  tokenId: varchar("token_id", { length: 78 }).unique().notNull(), // bigint as string
+  owner: varchar("owner", { length: 42 }).notNull(), // wallet address (lowercase)
+  badgeType: integer("badge_type").notNull(),
+  tokenURI: text("token_uri"), // nullable, fetched on demand
+  mintedAt: timestamp("minted_at").notNull(),
+  blockNumber: varchar("block_number", { length: 78 }).notNull(), // bigint as string
+  transactionHash: varchar("transaction_hash", { length: 66 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("badges_owner_idx").on(table.owner),
+  index("badges_token_id_idx").on(table.tokenId),
+]);
+
+export const insertBadgeSchema = createInsertSchema(badges);
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+export type Badge = typeof badges.$inferSelect;
+
+// Event sync state table for tracking indexing progress
+export const eventSyncState = pgTable("event_sync_state", {
+  id: serial("id").primaryKey(),
+  contractName: varchar("contract_name", { length: 50 }).unique().notNull(),
+  lastBlockNumber: varchar("last_block_number", { length: 78 }), // bigint as string, nullable for first run
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEventSyncStateSchema = createInsertSchema(eventSyncState);
+export type InsertEventSyncState = z.infer<typeof insertEventSyncStateSchema>;
+export type EventSyncState = typeof eventSyncState.$inferSelect;

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAccount, useReadContract, usePublicClient } from "wagmi";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { ACHIEVEMENT_BADGES_ADDRESS, BASE_CHAIN_ID } from "@/lib/baseConfig";
-import { useQueries } from "@tanstack/react-query";
 
 const ACHIEVEMENT_BADGES_ABI = [
   {
@@ -88,28 +88,85 @@ export function useBadge(): UseBadgeResult {
     query: { enabled: isConfigured && !!address },
   });
 
-  // For now, we'll use a simplified approach
-  // In production, token IDs should come from events or a backend indexer
+  // Fetch token IDs from backend API
+  const {
+    data: badgesData,
+    isLoading: isLoadingBadges,
+    refetch: refetchBadges,
+  } = useQuery({
+    queryKey: ["badges", address],
+    queryFn: async () => {
+      if (!address) return null;
+      
+      const response = await fetch(`/api/badges/tokens?address=${address}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch badges");
+      }
+      
+      return await response.json();
+    },
+    enabled: isConfigured && !!address,
+    staleTime: 30000, // 30 seconds
+  });
+
+  // Fetch badge details from contract using tokenIds
+  const tokenIds = badgesData?.tokenIds || [];
+  const badgeQueries = useQueries({
+    queries: tokenIds.map((tokenId: string) => ({
+      queryKey: ["badge", tokenId],
+      queryFn: async () => {
+        if (!publicClient || !isConfigured) return null;
+        
+        const [badgeType, tokenURI] = await Promise.all([
+          publicClient.readContract({
+            address: ACHIEVEMENT_BADGES_ADDRESS,
+            abi: ACHIEVEMENT_BADGES_ABI,
+            functionName: "badgeTypeOf",
+            args: [BigInt(tokenId)],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: ACHIEVEMENT_BADGES_ADDRESS,
+            abi: ACHIEVEMENT_BADGES_ABI,
+            functionName: "tokenURI",
+            args: [BigInt(tokenId)],
+          }) as Promise<string>,
+        ]);
+        
+        return {
+          tokenId: BigInt(tokenId),
+          badgeType,
+          tokenURI,
+        } as BadgeInfo;
+      },
+      enabled: isConfigured && !!tokenId,
+      staleTime: 60000, // 1 minute
+    })),
+  });
+
+  // Combine badge data
   const badges: BadgeInfo[] = useMemo(() => {
-    // This will be populated when tokenIds are provided
-    return [];
-  }, []);
+    return badgeQueries
+      .map((query) => query.data)
+      .filter((badge): badge is BadgeInfo => badge !== null && badge !== undefined);
+  }, [badgeQueries]);
 
   const fetchBadges = async (tokenIds: bigint[]) => {
-    if (!publicClient || !isConfigured || tokenIds.length === 0) return;
-
-    // This would fetch badge details for given token IDs
-    // Implementation would use useQueries or batch readContract calls
+    // Trigger refetch if needed
+    await refetchBadges();
   };
 
   const refetch = () => {
     refetchBalance();
+    refetchBadges();
   };
 
   return {
     balance: balance ?? null,
     badges,
-    isLoading: isLoadingBalance,
+    isLoading: isLoadingBalance || isLoadingBadges,
     isConfigured,
     fetchBadges,
     refetch,

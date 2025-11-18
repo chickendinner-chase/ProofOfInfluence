@@ -1,16 +1,30 @@
 // Replit Auth integration - from blueprint:javascript_log_in_with_replit
+// NOTE: Replit Auth is now optional - if REPL_ID is not set, auth will fall back to wallet authentication
 import * as client from "openid-client";
 import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-const getOidcConfig = memoize(
+// Check if Replit Auth is enabled
+export const isReplitAuthEnabled = (): boolean => {
+  return !!(
+    process.env.REPL_ID &&
+    process.env.SESSION_SECRET &&
+    process.env.DATABASE_URL
+  );
+};
+
+// Export getOidcConfig for use in unified auth middleware
+export const getOidcConfig = memoize(
   async () => {
+    if (!isReplitAuthEnabled()) {
+      throw new Error("Replit Auth is not enabled: REPL_ID is not set");
+    }
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
       process.env.REPL_ID!
@@ -41,7 +55,8 @@ export function getSession() {
   });
 }
 
-function updateUserSession(
+// Export updateUserSession for use in unified auth middleware
+export function updateUserSession(
   user: any,
   tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
@@ -69,6 +84,40 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Only setup Replit Auth if REPL_ID is configured
+  if (!isReplitAuthEnabled()) {
+    console.warn("[Auth] Replit Auth is disabled: REPL_ID is not set. Wallet authentication will be used.");
+    console.warn("[Auth] To bypass authentication for testing, set AUTH_BYPASS=true or DEV_MODE_AUTH_BYPASS=true");
+    
+    // Setup basic passport serialization even without Replit Auth
+    passport.serializeUser((user: Express.User, cb) => cb(null, user));
+    passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+    
+    // Provide placeholder routes that return appropriate errors
+    app.get("/api/login", (req, res) => {
+      res.status(503).json({ 
+        message: "Replit Auth is not configured. Please use wallet authentication or set REPL_ID environment variable.",
+        error: "AUTH_NOT_CONFIGURED"
+      });
+    });
+    
+    app.get("/api/callback", (req, res) => {
+      res.status(503).json({ 
+        message: "Replit Auth is not configured. Please use wallet authentication or set REPL_ID environment variable.",
+        error: "AUTH_NOT_CONFIGURED"
+      });
+    });
+    
+    app.get("/api/logout", (req, res) => {
+      req.logout(() => {
+        res.redirect("/");
+      });
+    });
+    
+    return;
+  }
+
+  // Replit Auth is enabled, proceed with normal setup
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (
@@ -133,31 +182,3 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-};

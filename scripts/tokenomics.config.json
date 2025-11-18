@@ -1,0 +1,75 @@
+{
+  "poiToken": {
+    "initialSupply": "1000000000",
+    "description": "POI Token initial supply (18 decimals, in POI units)"
+  },
+  "tgeSale": {
+    "tiers": [
+      {
+        "price": "2",
+        "amount": "500000",
+        "description": "Tier 0: 2 USDC per POI, 500,000 POI supply"
+      },
+      {
+        "price": "3",
+        "amount": "250000",
+        "description": "Tier 1: 3 USDC per POI, 250,000 POI supply"
+      }
+    ],
+    "minContribution": "0",
+    "maxContribution": "0",
+    "saleStart": 0,
+    "saleEnd": 0,
+    "whitelistEnabled": false,
+    "merkleRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "description": "TGE Sale configuration. Set saleStart/saleEnd to 0 to disable time window. minContribution/maxContribution 0 = unlimited"
+  },
+  "vesting": {
+    "schedules": [
+      {
+        "beneficiary": "",
+        "totalAmount": "1000000",
+        "cliff": 2592000,
+        "duration": 15552000,
+        "slicePeriodSeconds": 86400,
+        "revocable": true,
+        "description": "Example vesting: 1M POI, 30-day cliff, 180-day linear vesting, daily release, revocable. Set beneficiary to empty string to skip."
+      }
+    ],
+    "description": "Vesting schedules to create after Vault deployment. beneficiary must be set to a valid address, or leave empty to skip creation"
+  },
+  "stakingRewards": {
+    "rewardRate": "1000000000000000000",
+    "rewardsDuration": 604800,
+    "description": "Staking rewards: rewardRate (wei per second), rewardsDuration (seconds, 7 days = 604800)"
+  },
+  "airdrop": {
+    "rounds": [
+      {
+        "roundId": 0,
+        "recipients": [],
+        "description": "Airdrop rounds. recipients array should contain {walletAddress, amount} objects. Empty array means no airdrop for this round."
+      }
+    ],
+    "description": "Airdrop eligibility configuration. Recipients will be used to generate Merkle tree."
+  },
+  "earlyBird": {
+    "allocations": [],
+    "description": "Early bird allowlist allocations. Array of {account, allocation} objects (allocation in POI units, 18 decimals). Empty means no allowlist."
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2025-01-16",
+    "network": "base-sepolia",
+    "chainId": 84532,
+    "notes": [
+      "All amounts are in human-readable format (will be converted to wei in scripts)",
+      "POI Token uses 18 decimals",
+      "USDC uses 6 decimals",
+      "Time values are in seconds (Unix timestamp for saleStart/saleEnd, duration in seconds for vesting)",
+      "Empty beneficiary in vesting schedules will skip that schedule",
+      "Empty recipients/allocations arrays will skip those configurations"
+    ]
+  }
+}
+

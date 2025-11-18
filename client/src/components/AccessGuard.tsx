@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Lock, Wallet, ShieldCheck } from "lucide-react";
+import { ROUTES } from "@/routes";
 
 interface AccessGuardProps {
   children: ReactNode;
@@ -54,7 +55,7 @@ export default function AccessGuard({
           title: "需要连接钱包",
           description: "请连接您的 Web3 钱包以访问此功能",
           action: "连接钱包",
-          href: "/dashboard",
+          href: ROUTES.APP_DASHBOARD,
         };
       case "kyc_verified":
         return {
@@ -62,7 +63,7 @@ export default function AccessGuard({
           title: "需要 KYC 认证",
           description: "此功能需要完成身份验证（KYC）才能使用",
           action: "开始认证",
-          href: "/dashboard?kyc=true",
+          href: `${ROUTES.APP_DASHBOARD}?kyc=true`,
         };
       default:
         return {
@@ -70,7 +71,7 @@ export default function AccessGuard({
           title: "访问受限",
           description: "您没有权限访问此内容",
           action: "了解更多",
-          href: "/",
+          href: ROUTES.HOME,
         };
     }
   };
