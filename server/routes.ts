@@ -3,7 +3,7 @@ import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import { ethers } from "ethers";
 import { storage } from "./storage";
-import { setupAuth } from "./replitAuth";
+import { setupAuth } from "./auth/session";
 import { isAuthenticated } from "./auth";
 import { insertProfileSchema, insertLinkSchema } from "@shared/schema";
 import { stripe } from "./stripe";
@@ -66,6 +66,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register unified OAuth routes
   registerAuthRoutes(app);
+
+  // Unified logout endpoint (supports Replit Auth and Wallet Auth)
+  app.post("/api/auth/logout", async (req: any, res) => {
+    try {
+      // 1) 清钱包 session（如果有）
+      try {
+        if (req.session && req.session.walletUser) {
+          delete req.session.walletUser;
+        }
+      } catch (e) {
+        console.warn("[Auth] clear walletUser failed:", e);
+      }
+
+      // 2) 清 Passport / Replit 登录（如果有）
+      await new Promise<void>((resolve, reject) => {
+        if (typeof req.logout === "function") {
+          req.logout((err: any) => (err ? reject(err) : resolve()));
+        } else {
+          resolve();
+        }
+      });
+
+      // 3) 销毁整个 session
+      await new Promise<void>((resolve) => {
+        if (req.session) {
+          req.session.destroy(() => resolve());
+        } else {
+          resolve();
+        }
+      });
+
+      // 4) 清 cookie（名字按 session 配置，默认 connect.sid）
+      res.clearCookie("connect.sid");
+
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error("[Auth] Logout error:", err);
+      return res
+        .status(500)
+        .json({ message: "Logout failed", detail: (err as any)?.message });
+    }
+  });
 
   registerMarketRoutes(app);
   registerReservePoolRoutes(app);

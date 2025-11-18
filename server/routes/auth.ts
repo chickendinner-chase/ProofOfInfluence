@@ -1,7 +1,7 @@
 // Unified OAuth authentication routes
 // MVP: Simple routing for all OAuth providers
 import express from "express";
-import { isReplitAuthEnabled } from "../replitAuth";
+import { isReplitAuthEnabled } from "../auth/session";
 
 export function registerAuthRoutes(app: express.Express) {
   // Unified OAuth login entry point
@@ -14,7 +14,7 @@ export function registerAuthRoutes(app: express.Express) {
       return next(); // 让其他路由处理
     }
     
-    // Replit - redirect to existing route (already set up in replitAuth.ts)
+    // Replit - redirect to existing route (already set up in session.ts)
     if (provider === "replit") {
       if (!isReplitAuthEnabled()) {
         return res.status(503).json({

@@ -1,5 +1,6 @@
-// Replit Auth integration - from blueprint:javascript_log_in_with_replit
-// NOTE: Replit Auth is now optional - if REPL_ID is not set, auth will fall back to wallet authentication
+// Session configuration and authentication setup
+// Supports Replit Auth (OAuth/OIDC) and Wallet Auth
+// NOTE: Replit Auth is optional - if REPL_ID is not set, auth will fall back to wallet authentication
 import * as client from "openid-client";
 import { Strategy, type VerifyFunction } from "openid-client/passport";
 
@@ -8,7 +9,7 @@ import session from "express-session";
 import type { Express } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import { storage } from "./storage";
+import { storage } from "../storage";
 
 // Check if Replit Auth is enabled
 export const isReplitAuthEnabled = (): boolean => {
@@ -42,6 +43,11 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // 在开发环境（localhost）使用 secure: false，生产环境使用 secure: true
+  const isProduction = process.env.NODE_ENV === "production";
+  const isSecure = isProduction || process.env.FORCE_SECURE_COOKIES === "true";
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -49,7 +55,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: isSecure, // 开发环境 false，生产环境 true
+      sameSite: isSecure ? "none" : "lax", // secure cookie 需要 sameSite: "none"
       maxAge: sessionTtl,
     },
   });

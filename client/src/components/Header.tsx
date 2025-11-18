@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, ChevronDown, ShoppingCart, Briefcase, Palette } from "lucide-react";
+import { Menu, X, ChevronDown, ShoppingCart, Briefcase, Palette, Settings } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import WalletConnectButton from "@/components/WalletConnectButton";
@@ -65,6 +65,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
   const resourcesLabel = lang === "zh" ? "资源" : "Resources";
   const projectXLabel = lang === "zh" ? "projectX" : "projectX";
   const loginLabel = lang === "zh" ? "登录" : "Login";
+  const settingsLabel = lang === "zh" ? "设置" : "Settings";
 
   const headerStyles = theme === 'cyberpunk'
     ? 'border-b border-cyan-400/20 bg-slate-950/95 backdrop-blur-sm'
@@ -150,14 +151,25 @@ export default function Header({ lang = "zh" }: HeaderProps) {
           {!isLoginPage && (
             <>
               {isAuthenticated ? (
-                <Link href={ROUTES.APP}>
-                  <Button
-                    variant="default"
-                    className="bg-white text-slate-900 hover:bg-slate-100"
-                  >
-                    {projectXLabel}
-                  </Button>
-                </Link>
+                <>
+                  <Link href={ROUTES.APP}>
+                    <Button
+                      variant="default"
+                      className="bg-white text-slate-900 hover:bg-slate-100"
+                    >
+                      {projectXLabel}
+                    </Button>
+                  </Link>
+                  <Link href={ROUTES.APP_SETTINGS}>
+                    <Button
+                      variant="outline"
+                      className="border-slate-700 hover:bg-slate-800"
+                      title={settingsLabel}
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                </>
               ) : (
                 <Link href={ROUTES.LOGIN}>
                   <Button

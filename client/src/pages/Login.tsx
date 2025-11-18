@@ -2,6 +2,7 @@ import React from "react";
 import { useLocation } from "wouter";
 import { useAccount } from "wagmi";
 import { useAppKit } from '@reown/appkit/react';
+import { useQueryClient } from "@tanstack/react-query";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton } from "@/components/themed";
@@ -19,6 +20,7 @@ export default function Login() {
   const { open } = useAppKit();
   const { loginWithWallet, isPending: isWalletLoginPending } = useWalletLogin();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
 
   const handleWalletLogin = async () => {
@@ -33,7 +35,9 @@ export default function Login() {
 
     try {
       await loginWithWallet();
-      setLocation(ROUTES.APP_DASHBOARD);
+      // 等待认证状态更新完成（确保 Header 能正确显示已登录状态）
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      setLocation(ROUTES.APP_SETTINGS);
     } catch (error) {
       // Error handling is done in useWalletLogin hook
     }

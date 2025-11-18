@@ -50,7 +50,9 @@ export function useWalletLogin() {
       return await loginRes.json();
     },
     onSuccess: async () => {
+      // 先 invalidate，然后 refetch 确保数据更新
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "登录成功",
         description: "已通过钱包登录",
