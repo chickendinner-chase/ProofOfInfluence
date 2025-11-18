@@ -42,8 +42,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   //
   // Priority 2: Wallet Session Auth
   //
-  const walletUser = getWalletAuthUser(req);
-  if (walletUser) {
+  const session: any = (req as any).session;
+  if (session?.walletUser) {
+    const walletUser = session.walletUser;
     // For compatibility with existing code (many places use req.user.claims.sub)
     (req as any).user = {
       claims: {

@@ -24,6 +24,9 @@ export default function Header({ lang = "zh" }: HeaderProps) {
   const { isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
+  // Hide Connect Wallet and Login button on /login page
+  const isLoginPage = location === ROUTES.LOGIN;
+
   // Main navigation items (simplified)
   const mainNavItems = lang === "zh" 
     ? [
@@ -136,30 +139,36 @@ export default function Header({ lang = "zh" }: HeaderProps) {
             <Palette className="w-5 h-5" />
           </button>
 
-          {/* Wallet Connect - Desktop */}
-          <div className="hidden md:block">
-            <WalletConnectButton />
-          </div>
+          {/* Wallet Connect - Desktop (hidden on login page) */}
+          {!isLoginPage && (
+            <div className="hidden md:block">
+              <WalletConnectButton />
+            </div>
+          )}
 
-          {/* projectX / Login Link */}
-          {isAuthenticated ? (
-            <Link href={ROUTES.APP}>
-              <Button
-                variant="default"
-                className="bg-white text-slate-900 hover:bg-slate-100"
-              >
-                {projectXLabel}
-              </Button>
-            </Link>
-          ) : (
-            <Link href={ROUTES.LOGIN}>
-              <Button
-                variant="outline"
-                className="border-slate-700 hover:bg-slate-800"
-              >
-                {loginLabel}
-              </Button>
-            </Link>
+          {/* projectX / Login Link (hidden on login page) */}
+          {!isLoginPage && (
+            <>
+              {isAuthenticated ? (
+                <Link href={ROUTES.APP}>
+                  <Button
+                    variant="default"
+                    className="bg-white text-slate-900 hover:bg-slate-100"
+                  >
+                    {projectXLabel}
+                  </Button>
+                </Link>
+              ) : (
+                <Link href={ROUTES.LOGIN}>
+                  <Button
+                    variant="outline"
+                    className="border-slate-700 hover:bg-slate-800"
+                  >
+                    {loginLabel}
+                  </Button>
+                </Link>
+              )}
+            </>
           )}
 
           {/* Mobile Menu Button */}
@@ -220,10 +229,12 @@ export default function Header({ lang = "zh" }: HeaderProps) {
               ))}
             </div>
 
-            {/* Wallet Connect - Mobile */}
-            <div className="pt-4 border-t border-slate-800">
-              <WalletConnectButton />
-            </div>
+            {/* Wallet Connect - Mobile (hidden on login page) */}
+            {!isLoginPage && (
+              <div className="pt-4 border-t border-slate-800">
+                <WalletConnectButton />
+              </div>
+            )}
           </nav>
         </div>
       )}

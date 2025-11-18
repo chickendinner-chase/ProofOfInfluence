@@ -73,29 +73,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const user = await storage.getUser(userId);
-      
+      if (!user) {
+        // This is a serious error: user should have been created during login
+        console.error("[Auth] User not found for authenticated request", {
+          userId,
+          walletAddress: req.user.walletAddress,
+        });
+        return res.status(500).json({ message: "User not found in database" });
+      }
+
       // Auto-create profile on first login if it doesn't exist
-      if (user) {
-        const existingProfile = await storage.getProfile(userId);
-        if (!existingProfile) {
-          const defaultName = user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.firstName || user.email?.split('@')[0] || 'User';
-          
-          await storage.createProfile({
-            userId,
-            name: defaultName,
-            bio: null,
-            avatarUrl: user.profileImageUrl || null,
-            googleUrl: null,
-            twitterUrl: null,
-            weiboUrl: null,
-            tiktokUrl: null,
-            isPublic: false, // Profile is private by default until user sets username
-          });
-        }
+      const existingProfile = await storage.getProfile(userId);
+      if (!existingProfile) {
+        const defaultName = user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.firstName || user.email?.split('@')[0] || 'User';
+        
+        await storage.createProfile({
+          userId,
+          name: defaultName,
+          bio: null,
+          avatarUrl: user.profileImageUrl || null,
+          googleUrl: null,
+          twitterUrl: null,
+          weiboUrl: null,
+          tiktokUrl: null,
+          isPublic: false, // Profile is private by default until user sets username
+        });
       }
       
       // Development mode: Grant admin access to all users if DEV_MODE_ADMIN is enabled
@@ -104,15 +114,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isDevelopment = process.env.NODE_ENV === 'development';
       const devModeAdmin = process.env.DEV_MODE_ADMIN === 'true';
       
-      if (user && isDevelopment && devModeAdmin) {
+      if (isDevelopment && devModeAdmin) {
         // Override user role to admin in development mode for testing
         user.role = 'admin';
         console.log(`[DEV MODE] Admin access granted to user ${user.email || user.id}`);
       }
       
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
+      res.json({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        walletAddress: req.user.walletAddress || user.walletAddress || null,
+        // TODO: 其他 profile 字段可以后续补
+      });
+    } catch (err) {
+      console.error("[Auth] Failed to fetch auth user:", err);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
@@ -189,21 +205,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Nonce already used. Please request a new nonce." });
       }
 
-      // 4) Get or create user
-      let user = await storage.getUserByWallet(normalized);
-      if (!user) {
-        // Create new user with wallet address
-        const userId = `wallet_${normalized.slice(2, 10)}_${Date.now()}`;
-        // First create user with minimal data
-        user = await storage.upsertUser({
-          id: userId,
-        });
-        // Then update wallet address
-        user = await storage.updateUserWallet(userId, normalized);
-      } else {
-        // Update last login time (updateUserWallet also updates updatedAt)
-        user = await storage.updateUserWallet(user.id, normalized);
-      }
+      // 4) Find or create user in database
+      // This ensures DB always has the user before session is set
+      const user = await storage.findOrCreateUserByWallet(normalized);
 
       // 5) Set wallet user in session
       const { setWalletAuthUser } = await import("./auth/walletAuth");
@@ -219,14 +223,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (req.session as any).save((err: any) => (err ? reject(err) : resolve()));
       });
 
+      // Return user directly (not wrapped in { user, authenticated })
       res.json({
-        user: {
-          id: user.id,
-          walletAddress: normalized,
-          email: user.email,
-          role: user.role,
-        },
-        authenticated: true,
+        id: user.id,
+        walletAddress: normalized,
+        email: user.email,
+        role: user.role,
       });
     } catch (error: any) {
       console.error("[WalletAuth] Login error:", error);
