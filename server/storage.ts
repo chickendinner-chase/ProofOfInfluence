@@ -31,6 +31,7 @@ import {
   userPersonalityProfiles,
   userMemories,
   agentkitActions,
+  testWallets,
   badges,
   eventSyncState,
   type User,
@@ -96,6 +97,8 @@ import {
   type InsertUserMemory,
   type AgentkitAction,
   type InsertAgentkitAction,
+  type TestWallet,
+  type InsertTestWallet,
   type Badge,
   type InsertBadge,
   type EventSyncState,
@@ -130,6 +133,12 @@ export interface IStorage {
   ): Promise<UserPersonalityProfile>;
   listUserMemories(params: { userId: string; limit: number }): Promise<UserMemory[]>;
   createUserMemory(memory: InsertUserMemory & { userId: string }): Promise<UserMemory>;
+
+  // Test wallet utilities
+  createTestWallet(wallet: InsertTestWallet): Promise<TestWallet>;
+  listTestWallets(): Promise<TestWallet[]>;
+  getTestWalletByLabel(label: string): Promise<TestWallet | undefined>;
+  getTestWalletByAddress(address: string): Promise<TestWallet | undefined>;
   
   // Link operations
   getLinks(userId: string): Promise<Link[]>;
@@ -428,6 +437,32 @@ export class DatabaseStorage implements IStorage {
 
   async createUserMemory(memory: InsertUserMemory & { userId: string }): Promise<UserMemory> {
     const [record] = await db.insert(userMemories).values(memory).returning();
+    return record;
+  }
+
+  async createTestWallet(wallet: InsertTestWallet): Promise<TestWallet> {
+    const [record] = await db
+      .insert(testWallets)
+      .values({
+        ...wallet,
+        address: wallet.address?.toLowerCase(),
+      })
+      .returning();
+    return record;
+  }
+
+  async listTestWallets(): Promise<TestWallet[]> {
+    return await db.select().from(testWallets).orderBy(desc(testWallets.createdAt));
+  }
+
+  async getTestWalletByLabel(label: string): Promise<TestWallet | undefined> {
+    const [record] = await db.select().from(testWallets).where(eq(testWallets.label, label));
+    return record;
+  }
+
+  async getTestWalletByAddress(address: string): Promise<TestWallet | undefined> {
+    const normalized = address.toLowerCase();
+    const [record] = await db.select().from(testWallets).where(eq(testWallets.address, normalized));
     return record;
   }
 

@@ -14,7 +14,7 @@ import { registerAirdropRoutes } from "./routes/airdrop";
 import { registerReferralContractRoutes } from "./routes/referral";
 import { registerBadgeRoutes } from "./routes/badge";
 import { registerAuthRoutes } from "./routes/auth";
-import { mintTestBadge } from "./agentkit";
+import { registerTestRoutes } from "./routes/test";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
 import { contractService } from "./services/contracts";
@@ -23,6 +23,7 @@ import { approveSpender, getAllowance } from "./agentkit/erc20";
 import tgeContract from "@shared/contracts/poi_tge.json";
 import usdcContract from "@shared/contracts/poi_tge.json";
 import { getSaleStatus } from "./agentkit/tge";
+import { ImmortalityAgentKitService } from "./services/agentkit";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const tgeSaleAddress =
@@ -63,6 +64,8 @@ declare global {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth (session, passport initialization)
   await setupAuth(app);
+
+  const immortalityAgentKitService = new ImmortalityAgentKitService(storage);
 
   // Register unified OAuth routes
   registerAuthRoutes(app);
@@ -115,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAirdropRoutes(app);
   registerReferralContractRoutes(app);
   registerBadgeRoutes(app);
+  registerTestRoutes(app);
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -615,36 +619,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/immortality/actions/mint-test-badge", isAuthenticated, async (req: any, res) => {
     const userId = req.user.claims.sub;
     try {
-      const user = await storage.getUser(userId);
-      if (!user || !user.walletAddress) {
-        return res.status(400).json({ message: "请先绑定钱包地址" });
-      }
-
-      const action = await storage.createAgentkitAction({
-        userId,
-        actionType: "MINT_TEST_BADGE",
-        status: "pending",
-        requestPayload: { badgeId: 1 },
-        metadata: { network: process.env.AGENTKIT_DEFAULT_CHAIN || "base-sepolia" },
-      });
-
-      try {
-        const txHash = await mintTestBadge(user.walletAddress);
-        await storage.updateAgentkitAction(action.id, {
-          status: "success",
-          txHash,
-        });
-        res.json({ actionId: action.id, status: "success", txHash });
-      } catch (err: any) {
-        await storage.updateAgentkitAction(action.id, {
-          status: "failed",
-          errorMessage: err?.message ?? "Unknown error",
-        });
-        throw err;
-      }
+      const result = await immortalityAgentKitService.mintTestBadgeForUser(userId);
+      res.json(result);
     } catch (error: any) {
       console.error("Error minting badge:", error);
-      res.status(500).json({ message: "Failed to mint badge", details: error?.message });
+      const message = error?.message ?? "Failed to mint badge";
+      res.status(message === "User wallet not linked" ? 400 : 500).json({
+        message,
+        details: error?.message,
+      });
     }
   });
 

@@ -34,6 +34,32 @@ npm run dev
 
 Visit `http://localhost:5000` to see the app.
 
+## 🧪 TestRunner & 多钱包自动化
+
+本仓库集成了 `POST /api/test/run-scenario`，用于在本地或 Dev 环境快速构造「永生 Agent」相关的演示数据。使用方式：
+
+1. 执行 `npm run db:push`，确保 `test_wallets` 等最新表结构已经在数据库中创建；
+2. `npm run dev` 启动本地服务器；
+3. 通过 curl/Postman 调用：
+
+```bash
+curl -X POST http://localhost:5000/api/test/run-scenario \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "scenario": "immortality-playable-agent",
+    "seedMemories": true
+  }'
+```
+
+可用场景：
+
+| scenario | 说明 | 参数 |
+| --- | --- | --- |
+| `immortality-playable-agent` | 创建/复用一个测试钱包，写入记忆 → 触发 `/api/chat` → 自动执行 `/api/immortality/actions/mint-test-badge`，验证闭环 | `label`（可选，指定钱包标签），`seedMemories`（默认 true） |
+| `immortality-demo-seed` | 批量创建多钱包 Demo 用户（默认 5 个），每个钱包写入 3-5 条记忆、触发 1-2 次聊天并铸造一次徽章 | `wallets`（默认 5，最大 20） |
+
+运行成功后可在日志中看到 `TestScenarioRunner` 输出的 wallet 地址、UserId、聊天结果、徽章交易哈希等信息，同时数据库会新增 `test_wallets`、`user_memories`、`agentkit_actions` 等记录，方便前端登录或演示使用。
+
 ## 📦 Features
 
 ### Core Modules
