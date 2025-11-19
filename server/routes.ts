@@ -545,7 +545,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/me/memories", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      // Support demoUserId query param or header (dev/staging only)
+      const demoUserId = req.query.demoUserId || req.headers["x-demo-user-id"];
+      let userId = req.user.claims.sub;
+
+      if (demoUserId && process.env.NODE_ENV !== "production") {
+        // Use demo user ID instead of session user ID
+        userId = demoUserId;
+      }
+
       const limit = Number(req.query.limit) || 20;
       const cappedLimit = Math.min(Math.max(limit, 1), 50);
       const memories = await storage.listUserMemories({ userId, limit: cappedLimit });
@@ -558,7 +566,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/me/memories", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      // Support demoUserId query param or header (dev/staging only)
+      const demoUserId = req.query.demoUserId || req.headers["x-demo-user-id"];
+      let userId = req.user.claims.sub;
+
+      if (demoUserId && process.env.NODE_ENV !== "production") {
+        // Use demo user ID instead of session user ID
+        userId = demoUserId;
+      }
+
       const validated = memorySchema.parse(req.body);
       const memory = await storage.createUserMemory({
         userId,
@@ -1259,7 +1275,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/immortality/balance", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      // Support demoUserId query param or header (dev/staging only)
+      const demoUserId = req.query.demoUserId || req.headers["x-demo-user-id"];
+      let userId = req.user.claims.sub;
+
+      if (demoUserId && process.env.NODE_ENV !== "production") {
+        // Use demo user ID instead of session user ID
+        userId = demoUserId;
+      }
+
       const balance = await storage.getUserBalance(userId);
       res.json({
         credits: balance?.immortalityCredits ?? 0,

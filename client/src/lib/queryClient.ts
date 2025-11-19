@@ -12,9 +12,21 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Read demoUserId from localStorage if available
+  const demoUserId = typeof window !== "undefined" 
+    ? localStorage.getItem("demoUserId")
+    : null;
+
+  const headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
+  
+  // Add demo user header if present (dev/staging only)
+  if (demoUserId && (import.meta.env.DEV || import.meta.env.MODE === "development")) {
+    headers["x-demo-user-id"] = demoUserId;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -51,8 +63,21 @@ export const getQueryFn: <T>(options: {
       url += `?${queryParams.join("&")}`;
     }
     
+    // Read demoUserId from localStorage if available
+    const demoUserId = typeof window !== "undefined" 
+      ? localStorage.getItem("demoUserId")
+      : null;
+
+    const headers: Record<string, string> = {};
+    
+    // Add demo user header if present (dev/staging only)
+    if (demoUserId && (import.meta.env.DEV || import.meta.env.MODE === "development")) {
+      headers["x-demo-user-id"] = demoUserId;
+    }
+    
     const res = await fetch(url, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

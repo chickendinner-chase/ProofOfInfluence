@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Play, CheckCircle2, XCircle, Code } from "lucide-react";
 import { isDevEnvironment } from "@/lib/env";
 
-type ScenarioName = "immortality-playable-agent" | "immortality-demo-seed" | "tge-purchase" | "swap-eth-usdc" | "chat-immortality";
+type ScenarioName = "immortality-playable-agent" | "immortality-demo-seed";
 
 interface ScenarioOption {
   value: ScenarioName;
@@ -21,43 +21,21 @@ const SCENARIOS: ScenarioOption[] = [
   {
     value: "immortality-playable-agent",
     label: "Immortality Playable Agent",
-    description: "触发 immortality-playable-agent 单次回归测试",
+    description: "Full E2E test: Create user, initialize memories, test AI chat, mint badge",
   },
   {
     value: "immortality-demo-seed",
     label: "Immortality Demo Seed",
-    description: "批量生成 demo 用户（immortality-demo-seed）",
-  },
-  {
-    value: "tge-purchase",
-    label: "TGE Purchase",
-    description: "测试 TGE 购买场景",
-  },
-  {
-    value: "swap-eth-usdc",
-    label: "Swap ETH/USDC",
-    description: "测试 ETH/USDC 交换场景",
-  },
-  {
-    value: "chat-immortality",
-    label: "Chat Immortality",
-    description: "测试 Immortality 聊天场景",
+    description: "Batch generate demo users with test wallets",
   },
 ];
 
 interface RunScenarioResponse {
-  ok: boolean;
-  scenario?: string;
-  label?: string;
-  walletCount?: number;
-  results?: Array<{
-    walletId?: string;
-    address?: string;
-    ok: boolean;
-    result?: any;
-    error?: string;
-  }>;
-  error?: string;
+  success: boolean;
+  result?: any;
+  txHashes?: string[];
+  errors?: string[];
+  steps?: Array<{ step: string; status: "success" | "error"; message?: string }>;
 }
 
 export default function TestScenariosPage() {
@@ -65,7 +43,7 @@ export default function TestScenariosPage() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [selectedScenario, setSelectedScenario] = useState<ScenarioName | "">("");
-  const [walletCount, setWalletCount] = useState<string>("1");
+  const [wallets, setWallets] = useState<string>("1");
   const [customParams, setCustomParams] = useState<string>("{}");
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<RunScenarioResponse | null>(null);
@@ -123,15 +101,19 @@ export default function TestScenariosPage() {
         return;
       }
 
-      const walletCountNum = parseInt(walletCount, 10);
-      if (isNaN(walletCountNum) || walletCountNum < 1) {
-        toast({
-          title: "钱包数量无效",
-          description: "钱包数量必须是大于 0 的数字",
-          variant: "destructive",
-        });
-        setIsRunning(false);
-        return;
+      // For immortality-demo-seed, add wallets param
+      if (selectedScenario === "immortality-demo-seed") {
+        const walletsNum = parseInt(wallets, 10);
+        if (isNaN(walletsNum) || walletsNum < 1) {
+          toast({
+            title: "钱包数量无效",
+            description: "钱包数量必须是大于 0 的数字",
+            variant: "destructive",
+          });
+          setIsRunning(false);
+          return;
+        }
+        params.wallets = walletsNum;
       }
 
       const response = await fetch("/api/test/run-scenario", {
@@ -139,24 +121,23 @@ export default function TestScenariosPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           scenario: selectedScenario,
-          walletCount: walletCountNum,
-          label: `test:${selectedScenario}`,
           params,
         }),
       });
 
       const data: RunScenarioResponse = await response.json();
 
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "运行场景失败");
+      if (!response.ok || !data.success) {
+        throw new Error(data.errors?.join(", ") || "运行场景失败");
       }
 
       setResult(data);
       toast({
         title: "场景运行成功",
-        description: `已使用 ${data.walletCount || 0} 个钱包运行场景`,
+        description: data.steps ? `完成 ${data.steps.length} 个步骤` : "场景执行完成",
       });
     } catch (error: any) {
       console.error("[TestScenarios] Run scenario failed", error);
@@ -166,8 +147,8 @@ export default function TestScenariosPage() {
         variant: "destructive",
       });
       setResult({
-        ok: false,
-        error: error?.message || "未知错误",
+        success: false,
+        errors: [error?.message || "未知错误"],
       });
     } finally {
       setIsRunning(false);
@@ -221,24 +202,26 @@ export default function TestScenariosPage() {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">钱包数量</label>
-              <input
-                type="number"
-                min="1"
-                className={cn(
-                  "w-full rounded-xl border bg-transparent p-3 text-sm outline-none focus:ring-2",
-                  theme === "cyberpunk"
-                    ? "border-cyan-500/40 focus:ring-cyan-400/40"
-                    : "border-slate-200 focus:ring-blue-200",
-                )}
-                value={walletCount}
-                onChange={(e) => setWalletCount(e.target.value)}
-                placeholder="1"
-                disabled={isRunning}
-              />
-              <p className="mt-1 text-xs opacity-60">默认值：1（immortality-demo-seed 建议使用 5）</p>
-            </div>
+            {selectedScenario === "immortality-demo-seed" && (
+              <div>
+                <label className="block text-sm font-semibold mb-2">钱包数量</label>
+                <input
+                  type="number"
+                  min="1"
+                  className={cn(
+                    "w-full rounded-xl border bg-transparent p-3 text-sm outline-none focus:ring-2",
+                    theme === "cyberpunk"
+                      ? "border-cyan-500/40 focus:ring-cyan-400/40"
+                      : "border-slate-200 focus:ring-blue-200",
+                  )}
+                  value={wallets}
+                  onChange={(e) => setWallets(e.target.value)}
+                  placeholder="5"
+                  disabled={isRunning}
+                />
+                <p className="mt-1 text-xs opacity-60">建议使用 5 个钱包</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-semibold mb-2">自定义参数（JSON）</label>
@@ -256,7 +239,7 @@ export default function TestScenariosPage() {
                 disabled={isRunning}
               />
               <p className="mt-1 text-xs opacity-60">
-                可选：场景特定的参数，例如 tge-purchase 需要 usdcAmount
+                可选：场景特定的参数，例如 {"{"}"memories": [...], "chatMessages": [...]{"}"}
               </p>
             </div>
 
@@ -286,13 +269,13 @@ export default function TestScenariosPage() {
               <h2 className="text-lg font-semibold">运行结果</h2>
               {result && (
                 <div className="flex items-center gap-2">
-                  {result.ok ? (
+                  {result.success ? (
                     <CheckCircle2 className="w-5 h-5 text-green-400" />
                   ) : (
                     <XCircle className="w-5 h-5 text-red-400" />
                   )}
-                  <span className={cn("text-sm", result.ok ? "text-green-400" : "text-red-400")}>
-                    {result.ok ? "成功" : "失败"}
+                  <span className={cn("text-sm", result.success ? "text-green-400" : "text-red-400")}>
+                    {result.success ? "成功" : "失败"}
                   </span>
                 </div>
               )}
@@ -310,44 +293,16 @@ export default function TestScenariosPage() {
 
             {result && (
               <div className="space-y-4">
-                {result.scenario && (
+                {result.steps && result.steps.length > 0 && (
                   <div>
-                    <p className="text-xs opacity-60 mb-1">场景</p>
-                    <p className="text-sm font-mono">{result.scenario}</p>
-                  </div>
-                )}
-
-                {result.label && (
-                  <div>
-                    <p className="text-xs opacity-60 mb-1">标签</p>
-                    <p className="text-sm font-mono">{result.label}</p>
-                  </div>
-                )}
-
-                {result.walletCount !== undefined && (
-                  <div>
-                    <p className="text-xs opacity-60 mb-1">钱包数量</p>
-                    <p className="text-sm">{result.walletCount}</p>
-                  </div>
-                )}
-
-                {result.error && (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-xs text-red-400 font-semibold mb-1">错误</p>
-                    <p className="text-sm text-red-300">{result.error}</p>
-                  </div>
-                )}
-
-                {result.results && result.results.length > 0 && (
-                  <div>
-                    <p className="text-xs opacity-60 mb-2">详细结果</p>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {result.results.map((item, idx) => (
+                    <p className="text-xs opacity-60 mb-2">执行步骤</p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {result.steps.map((step, idx) => (
                         <div
                           key={idx}
                           className={cn(
-                            "p-3 rounded-lg border text-sm",
-                            item.ok
+                            "p-2 rounded-lg border text-sm flex items-center gap-2",
+                            step.status === "success"
                               ? theme === "cyberpunk"
                                 ? "border-green-500/20 bg-green-500/5"
                                 : "border-green-200 bg-green-50"
@@ -356,30 +311,62 @@ export default function TestScenariosPage() {
                               : "border-red-200 bg-red-50",
                           )}
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-mono text-xs opacity-60">
-                              {item.address ? `${item.address.slice(0, 6)}...${item.address.slice(-4)}` : `Wallet ${idx + 1}`}
-                            </span>
-                            {item.ok ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-red-400" />
+                          {step.status === "success" ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-mono text-xs">{step.step}</p>
+                            {step.message && (
+                              <p className="text-xs opacity-60 mt-1">{step.message}</p>
                             )}
                           </div>
-                          {item.error && (
-                            <p className="text-xs text-red-400 mt-1">{item.error}</p>
-                          )}
-                          {item.result && (
-                            <details className="mt-2">
-                              <summary className="text-xs opacity-60 cursor-pointer">查看详情</summary>
-                              <pre className="mt-2 text-xs font-mono overflow-x-auto">
-                                {JSON.stringify(item.result, null, 2)}
-                              </pre>
-                            </details>
-                          )}
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {result.txHashes && result.txHashes.length > 0 && (
+                  <div>
+                    <p className="text-xs opacity-60 mb-2">交易哈希</p>
+                    <div className="space-y-1">
+                      {result.txHashes.map((txHash, idx) => (
+                        <a
+                          key={idx}
+                          href={`https://sepolia.basescan.org/tx/${txHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-mono text-primary hover:underline block"
+                        >
+                          {txHash}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result.errors && result.errors.length > 0 && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <p className="text-xs text-red-400 font-semibold mb-1">错误</p>
+                    <div className="space-y-1">
+                      {result.errors.map((error, idx) => (
+                        <p key={idx} className="text-sm text-red-300">{error}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result.result && (
+                  <div>
+                    <p className="text-xs opacity-60 mb-2">结果详情</p>
+                    <details>
+                      <summary className="text-xs opacity-60 cursor-pointer">查看详情</summary>
+                      <pre className="mt-2 text-xs font-mono overflow-x-auto p-3 rounded bg-black/20">
+                        {JSON.stringify(result.result, null, 2)}
+                      </pre>
+                    </details>
                   </div>
                 )}
 

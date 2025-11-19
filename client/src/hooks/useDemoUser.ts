@@ -1,77 +1,93 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import { isDevEnvironment } from "@/lib/env";
-import { useAuth } from "./useAuth";
 
-export interface DemoUser {
-  walletId: string;
-  address: string;
-  label: string;
-  createdAt: string;
-  userId: string | null;
-  email: string | null;
-  username: string | null;
+interface DemoUser {
+  userId: string;
+  walletAddress: string;
+  label?: string | null;
+  username?: string | null;
+  scenario?: string | null;
 }
 
-/**
- * Hook to manage demo user selection for Immortality page
- * Only available in dev/staging environments
- */
-export function useDemoUser() {
-  const [selectedDemoUserId, setSelectedDemoUserId] = useState<string | null>(null);
-  const isDev = isDevEnvironment();
+const DEMO_USER_STORAGE_KEY = "demoUserId";
 
-  const { isAuthenticated } = useAuth();
+export function useDemoUser() {
+  const [location, setLocation] = useLocation();
+  const [selectedDemoUserId, setSelectedDemoUserIdState] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(DEMO_USER_STORAGE_KEY) || null;
+    }
+    return null;
+  });
 
   // Fetch demo users list
   const { data: demoUsers = [], isLoading } = useQuery<DemoUser[]>({
     queryKey: ["/api/test/demo-users"],
-    queryFn: getQueryFn<DemoUser[]>({ on401: "returnNull" }),
-    enabled: isDev && isAuthenticated,
-    retry: false,
+    enabled: typeof window !== "undefined" && isDevEnvironment(),
   });
 
-  // Get selected demo user
+  // Sync with URL query param
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDemoUserId = urlParams.get("demoUserId");
+
+    if (urlDemoUserId && urlDemoUserId !== selectedDemoUserId) {
+      setSelectedDemoUserIdState(urlDemoUserId);
+      localStorage.setItem(DEMO_USER_STORAGE_KEY, urlDemoUserId);
+    } else if (!urlDemoUserId && selectedDemoUserId) {
+      // Remove from URL if not present but we have it in state
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("demoUserId");
+      setLocation(newUrl.pathname + newUrl.search, { replace: true });
+    }
+  }, [location, selectedDemoUserId, setLocation]);
+
+  // Sync localStorage to URL when selectedDemoUserId changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (selectedDemoUserId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("demoUserId", selectedDemoUserId);
+      setLocation(url.pathname + url.search, { replace: true });
+    }
+  }, [selectedDemoUserId, setLocation]);
+
+  const setSelectedDemoUserId = useCallback((userId: string | null) => {
+    if (userId) {
+      localStorage.setItem(DEMO_USER_STORAGE_KEY, userId);
+    } else {
+      localStorage.removeItem(DEMO_USER_STORAGE_KEY);
+    }
+    setSelectedDemoUserIdState(userId);
+  }, []);
+
+  const clearDemoUser = useCallback(() => {
+    localStorage.removeItem(DEMO_USER_STORAGE_KEY);
+    setSelectedDemoUserIdState(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("demoUserId");
+    setLocation(url.pathname + url.search, { replace: true });
+  }, [setLocation]);
+
   const selectedDemoUser = selectedDemoUserId
-    ? demoUsers.find((u) => u.walletId === selectedDemoUserId || u.userId === selectedDemoUserId)
+    ? demoUsers.find((u) => u.userId === selectedDemoUserId || u.walletAddress === selectedDemoUserId)
     : null;
 
-  // Clear selection when switching back to real user
-  const clearDemoUser = () => {
-    setSelectedDemoUserId(null);
-    // Clear from localStorage
-    localStorage.removeItem("demo_user_id");
-  };
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    if (isDev) {
-      const saved = localStorage.getItem("demo_user_id");
-      if (saved && demoUsers.some((u) => u.walletId === saved || u.userId === saved)) {
-        setSelectedDemoUserId(saved);
-      }
-    }
-  }, [isDev, demoUsers]);
-
-  // Save to localStorage when selection changes
-  useEffect(() => {
-    if (selectedDemoUserId) {
-      localStorage.setItem("demo_user_id", selectedDemoUserId);
-    } else {
-      localStorage.removeItem("demo_user_id");
-    }
-  }, [selectedDemoUserId]);
+  const isUsingDemoUser = !!selectedDemoUserId;
 
   return {
-    isDev,
+    selectedDemoUserId,
+    selectedDemoUser,
     demoUsers,
     isLoading,
-    selectedDemoUser,
-    selectedDemoUserId,
     setSelectedDemoUserId,
     clearDemoUser,
-    isUsingDemoUser: !!selectedDemoUser,
+    isUsingDemoUser,
+    isDev: isDevEnvironment(),
   };
 }
-

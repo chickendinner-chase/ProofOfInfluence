@@ -68,7 +68,7 @@ export default function Immortality() {
   const [unstakeAmount, setUnstakeAmount] = useState<string>("");
 
   // Include demo user ID in query key to trigger refetch when switching
-  const demoUserId = demoUser.selectedDemoUser?.userId || demoUser.selectedDemoUser?.walletId;
+  const demoUserId = demoUser.selectedDemoUserId;
   const balanceQueryKey = demoUserId 
     ? ["/api/immortality/balance", { demoUserId }]
     : ["/api/immortality/balance"];
@@ -195,8 +195,8 @@ export default function Immortality() {
                     >
                       <option value="">真实用户</option>
                       {demoUser.demoUsers.map((du) => (
-                        <option key={du.walletId} value={du.walletId}>
-                          Demo: {du.username || du.address.slice(0, 6)}...{du.address.slice(-4)}
+                        <option key={du.userId || du.walletAddress} value={du.userId || du.walletAddress}>
+                          Demo: {du.username || du.label || du.walletAddress.slice(0, 6)}...{du.walletAddress.slice(-4)}
                         </option>
                       ))}
                     </select>
@@ -211,7 +211,7 @@ export default function Immortality() {
                 >
                   <Activity className="w-3 h-3" />
                   Agent {demoUser.isUsingDemoUser 
-                    ? (demoUser.selectedDemoUser?.username || demoUser.selectedDemoUser?.address.slice(0, 6))
+                    ? (demoUser.selectedDemoUser?.username || demoUser.selectedDemoUser?.label || demoUser.selectedDemoUser?.walletAddress.slice(0, 6))
                     : (user?.username ?? "Guest")}{" "}
                 </button>
               </div>

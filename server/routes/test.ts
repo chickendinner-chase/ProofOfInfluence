@@ -1,124 +1,128 @@
 import { type Express } from "express";
 import { isAuthenticated } from "../auth";
-import { TestWalletService } from "../services/testWalletService";
-import { TestScenarioRunner, type ScenarioName } from "../services/testScenarioRunner";
-import { getImmortalityAgentKitService } from "../services/agentkit";
+import { testScenarioRunner, type ScenarioName } from "../services/testScenarioRunner";
 import { storage } from "../storage";
 import { db } from "../db";
 import { testWallets, users } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
+import { z } from "zod";
 
 export function registerTestRoutes(app: Express) {
-  // 运行测试场景
+  // Run test scenario
   app.post("/api/test/run-scenario", isAuthenticated, async (req: any, res) => {
     try {
-      const { scenario, label, walletCount, params } = req.body as {
-        scenario?: ScenarioName;
-        label?: string;
-        walletCount?: number;
-        params?: Record<string, any>;
-      };
+      const schema = z.object({
+        scenario: z.enum(["immortality-playable-agent", "immortality-demo-seed"]),
+        params: z.record(z.any()).optional(),
+      });
 
-      if (!scenario) {
-        return res.status(400).json({ ok: false, error: "scenario is required" });
-      }
+      const body = schema.parse(req.body);
+      const { scenario, params = {} } = body;
 
-      const desiredWalletCount = typeof walletCount === "number" && walletCount > 0 ? walletCount : 1;
-      const resolvedLabel = label || `test:${scenario}`;
-
-      const agentKit = getImmortalityAgentKitService();
-      const walletService = new TestWalletService(agentKit);
-      const runner = new TestScenarioRunner(agentKit);
-
-      let wallets = await walletService.listTestWallets(resolvedLabel, desiredWalletCount);
-
-      const missing = desiredWalletCount - wallets.length;
-      if (missing > 0) {
-        const newWallets = await walletService.createManyTestWallets(resolvedLabel, missing);
-        wallets = wallets.concat(newWallets);
-      }
-
-      if (wallets.length > desiredWalletCount) {
-        wallets = wallets.slice(0, desiredWalletCount);
-      }
-
-      const result = await runner.runScenario(scenario, wallets, params || {});
+      const result = await testScenarioRunner.runScenario(scenario as ScenarioName, params);
 
       res.json({
-        ok: true,
-        scenario,
-        label: resolvedLabel,
-        walletCount: wallets.length,
-        results: result.results,
+        success: result.success,
+        result: result.result,
+        txHashes: result.txHashes,
+        errors: result.errors,
+        steps: result.steps,
       });
     } catch (error: any) {
       console.error("[TestRunner] run-scenario failed", error);
-      res.status(500).json({ ok: false, error: error?.message || "Unknown error" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          errors: error.errors.map((e) => `${e.path.join(".")}: ${e.message}`),
+        });
+      }
+      res.status(500).json({
+        success: false,
+        errors: [error?.message || "Unknown error"],
+      });
     }
   });
 
-  // 获取 demo 用户列表（基于 testWallets）
+  // Get demo users list
   app.get("/api/test/demo-users", isAuthenticated, async (req: any, res) => {
     try {
-      const label = (req.query.label as string) || "immortality-demo-seed";
+      const scenario = (req.query.scenario as string) || undefined;
       const limit = parseInt(req.query.limit as string) || 50;
 
-      // 查询 testWallets（如果表存在）
-      let wallets: any[] = [];
-      try {
-        wallets = await db
-          .select()
-          .from(testWallets)
-          .where(eq(testWallets.label, label))
-          .orderBy(desc(testWallets.createdAt))
-          .limit(limit);
-      } catch (err: any) {
-        // 如果 testWallets 表不存在，返回空数组
-        console.warn("[TestRunner] testWallets table not found, returning empty list:", err.message);
-        return res.json([]);
+      // Query testWallets
+      let query = db.select().from(testWallets);
+      
+      if (scenario) {
+        query = query.where(eq(testWallets.scenario, scenario)) as any;
       }
+      
+      const wallets = await query
+        .orderBy(desc(testWallets.createdAt))
+        .limit(limit);
 
-      // 尝试查找对应的用户记录（通过 walletAddress）
+      // Join with users table to get usernames
       const demoUsers = await Promise.all(
         wallets.map(async (wallet) => {
           try {
-            const [user] = await db
-              .select({
-                id: users.id,
-                email: users.email,
-                username: users.username,
-                walletAddress: users.walletAddress,
-              })
-              .from(users)
-              .where(eq(users.walletAddress, wallet.address.toLowerCase()))
-              .limit(1);
+            const user = wallet.userId
+              ? await storage.getUser(wallet.userId)
+              : await storage.getUserByWallet(wallet.walletAddress);
 
             return {
-              walletId: wallet.id,
-              address: wallet.address,
-              label: wallet.label,
-              createdAt: wallet.createdAt.toISOString(),
               userId: user?.id || null,
-              email: user?.email || null,
+              walletAddress: wallet.walletAddress,
+              label: wallet.label || null,
               username: user?.username || null,
+              scenario: wallet.scenario || null,
             };
           } catch (err) {
             return {
-              walletId: wallet.id,
-              address: wallet.address,
-              label: wallet.label,
-              createdAt: wallet.createdAt.toISOString(),
               userId: null,
-              email: null,
+              walletAddress: wallet.walletAddress,
+              label: wallet.label || null,
               username: null,
+              scenario: wallet.scenario || null,
             };
           }
-        }),
+        })
       );
 
       res.json(demoUsers);
     } catch (error: any) {
       console.error("[TestRunner] demo-users failed", error);
+      res.status(500).json({ message: error?.message || "Unknown error" });
+    }
+  });
+
+  // Get specific demo user details
+  app.get("/api/test/demo-users/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Demo user not found" });
+      }
+
+      // Find associated test wallet
+      const testWallet = await storage.getTestWalletByAddress(user.walletAddress || "");
+
+      res.json({
+        userId: user.id,
+        walletAddress: user.walletAddress,
+        username: user.username,
+        email: user.email,
+        testWallet: testWallet
+          ? {
+              id: testWallet.id,
+              label: testWallet.label,
+              scenario: testWallet.scenario,
+              status: testWallet.status,
+            }
+          : null,
+      });
+    } catch (error: any) {
+      console.error("[TestRunner] demo-user-details failed", error);
       res.status(500).json({ message: error?.message || "Unknown error" });
     }
   });
