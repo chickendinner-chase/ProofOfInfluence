@@ -7,7 +7,7 @@ import { useUserContractAction } from "./useUserContractAction";
 export interface ContractActionOptions {
   contract: string;
   action: string;
-  mode?: "user-wallet" | "agentkit";
+  mode: "user-wallet" | "agentkit"; // Required - must be explicitly specified
   onSuccess?: (data: any) => void;
   onError?: (error: Error) => void;
 }
@@ -22,17 +22,32 @@ interface ExecuteOptions {
  * Supports two modes:
  * - user-wallet: User signs transaction with their connected wallet (MetaMask)
  * - agentkit: Backend executes transaction via AgentKit CDP wallet
+ * 
+ * IMPORTANT: This hook should not be used directly.
+ * Use useUserContractAction() or useAgentContractAction() instead.
  */
 export function useContractAction(options: ContractActionOptions) {
-  const { contract, action, mode: defaultMode = "agentkit" } = options;
+  const { contract, action, mode } = options;
+  
+  // Enforce explicit mode specification
+  if (!mode || (mode !== "user-wallet" && mode !== "agentkit")) {
+    throw new Error(
+      `useContractAction requires explicit mode ("user-wallet" or "agentkit"). ` +
+      `Use useUserContractAction() or useAgentContractAction() instead.`
+    );
+  }
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
   const mutation = useMutation({
-    mutationFn: async ({ args, mode = defaultMode }: ExecuteOptions) => {
-      if (mode === "agentkit") {
+    mutationFn: async ({ args, mode: executionMode = mode }: ExecuteOptions) => {
+      // Use executionMode (from execute call) or fallback to hook's mode
+      const finalMode = executionMode || mode;
+      
+      if (finalMode === "agentkit") {
         // AgentKit mode: Backend executes via CDP wallet
         const response = await fetch(`/api/contracts/${contract}/${action}`, {
           method: "POST",
@@ -80,7 +95,7 @@ export function useContractAction(options: ContractActionOptions) {
           await publicClient.waitForTransactionReceipt({ hash });
         }
 
-        return { txHash: hash, status: "success", mode: "user-wallet" };
+        return { txHash: hash, status: "success", mode: finalMode };
       }
     },
     onSuccess: (data) => {

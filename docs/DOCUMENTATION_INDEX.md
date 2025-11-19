@@ -2,7 +2,7 @@
 
 本文档提供了 ProofOfInfluence 项目所有文档的索引和概览。
 
-**最后更新**: 2025-11-16
+**最后更新**: 2025-11-17
 
 ---
 
@@ -36,12 +36,12 @@
 - **contracts/MerkleAirdropDistributor.md** - 空投分发（✅ 已更新）
 - **contracts/EarlyBirdAllowlist.md** - 早鸟白名单（✅ 已更新）
 
-### 待部署合约
+### 已部署合约（全部）
 
-- **contracts/TGESale.md** - TGE 销售合约
-- **contracts/ReferralRegistry.md** - 推荐注册表
-- **contracts/AchievementBadges.md** - 成就徽章
-- **contracts/IMMORTALITY_BADGE.md** - 不朽徽章
+- **contracts/TGESale.md** - TGE 销售合约 ✅
+- **contracts/ReferralRegistry.md** - 推荐注册表 ✅
+- **contracts/AchievementBadges.md** - 成就徽章 ✅
+- **contracts/IMMORTALITY_BADGE.md** - 不朽徽章 ✅
 
 ---
 
@@ -106,22 +106,20 @@
 
 ---
 
-## ✅ 最近更新 (2025-11-16)
+## ✅ 最近更新 (2025-11-17)
 
 ### 已更新的文档
-1. ✅ **CONTRACT_TEST_SUMMARY.md** - 更新已完成状态和合约地址
-2. ✅ **DEPLOYMENT_CHECKLIST.md** - 更新已部署合约状态
-3. ✅ **ENV_VARIABLES.md** - 添加新合约地址
-4. ✅ **ENV_VARIABLES_FRONTEND.md** - 添加前端环境变量
-5. ✅ **ARCHITECTURE.md** - 更新版本和最近更新
-6. ✅ **contracts/VestingVault.md** - 更新部署状态和接口
-7. ✅ **contracts/MerkleAirdropDistributor.md** - 更新部署状态和接口
-8. ✅ **contracts/EarlyBirdAllowlist.md** - 更新部署状态和接口
-9. ✅ **DEPLOYMENT_TEST_RESULTS.md** - 部署和测试结果汇总
+1. ✅ **PROJECT_STATUS_REPORT.md** - 添加智能合约前后端集成检查
+2. ✅ **CONTRACT_ADDRESSES.md** - 合并所有已部署合约，更新状态
+3. ✅ **CONTRACT_TEST_SUMMARY.md** - 添加所有9个合约的测试信息
+4. ✅ **README.md** - 更新合约部署状态（全部9个已部署）
+5. ✅ **DOCUMENTATION_INDEX.md** - 更新日期和合约状态
 
-### 新建文档
-1. ✅ **CONTRACT_ADDRESSES.md** - 合约地址清单
-2. ✅ **DOCUMENTATION_INDEX.md** - 文档索引（本文档）
+### 主要更新内容
+- ✅ 所有9个智能合约已部署完成
+- ✅ 前后端集成已完成（100%）
+- ✅ 所有合约地址已在前端配置
+- ✅ 环境变量文档已更新
 
 ---
 

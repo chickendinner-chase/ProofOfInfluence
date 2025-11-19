@@ -1,10 +1,16 @@
 import { createAppKit } from '@reown/appkit/react'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { base, baseSepolia, mainnet, arbitrum, polygon, type Chain } from 'wagmi/chains'
+import { http } from 'wagmi'
+import { BASE_RPC_URL } from './baseConfig'
 
 // WalletConnect Project ID - 需要在 Replit Secrets 中配置 VITE_WALLETCONNECT_PROJECT_ID
 // 获取地址: https://cloud.walletconnect.com/
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
+// Fallback to real projectId if env is not set (for development)
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '63df30366341120f8b918fe61420d5f0'
+
+// HTTP RPC URL fallback for Base Sepolia
+const BASE_SEPOLIA_RPC = import.meta.env.VITE_BASE_SEPOLIA_RPC || 'https://sepolia.base.org'
 
 // Metadata for AppKit
 const metadata = {
@@ -14,13 +20,29 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/37784886']
 }
 
-// Define networks
-export const networks = [base, baseSepolia, mainnet, arbitrum, polygon]
+// Define networks with custom RPC URLs for fallback
+// If projectId is missing or invalid, HTTP transport will be used
+const networksWithRpc = [
+  base,
+  {
+    ...baseSepolia,
+    rpcUrls: {
+      default: {
+        http: [BASE_SEPOLIA_RPC],
+      },
+    },
+  },
+  mainnet,
+  arbitrum,
+  polygon,
+]
 
 // Create Wagmi Adapter
+// If projectId is missing, WagmiAdapter will fallback to HTTP transport
 export const wagmiAdapter = new WagmiAdapter({
-  networks: networks as any, // Type assertion for compatibility
-  projectId,
+  networks: networksWithRpc as any, // Type assertion for compatibility
+  projectId: projectId || undefined, // Only set if projectId exists
+  // Note: WagmiAdapter will automatically use HTTP transport if projectId is invalid/missing
 })
 
 // Export wagmi config for WagmiProvider
@@ -29,8 +51,8 @@ export const config = wagmiAdapter.wagmiConfig
 // Create AppKit instance with featured wallets
 createAppKit({
   adapters: [wagmiAdapter as any], // Type assertion for compatibility
-  networks: networks as any,
-  projectId,
+  networks: networksWithRpc as any,
+  projectId: projectId || undefined, // Only set if projectId exists
   metadata,
   features: {
     analytics: true,

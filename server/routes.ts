@@ -3,7 +3,8 @@ import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import { ethers } from "ethers";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./auth/session";
+import { isAuthenticated } from "./auth";
 import { insertProfileSchema, insertLinkSchema } from "@shared/schema";
 import { stripe } from "./stripe";
 import { registerMarketRoutes } from "./routes/market";
@@ -12,6 +13,7 @@ import { registerMerchantRoutes } from "./routes/merchant";
 import { registerAirdropRoutes } from "./routes/airdrop";
 import { registerReferralContractRoutes } from "./routes/referral";
 import { registerBadgeRoutes } from "./routes/badge";
+import { registerAuthRoutes } from "./routes/auth";
 import { registerTestRoutes } from "./routes/test";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
@@ -60,8 +62,53 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Replit Auth
+  // Setup Replit Auth (session, passport initialization)
   await setupAuth(app);
+
+  // Register unified OAuth routes
+  registerAuthRoutes(app);
+
+  // Unified logout endpoint (supports Replit Auth and Wallet Auth)
+  app.post("/api/auth/logout", async (req: any, res) => {
+    try {
+      // 1) 清钱包 session（如果有）
+      try {
+        if (req.session && req.session.walletUser) {
+          delete req.session.walletUser;
+        }
+      } catch (e) {
+        console.warn("[Auth] clear walletUser failed:", e);
+      }
+
+      // 2) 清 Passport / Replit 登录（如果有）
+      await new Promise<void>((resolve, reject) => {
+        if (typeof req.logout === "function") {
+          req.logout((err: any) => (err ? reject(err) : resolve()));
+        } else {
+          resolve();
+        }
+      });
+
+      // 3) 销毁整个 session
+      await new Promise<void>((resolve) => {
+        if (req.session) {
+          req.session.destroy(() => resolve());
+        } else {
+          resolve();
+        }
+      });
+
+      // 4) 清 cookie（名字按 session 配置，默认 connect.sid）
+      res.clearCookie("connect.sid");
+
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error("[Auth] Logout error:", err);
+      return res
+        .status(500)
+        .json({ message: "Logout failed", detail: (err as any)?.message });
+    }
+  });
 
   registerMarketRoutes(app);
   registerReservePoolRoutes(app);
@@ -74,29 +121,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const user = await storage.getUser(userId);
-      
+      if (!user) {
+        // This is a serious error: user should have been created during login
+        console.error("[Auth] User not found for authenticated request", {
+          userId,
+          walletAddress: req.user.walletAddress,
+        });
+        return res.status(500).json({ message: "User not found in database" });
+      }
+
       // Auto-create profile on first login if it doesn't exist
-      if (user) {
-        const existingProfile = await storage.getProfile(userId);
-        if (!existingProfile) {
-          const defaultName = user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.firstName || user.email?.split('@')[0] || 'User';
-          
-          await storage.createProfile({
-            userId,
-            name: defaultName,
-            bio: null,
-            avatarUrl: user.profileImageUrl || null,
-            googleUrl: null,
-            twitterUrl: null,
-            weiboUrl: null,
-            tiktokUrl: null,
-            isPublic: false, // Profile is private by default until user sets username
-          });
-        }
+      const existingProfile = await storage.getProfile(userId);
+      if (!existingProfile) {
+        const defaultName = user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.firstName || user.email?.split('@')[0] || 'User';
+        
+        await storage.createProfile({
+          userId,
+          name: defaultName,
+          bio: null,
+          avatarUrl: user.profileImageUrl || null,
+          googleUrl: null,
+          twitterUrl: null,
+          weiboUrl: null,
+          tiktokUrl: null,
+          isPublic: false, // Profile is private by default until user sets username
+        });
       }
       
       // Development mode: Grant admin access to all users if DEV_MODE_ADMIN is enabled
@@ -105,28 +162,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isDevelopment = process.env.NODE_ENV === 'development';
       const devModeAdmin = process.env.DEV_MODE_ADMIN === 'true';
       
-      if (user && isDevelopment && devModeAdmin) {
+      if (isDevelopment && devModeAdmin) {
         // Override user role to admin in development mode for testing
         user.role = 'admin';
         console.log(`[DEV MODE] Admin access granted to user ${user.email || user.id}`);
       }
       
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
+      res.json({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        walletAddress: req.user.walletAddress || user.walletAddress || null,
+        // TODO: 其他 profile 字段可以后续补
+      });
+    } catch (err) {
+      console.error("[Auth] Failed to fetch auth user:", err);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  // Early-Bird Registration
+  // Wallet Authentication
   app.get("/api/auth/wallet/nonce", async (req: any, res) => {
     const address = String(req.query.address || "").toLowerCase();
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
       return res.status(400).json({ message: "Invalid address" });
     }
+    
     const nonce = createWalletNonce(address);
-    res.json({ address, nonce, message: `Sign this nonce to prove ownership: ${nonce}` });
+    
+    // SIWE-style message format
+    const domain = process.env.APP_DOMAIN || req.hostname || "proofofinfluence.com";
+    const message = [
+      "Login to ProofOfInfluence",
+      `Domain: ${domain}`,
+      `Wallet: ${address}`,
+      `Nonce: ${nonce}`,
+      `Time: ${new Date().toISOString()}`,
+    ].join("\n");
+    
+    res.json({ address, nonce, message });
   });
+
+  app.post("/api/auth/wallet/login", async (req: any, res) => {
+    try {
+      const { address, walletAddress, signature, message } = req.body as {
+        address?: string;
+        walletAddress?: string;
+        signature?: string;
+        message?: string;
+      };
+
+      // 支持两种字段名：address 或 walletAddress（前端发送的是 walletAddress）
+      const finalAddress = address || walletAddress;
+
+      if (!finalAddress || !/^0x[a-fA-F0-9]{40}$/.test(finalAddress)) {
+        return res.status(400).json({ message: "Invalid address" });
+      }
+
+      if (!signature) {
+        return res.status(400).json({ message: "Signature is required" });
+      }
+
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const normalized = finalAddress.toLowerCase();
+
+      // 1) Get and verify nonce
+      const expectedNonce = getWalletNonce(normalized);
+      if (!expectedNonce) {
+        return res.status(401).json({ message: "Nonce expired or not found. Please request a new nonce." });
+      }
+
+      // Check if message contains the expected nonce
+      if (!message.includes(expectedNonce)) {
+        return res.status(401).json({ message: "Nonce mismatch. Message does not contain expected nonce." });
+      }
+
+      // 2) Verify signature using the message provided by frontend
+      let recovered: string;
+      try {
+        recovered = ethers.utils.verifyMessage(message, signature).toLowerCase();
+      } catch (error) {
+        return res.status(401).json({ message: "Invalid signature format." });
+      }
+
+      if (recovered !== normalized) {
+        return res.status(401).json({ message: "Signature verification failed. Signature does not match address." });
+      }
+
+      // 3) Consume nonce to prevent replay attacks
+      if (!consumeWalletNonce(normalized, expectedNonce)) {
+        return res.status(401).json({ message: "Nonce already used. Please request a new nonce." });
+      }
+
+      // 4) Find or create user in database
+      // This ensures DB always has the user before session is set
+      const user = await storage.findOrCreateUserByWallet(normalized);
+
+      // 5) Set wallet user in session
+      const { setWalletAuthUser } = await import("./auth/walletAuth");
+      setWalletAuthUser(req, {
+        id: user.id,
+        walletAddress: normalized,
+        email: user.email,
+        role: user.role,
+      });
+
+      // 6) Explicitly save session to ensure it's written to store
+      await new Promise<void>((resolve, reject) => {
+        (req.session as any).save((err: any) => (err ? reject(err) : resolve()));
+      });
+
+      // Return user directly (not wrapped in { user, authenticated })
+      res.json({
+        id: user.id,
+        walletAddress: normalized,
+        email: user.email,
+        role: user.role,
+      });
+    } catch (error: any) {
+      console.error("[WalletAuth] Login error:", error);
+      res.status(500).json({ message: error.message || "Internal server error" });
+    }
+  });
+
+  // Early-Bird Registration
 
   app.post("/api/early-bird/register", async (req: any, res) => {
     const schema = z.object({

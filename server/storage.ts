@@ -114,6 +114,7 @@ export interface IStorage {
   // User management
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
+  findOrCreateUserByWallet(walletAddress: string): Promise<User>;
   updateUserWallet(userId: string, walletAddress: string): Promise<User>;
   updateUserUsername(userId: string, username: string): Promise<User>;
   
@@ -271,6 +272,16 @@ export interface IStorage {
   findIdentity(provider: string, providerUserId?: string, walletAddress?: string): Promise<UserIdentity | undefined>;
   upsertIdentity(identity: InsertUserIdentity): Promise<UserIdentity>;
   mergeUsers(primaryUserId: string, secondaryUserId: string): Promise<void>;
+
+  // Badge operations
+  getBadgesByOwner(owner: string): Promise<Badge[]>;
+  getBadgeByTokenId(tokenId: string): Promise<Badge | undefined>;
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  updateBadge(tokenId: string, updates: Partial<InsertBadge>): Promise<Badge>;
+  
+  // Event sync state
+  getEventSyncState(contractName: string): Promise<EventSyncState | undefined>;
+  upsertEventSyncState(state: InsertEventSyncState): Promise<EventSyncState>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -303,6 +314,33 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByWallet(walletAddress: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.walletAddress, walletAddress));
+    return user;
+  }
+
+  async findOrCreateUserByWallet(walletAddress: string): Promise<User> {
+    const normalized = walletAddress.toLowerCase();
+    
+    // Try to find existing user
+    let user = await this.getUserByWallet(normalized);
+    
+    if (user) {
+      // Update last login time
+      const [updated] = await db
+        .update(users)
+        .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, user.id))
+        .returning();
+      return updated || user;
+    }
+    
+    // Create new user
+    const userId = `wallet_${normalized.slice(2, 10)}_${Date.now()}`;
+    user = await this.upsertUser({
+      id: userId,
+      walletAddress: normalized,
+      role: "user",
+    });
+    
     return user;
   }
 

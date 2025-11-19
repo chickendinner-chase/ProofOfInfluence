@@ -1,13 +1,27 @@
 import { useState, useEffect } from "react";
 import { parseUnits, formatUnits } from "viem";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { ThemedCard, ThemedButton, ThemedInput } from "@/components/themed";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAirdrop, type AirdropEligibility } from "@/hooks/useAirdrop";
+import { MERKLE_AIRDROP_ADDRESS } from "@/lib/baseConfig";
 import { Loader2, Gift, CheckCircle2, Lock, AlertCircle } from "lucide-react";
+
+const MERKLE_AIRDROP_ABI = [
+  {
+    inputs: [
+      { internalType: "uint64", name: "roundId", type: "uint64" },
+      { internalType: "uint256", name: "index", type: "uint256" },
+    ],
+    name: "isClaimed",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 export function AirdropCard() {
   const { theme } = useTheme();
@@ -25,6 +39,19 @@ export function AirdropCard() {
 
   const [eligibility, setEligibility] = useState<AirdropEligibility | null>(null);
   const [checkingEligibility, setCheckingEligibility] = useState(false);
+
+  // Check if airdrop is already claimed on-chain
+  const { data: isClaimedOnChain, refetch: refetchClaimed } = useReadContract({
+    address: MERKLE_AIRDROP_ADDRESS,
+    abi: MERKLE_AIRDROP_ABI,
+    functionName: "isClaimed",
+    args: eligibility
+      ? [eligibility.roundId, BigInt(eligibility.index)]
+      : undefined,
+    query: {
+      enabled: isConfigured && !!eligibility && !!address,
+    },
+  });
 
   // Check eligibility from backend
   useEffect(() => {
@@ -82,6 +109,10 @@ export function AirdropCard() {
         title: "领取成功",
         description: `${formatUnits(eligibility.amount, 18)} POI 已成功领取`,
       });
+      // Refetch claim status after successful claim
+      setTimeout(() => {
+        refetchClaimed();
+      }, 2000);
       setEligibility(null); // Clear after successful claim
     } catch (error: any) {
       toast({
@@ -147,6 +178,14 @@ export function AirdropCard() {
 
       {eligibility ? (
         <div className="space-y-4">
+          {isClaimedOnChain && (
+            <Alert className="mb-4">
+              <CheckCircle2 className="w-4 h-4" />
+              <AlertDescription>
+                此空投已领取
+              </AlertDescription>
+            </Alert>
+          )}
           <div className={cn(
             "p-4 rounded-lg border",
             theme === "cyberpunk"
@@ -154,19 +193,28 @@ export function AirdropCard() {
               : "bg-slate-50 border-slate-200"
           )}>
             <div className="flex items-center gap-3 mb-3">
-              <Gift className={cn(
-                "w-8 h-8",
-                theme === "cyberpunk" ? "text-cyan-400" : "text-blue-600"
-              )} />
+              {isClaimedOnChain ? (
+                <CheckCircle2 className={cn(
+                  "w-8 h-8",
+                  theme === "cyberpunk" ? "text-green-400" : "text-green-600"
+                )} />
+              ) : (
+                <Gift className={cn(
+                  "w-8 h-8",
+                  theme === "cyberpunk" ? "text-cyan-400" : "text-blue-600"
+                )} />
+              )}
               <div>
                 <div className={cn(
                   "text-lg font-bold",
                   theme === "cyberpunk" ? "font-rajdhani" : "font-poppins"
                 )}>
-                  可领取空投
+                  {isClaimedOnChain ? "已领取空投" : "可领取空投"}
                 </div>
                 <div className="text-sm opacity-70">
-                  您有资格领取空投
+                  {isClaimedOnChain
+                    ? "此空投已在链上确认领取"
+                    : "您有资格领取空投"}
                 </div>
               </div>
             </div>
@@ -190,7 +238,7 @@ export function AirdropCard() {
 
           <ThemedButton
             onClick={handleClaim}
-            disabled={isClaiming || isPaused || !isConnected}
+            disabled={isClaiming || isPaused || !isConnected || isClaimedOnChain}
             className="w-full"
             emphasis
           >
@@ -198,6 +246,11 @@ export function AirdropCard() {
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 领取中...
+              </>
+            ) : isClaimedOnChain ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                已领取
               </>
             ) : (
               <>

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ethers } from "ethers";
 import { storage } from "../storage";
 import type { Express } from "express";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 import { getReferral, hasReferral, getReferralCount, getTotalRewardsEarned } from "../agentkit/referral";
 
 /**

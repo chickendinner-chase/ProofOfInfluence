@@ -29,8 +29,15 @@ Frontend (Vite) (.env.local or platform ENV):
 - VITE_CHAIN_ID = 84532 (Base Sepolia) or 8453 (Base)
 - VITE_BASE_RPC_URL = https://sepolia.base.org
 - VITE_USDC_ADDRESS = 0x...
-- VITE_TGESALE_ADDRESS = 0x... (fill after deploy)
-- VITE_POI_ADDRESS = 0x... (fill after deploy)
+- VITE_TGESALE_ADDRESS = 0x323b3197911603692729c6a5F7375d9AC8c3bA93
+- VITE_POI_ADDRESS = 0x737869142C93078Dae4d78D4E8c5dbD45160565a
+- VITE_STAKING_REWARDS_ADDRESS = 0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d
+- VITE_VESTING_VAULT_ADDRESS = 0xe4E695722C598CBa27723ab98049818b4b827924
+- VITE_MERKLE_AIRDROP_ADDRESS = 0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e
+- VITE_EARLY_BIRD_ALLOWLIST_ADDRESS = 0x75D75a4870762422D85D275b22F5A87Df78b4852
+- VITE_REFERRAL_REGISTRY_ADDRESS = 0xD857D2E232031CD6311Fba80c62E3F11f7Fb9bD0
+- VITE_ACHIEVEMENT_BADGES_ADDRESS = 0xe86C5077b60490A11316D40AB1368d7d73770E00
+- VITE_IMMORTALITY_BADGE_ADDRESS = 0xbd637B458edbdb1dB420d220BF92F7bd02382000
 - VITE_WALLETCONNECT_PROJECT_ID = ...
 - VITE_BASESCAN_URL = https://sepolia.basescan.org (or https://basescan.org)
 
@@ -45,19 +52,31 @@ npm run compile
 ---
 
 ### 3) Deploy Contracts (record addresses)
-Deploy in this order (adjust to your scripts):
-1. POI (ERC20) → POI_ADDRESS
-2. TGESale → TGESALE_ADDRESS
-3. StakingRewards → STAKING_REWARDS_ADDRESS
-4. VestingVault ✅ → VESTING_VAULT_ADDRESS=0xe4E695722C598CBa27723ab98049818b4b827924
-5. MerkleAirdropDistributor ✅ → MERKLE_AIRDROP_ADDRESS=0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e
-6. EarlyBirdAllowlist ✅ → EARLY_BIRD_ALLOWLIST_ADDRESS=0x75D75a4870762422D85D275b22F5A87Df78b4852
-7. ReferralRegistry (optional) → REFERRAL_REGISTRY_ADDRESS
-8. AchievementBadges / ImmortalityBadge → ACHIEVEMENT_BADGES_ADDRESS / IMMORTALITY_BADGE_ADDRESS
+> **注意**: 所有合约已部署完成并已集成到前端。以下为部署顺序参考。
 
-Fill addresses into:
-- shared/contracts/*.json (address field)
-- Frontend VITE_* vars (POI/TGESale/USDC/Chain/RPC)
+**部署状态** (Base Sepolia - Chain ID: 84532):
+1. ✅ POI (ERC20) → `0x737869142C93078Dae4d78D4E8c5dbD45160565a` - **已部署 + 已集成**
+2. ✅ TGESale → `0x323b3197911603692729c6a5F7375d9AC8c3bA93` - **已部署 + 已集成**
+3. ✅ StakingRewards → `0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d` - **已部署 + 已集成**
+4. ✅ VestingVault → `0xe4E695722C598CBa27723ab98049818b4b827924` - **已部署 + 已集成**
+5. ✅ MerkleAirdropDistributor → `0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e` - **已部署 + 已集成**
+6. ✅ EarlyBirdAllowlist → `0x75D75a4870762422D85D275b22F5A87Df78b4852` - **已部署 + 已集成**
+7. ✅ ReferralRegistry → `0xD857D2E232031CD6311Fba80c62E3F11f7Fb9bD0` - **已部署 + 已集成**
+8. ✅ AchievementBadges → `0xe86C5077b60490A11316D40AB1368d7d73770E00` - **已部署 + 已集成**
+9. ✅ ImmortalityBadge → `0xbd637B458edbdb1dB420d220BF92F7bd02382000` - **已部署 + 已集成**
+
+**地址已同步到**:
+- ✅ `shared/contracts/*.json` (所有合约地址已写入)
+- ✅ 前端 `baseConfig.ts` (所有地址从环境变量读取)
+- ✅ 环境变量配置 (`.env` 和 `client/.env.local`)
+- ✅ 文档 `CONTRACT_ADDRESSES.md` (完整地址清单)
+
+**集成状态** (2025-11-17):
+- ✅ 所有合约地址统一从环境变量读取
+- ✅ 前端 hooks 已完整实现
+- ✅ Dashboard、/airdrop、/tge 页面已集成
+- ✅ 链上校验已实现（Airdrop `isClaimed`、Allowlist `verify`）
+- ✅ 端到端测试清单已创建
 
 ---
 

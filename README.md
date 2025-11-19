@@ -85,30 +85,29 @@ Visit `http://localhost:5000` to see the app.
 
 #### Contract Suite
 
-**已部署合约 (Base Sepolia)**:
+**已部署合约 (Base Sepolia) - 全部 9 个**:
 - **POIToken** ✅ – `0x737869142C93078Dae4d78D4E8c5dbD45160565a` – Access-controlled ERC20 with pausing, blacklist controls, role-managed minting/burning, and permit support.
 - **StakingRewards** ✅ – `0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d` – Staking rewards contract.
 - **VestingVault** ✅ – `0xe4E695722C598CBa27723ab98049818b4b827924` – Multi-schedule linear vesting vault with revocation support.
 - **MerkleAirdropDistributor** ✅ – `0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e` – Multi-round POI distributor secured by Merkle proofs and replay protection.
 - **EarlyBirdAllowlist** ✅ – `0x75D75a4870762422D85D275b22F5A87Df78b4852` – Merkle-based allocation tracker with consumer controls for TGE integrations.
-
-**待部署合约**:
-- **ReferralRegistry** – On-chain inviter ledger with optional POI reward streaming.
-- **AchievementBadges** – Soulbound ERC721 achievements with configurable badge types.
-- **TGESale** – Token generation event sale contract.
+- **TGESale** ✅ – `0x323b3197911603692729c6a5F7375d9AC8c3bA93` – Token generation event sale contract.
+- **ReferralRegistry** ✅ – `0xD857D2E232031CD6311Fba80c62E3F11f7Fb9bD0` – On-chain inviter ledger with optional POI reward streaming.
+- **AchievementBadges** ✅ – `0xe86C5077b60490A11316D40AB1368d7d73770E00` – Soulbound ERC721 achievements with configurable badge types.
+- **ImmortalityBadge** ✅ – `0xbd637B458edbdb1dB420d220BF92F7bd02382000` – Immortality badge contract.
 
 **部署脚本**: 
-使用 `.cjs` 脚本进行部署（绕过 Hardhat 配置问题）：
+所有合约已部署完成。部署脚本位于 `scripts/` 目录：
 ```bash
-# 部署已完成的合约
-node scripts/deploy-vesting-run.cjs
-node scripts/deploy-airdrop-run.cjs
-node scripts/deploy-early-bird-run.cjs
+# 部署脚本（所有合约已部署）
+npm run deploy:token
+npm run deploy:tge
+npm run deploy:referral
+npm run deploy:badges
+npm run deploy:immortality
 
-# 测试已部署的合约
-node scripts/test-vesting.cjs
-node scripts/test-airdrop.cjs
-node scripts/test-early-bird.cjs
+# 测试脚本
+npm run test
 ```
 
 **合约地址**: 所有地址已更新到 `shared/contracts/*.json`。详细列表见 `docs/CONTRACT_ADDRESSES.md`。
@@ -341,7 +340,7 @@ npm run check
 - **Version**: v2.0.0
 - **Status**: Active Development
 - **License**: Private
-- **Last Updated**: 2025-11-09
+- **Last Updated**: 2025-11-17
 
 ## 🔗 Links
 

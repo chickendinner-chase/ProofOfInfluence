@@ -345,7 +345,7 @@ db.select().from('users').limit(1).then(console.log).catch(console.error);
 ```markdown
 ## Replit 测试报告
 
-**日期**: 2025-01-XX
+**日期**: 2025-11-17
 **测试者**: [姓名]
 **分支**: dev
 
@@ -384,6 +384,6 @@ db.select().from('users').limit(1).then(console.log).catch(console.error);
 
 ---
 
-**最后更新**: 2025-01-XX  
+**最后更新**: 2025-11-17  
 **状态**: ✅ 准备测试
 

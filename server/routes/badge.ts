@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import { storage } from "../storage";
 import { triggerSync } from "../services/badgeSync";
 import type { Express } from "express";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 
 // Get provider from environment (for manual sync endpoint)
 function getProvider(): ethers.providers.Provider | null {

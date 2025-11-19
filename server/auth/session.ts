@@ -1,21 +1,27 @@
-// Replit Auth integration - from blueprint:javascript_log_in_with_replit
-// NOTE: Replit Auth is now optional - if REPL_ID is not set, auth will be disabled
+// Session configuration and authentication setup
+// Supports Replit Auth (OAuth/OIDC) and Wallet Auth
+// NOTE: Replit Auth is optional - if REPL_ID is not set, auth will fall back to wallet authentication
 import * as client from "openid-client";
 import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import { storage } from "./storage";
+import { storage } from "../storage";
 
 // Check if Replit Auth is enabled
 export const isReplitAuthEnabled = (): boolean => {
-  return !!process.env.REPL_ID && process.env.REPL_ID.trim() !== "";
+  return !!(
+    process.env.REPL_ID &&
+    process.env.SESSION_SECRET &&
+    process.env.DATABASE_URL
+  );
 };
 
-const getOidcConfig = memoize(
+// Export getOidcConfig for use in unified auth middleware
+export const getOidcConfig = memoize(
   async () => {
     if (!isReplitAuthEnabled()) {
       throw new Error("Replit Auth is not enabled: REPL_ID is not set");
@@ -37,6 +43,11 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // 在开发环境（localhost）使用 secure: false，生产环境使用 secure: true
+  const isProduction = process.env.NODE_ENV === "production";
+  const isSecure = isProduction || process.env.FORCE_SECURE_COOKIES === "true";
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -44,13 +55,15 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: isSecure, // 开发环境 false，生产环境 true
+      sameSite: isSecure ? "none" : "lax", // secure cookie 需要 sameSite: "none"
       maxAge: sessionTtl,
     },
   });
 }
 
-function updateUserSession(
+// Export updateUserSession for use in unified auth middleware
+export function updateUserSession(
   user: any,
   tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
 ) {
@@ -80,7 +93,7 @@ export async function setupAuth(app: Express) {
 
   // Only setup Replit Auth if REPL_ID is configured
   if (!isReplitAuthEnabled()) {
-    console.warn("[Auth] Replit Auth is disabled: REPL_ID is not set. Authentication will be limited.");
+    console.warn("[Auth] Replit Auth is disabled: REPL_ID is not set. Wallet authentication will be used.");
     console.warn("[Auth] To bypass authentication for testing, set AUTH_BYPASS=true or DEV_MODE_AUTH_BYPASS=true");
     
     // Setup basic passport serialization even without Replit Auth
@@ -90,14 +103,14 @@ export async function setupAuth(app: Express) {
     // Provide placeholder routes that return appropriate errors
     app.get("/api/login", (req, res) => {
       res.status(503).json({ 
-        message: "Replit Auth is not configured. Please set REPL_ID environment variable.",
+        message: "Replit Auth is not configured. Please use wallet authentication or set REPL_ID environment variable.",
         error: "AUTH_NOT_CONFIGURED"
       });
     });
     
     app.get("/api/callback", (req, res) => {
       res.status(503).json({ 
-        message: "Replit Auth is not configured. Please set REPL_ID environment variable.",
+        message: "Replit Auth is not configured. Please use wallet authentication or set REPL_ID environment variable.",
         error: "AUTH_NOT_CONFIGURED"
       });
     });
@@ -176,62 +189,3 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // Auth bypass: Allow bypassing auth if explicitly enabled (for migration from Replit)
-  // This is useful when migrating away from Replit Auth to another auth system
-  const authBypass = process.env.DEV_MODE_AUTH_BYPASS === 'true' || process.env.AUTH_BYPASS === 'true';
-  
-  if (!isReplitAuthEnabled()) {
-    // If Replit Auth is not enabled, check for bypass
-    if (authBypass) {
-      console.warn("[Auth] Authentication bypass enabled (DEV_MODE_AUTH_BYPASS or AUTH_BYPASS is set)");
-      // Create a mock user for development/testing
-      if (!req.user) {
-        (req as any).user = {
-          claims: {
-            sub: process.env.AUTH_BYPASS_USER_ID || 'dev-user',
-            email: process.env.AUTH_BYPASS_USER_EMAIL || 'dev@example.com',
-            first_name: process.env.AUTH_BYPASS_USER_FIRST_NAME || 'Dev',
-            last_name: process.env.AUTH_BYPASS_USER_LAST_NAME || 'User',
-          },
-          expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-        };
-      }
-      return next();
-    }
-    
-    // When bypass is disabled, return error
-    return res.status(503).json({ 
-      message: "Authentication is not configured. Please set REPL_ID environment variable or enable AUTH_BYPASS=true for testing.",
-      error: "AUTH_NOT_CONFIGURED"
-    });
-  }
-
-  // Normal Replit Auth flow
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-};

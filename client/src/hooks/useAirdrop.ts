@@ -102,9 +102,20 @@ export function useAirdrop(): UseAirdropResult {
     hash: claimHash,
   });
 
+  // Note: isClaimed is a synchronous function that returns a boolean
+  // For real-time checking, use the useReadContract hook directly in components
+  // This function is kept for backward compatibility but should be replaced with
+  // direct contract reads in components that need real-time status
   const isClaimed = (roundId: bigint, index: number): boolean => {
-    // This would need to be called per index, so we return a placeholder
-    // In practice, you'd want to use useReadContract for each index you're checking
+    // This is a placeholder - components should use useReadContract directly
+    // Example usage in component:
+    // const { data: claimed } = useReadContract({
+    //   address: MERKLE_AIRDROP_ADDRESS,
+    //   abi: MERKLE_AIRDROP_ABI,
+    //   functionName: "isClaimed",
+    //   args: [roundId, BigInt(index)],
+    //   query: { enabled: isConfigured },
+    // });
     return false;
   };
 

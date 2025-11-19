@@ -83,14 +83,24 @@ export function useAllowlist(): UseAllowlistResult {
     query: { enabled: isConfigured && !!address },
   });
 
+  // Note: verify is an async function that should call the contract
+  // For real-time verification in components, use useReadContract directly
+  // This function is kept for backward compatibility
   const verify = async (
     account: `0x${string}`,
     allocation: bigint,
     proof: `0x${string}`[]
   ): Promise<boolean> => {
     if (!isConfigured) return false;
-    // This would need to be called via useReadContract in practice
-    // For now, return a placeholder
+    // Components should use useReadContract directly for real-time verification
+    // Example usage in component:
+    // const { data: isValid } = useReadContract({
+    //   address: EARLY_BIRD_ALLOWLIST_ADDRESS,
+    //   abi: EARLY_BIRD_ALLOWLIST_ABI,
+    //   functionName: "verify",
+    //   args: [account, allocation, proof],
+    //   query: { enabled: isConfigured && !!account && !!proof.length },
+    // });
     return false;
   };
 

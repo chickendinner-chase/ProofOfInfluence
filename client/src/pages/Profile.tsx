@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Section } from "@/components/layout/Section";
 import { ThemedCard, ThemedButton, ThemedInput } from "@/components/themed";
@@ -8,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Palette, Bell, Shield, Wallet, Save, LogOut, Brain, Lock, Link as LinkIcon, CheckCircle2 } from "lucide-react";
 import type { User as UserType } from "@shared/schema";
-import { useAccount, useWalletClient } from "wagmi";
+import { useAccount, useWalletClient, useDisconnect } from "wagmi";
+import { ROUTES } from "@/routes";
 
 interface PersonalityProfile {
   mbtiType?: string | null;
@@ -21,6 +23,9 @@ export default function Profile() {
   const { toast } = useToast();
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const { disconnect } = useDisconnect();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   // Fetch user data (keeping existing API integration)
   const { data: user } = useQuery<UserType>({
@@ -29,6 +34,20 @@ export default function Profile() {
 
   const { data: identities, refetch: refetchIdentities } = useQuery<any>({
     queryKey: ["/api/auth/identities"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/identities", {
+        credentials: "include",
+      });
+      // Treat 400 as unauthenticated (no identities) instead of an error
+      if (res.status === 400 || res.status === 401) {
+        return [];
+      }
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${res.statusText}`);
+      }
+      return await res.json();
+    },
+    retry: false, // Disable retry for this query
   });
 
   const [username, setUsername] = useState("");
@@ -91,12 +110,31 @@ export default function Profile() {
     });
   };
 
-  const handleLogout = () => {
-    // Logout logic would go here
-    toast({
-      title: "已退出登录",
-      description: "您已安全退出",
-    });
+  const handleLogout = async () => {
+    try {
+      // 调用退出 API
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (e) {
+      console.error("Logout error", e);
+      // 就算后端报错，本地也继续清理
+    } finally {
+      // 1) 断开钱包
+      disconnect();
+
+      // 2) 清掉 React Query 缓存（特别是 /api/auth/user）
+      await queryClient.clear();
+
+      // 3) 回到登录页
+      setLocation(ROUTES.LOGIN);
+
+      toast({
+        title: "已退出当前账号",
+        description: "你可以用其他钱包或 Web2 账号重新登录。",
+      });
+    }
   };
 
   const bindWallet = async () => {
@@ -335,12 +373,12 @@ export default function Profile() {
           <ThemedCard className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium mb-1">退出登录</div>
-                <div className="text-sm opacity-70">退出当前账户</div>
+                <div className="font-medium mb-1">退出 / 切换账号</div>
+                <div className="text-sm opacity-70">退出当前账户，可以用其他钱包或 Web2 账号重新登录</div>
               </div>
               <ThemedButton variant="outline" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
-                退出
+                退出 / 切换账号
               </ThemedButton>
             </div>
           </ThemedCard>

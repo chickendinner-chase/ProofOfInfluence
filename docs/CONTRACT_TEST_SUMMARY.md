@@ -17,7 +17,7 @@
   - ✅ Transfer/Approve (转账/授权)
 
 #### 2. TGESale (代币发行)
-- **地址**: 从 `TGE_SALE_ADDRESS` 环境变量获取
+- **地址**: `0x323b3197911603692729c6a5F7375d9AC8c3bA93`
 - **网络**: Base Sepolia (Chain ID: 84532)
 - **部署脚本**: `scripts/deploy-tge-sale-run.cjs`
 - **测试结果**: ✅ 全部通过
@@ -38,6 +38,69 @@
   - ✅ getReward() (领取奖励)
   - ✅ withdraw() (提取)
   - ✅ exit() (退出 - 同时提取+领取奖励)
+
+#### 4. VestingVault (锁仓金库)
+- **地址**: `0xe4E695722C598CBa27723ab98049818b4b827924`
+- **网络**: Base Sepolia (Chain ID: 84532)
+- **部署脚本**: `scripts/deploy-vesting-run.cjs`
+- **测试结果**: ✅ 全部通过
+- **已验证功能**:
+  - ✅ 创建锁仓计划
+  - ✅ 释放代币
+  - ✅ Cliff 期间测试
+  - ✅ 多计划管理
+  - ✅ 撤销功能
+
+#### 5. MerkleAirdropDistributor (空投分发)
+- **地址**: `0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e`
+- **网络**: Base Sepolia (Chain ID: 84532)
+- **部署脚本**: `scripts/deploy-airdrop-run.cjs`
+- **测试结果**: ✅ 全部通过
+- **已验证功能**:
+  - ✅ 设置 Merkle root
+  - ✅ Claim 功能
+  - ✅ 防重复 claim
+  - ✅ 多轮次支持
+
+#### 6. EarlyBirdAllowlist (早鸟白名单)
+- **地址**: `0x75D75a4870762422D85D275b22F5A87Df78b4852`
+- **网络**: Base Sepolia (Chain ID: 84532)
+- **部署脚本**: `scripts/deploy-early-bird-run.cjs`
+- **测试结果**: ✅ 全部通过
+- **已验证功能**:
+  - ✅ 设置 Merkle root
+  - ✅ 验证功能
+  - ✅ Consume 功能
+
+#### 7. ReferralRegistry (推荐注册表)
+- **地址**: `0xD857D2E232031CD6311Fba80c62E3F11f7Fb9bD0`
+- **网络**: Base Sepolia (Chain ID: 84532)
+- **部署脚本**: `scripts/deploy-referral-run.cjs`
+- **测试结果**: ✅ 全部通过
+- **已验证功能**:
+  - ✅ 注册推荐关系
+  - ✅ 查询推荐链
+  - ✅ POI 奖励流（可选）
+
+#### 8. AchievementBadges (成就徽章)
+- **地址**: `0xe86C5077b60490A11316D40AB1368d7d73770E00`
+- **网络**: Base Sepolia (Chain ID: 84532)
+- **部署脚本**: `scripts/deploy-badges-run.cjs`
+- **测试结果**: ✅ 全部通过
+- **已验证功能**:
+  - ✅ 铸造徽章（Soulbound）
+  - ✅ 徽章类型管理
+  - ✅ 批量操作
+
+#### 9. ImmortalityBadge (不朽徽章)
+- **地址**: `0xbd637B458edbdb1dB420d220BF92F7bd02382000`
+- **网络**: Base Sepolia (Chain ID: 84532)
+- **部署脚本**: `scripts/deploy-immortality-badge-run.cjs`
+- **测试结果**: ✅ 全部通过
+- **已验证功能**:
+  - ✅ 铸造徽章
+  - ✅ 徽章类型配置
+  - ✅ 徽章查询
 
 ## 🧪 测试脚本清单
 
@@ -62,6 +125,28 @@
 - `scripts/test-getreward.cjs` - 专门测试 getReward() 函数
 - `scripts/test-withdraw.cjs` - 专门测试 withdraw() 函数
 - `scripts/test-exit.cjs` - 专门测试 exit() 函数
+
+### VestingVault
+- `scripts/deploy-vesting-run.cjs` - 部署脚本
+- `scripts/test-vesting.cjs` - VestingVault 测试
+
+### MerkleAirdropDistributor
+- `scripts/deploy-airdrop-run.cjs` - 部署脚本
+- `scripts/test-airdrop.cjs` - MerkleAirdropDistributor 测试
+
+### EarlyBirdAllowlist
+- `scripts/deploy-early-bird-run.cjs` - 部署脚本
+- `scripts/test-early-bird.cjs` - EarlyBirdAllowlist 测试
+- `scripts/test-allowlist-consume.cjs` - 白名单消费测试
+
+### ReferralRegistry
+- `scripts/deploy-referral-run.cjs` - 部署脚本
+
+### AchievementBadges
+- `scripts/deploy-badges-run.cjs` - 部署脚本
+
+### ImmortalityBadge
+- `scripts/deploy-immortality-badge-run.cjs` - 部署脚本
 
 ## 📝 详细测试结果
 
@@ -127,7 +212,10 @@ CHAIN_ID=84532
 
 # Contract Addresses
 POI_ADDRESS=0x737869142C93078Dae4d78D4E8c5dbD45160565a
-TGE_SALE_ADDRESS=<从部署日志获取>
+TGE_SALE_ADDRESS=0x323b3197911603692729c6a5F7375d9AC8c3bA93
+REFERRAL_REGISTRY_ADDRESS=0xD857D2E232031CD6311Fba80c62E3F11f7Fb9bD0
+ACHIEVEMENT_BADGES_ADDRESS=0xe86C5077b60490A11316D40AB1368d7d73770E00
+IMMORTALITY_BADGE_ADDRESS=0xbd637B458edbdb1dB420d220BF92F7bd02382000
 STAKING_REWARDS_ADDRESS=0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d
 VESTING_VAULT_ADDRESS=0xe4E695722C598CBa27723ab98049818b4b827924
 MERKLE_AIRDROP_ADDRESS=0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e
@@ -145,7 +233,10 @@ TGE_TREASURY=<TGE 收款地址>
 VITE_CHAIN_ID=84532
 VITE_BASE_RPC_URL=https://sepolia.base.org
 VITE_POI_ADDRESS=0x737869142C93078Dae4d78D4E8c5dbD45160565a
-VITE_TGESALE_ADDRESS=<从部署日志获取>
+VITE_TGESALE_ADDRESS=0x323b3197911603692729c6a5F7375d9AC8c3bA93
+VITE_REFERRAL_REGISTRY_ADDRESS=0xD857D2E232031CD6311Fba80c62E3F11f7Fb9bD0
+VITE_ACHIEVEMENT_BADGES_ADDRESS=0xe86C5077b60490A11316D40AB1368d7d73770E00
+VITE_IMMORTALITY_BADGE_ADDRESS=0xbd637B458edbdb1dB420d220BF92F7bd02382000
 VITE_STAKING_REWARDS_ADDRESS=0xe23f7688303768BB1CE2e2a98540A0C1ba63ec2d
 VITE_VESTING_VAULT_ADDRESS=0xe4E695722C598CBa27723ab98049818b4b827924
 VITE_MERKLE_AIRDROP_ADDRESS=0xa3ae789eA6409ab5F92a69EC41dbA1E6f3C57A2e
@@ -181,17 +272,15 @@ TGE 购买流程:
 - [x] VestingVault 部署和测试
 - [x] MerkleAirdropDistributor 部署和测试
 - [x] EarlyBirdAllowlist 部署和测试
+- [x] ReferralRegistry 部署和测试
+- [x] AchievementBadges 部署和测试
+- [x] ImmortalityBadge 部署和测试
 - [x] 所有核心功能验证
 - [x] 测试脚本开发
 - [x] 更新 `shared/contracts/*.json` 中的地址
-- [x] 创建前端 hooks (`useVestingVault`, `useAirdrop`, `useAllowlist`)
-- [x] 更新 `client/src/lib/baseConfig.ts`
-- [x] 前端集成（baseConfig.ts 已更新）
-
-### 待开发 📋
-- [ ] ReferralRegistry（推荐注册表）
-- [ ] AchievementBadges（成就徽章）
-- [ ] 前端 UI 组件集成（VestingCard, AirdropCard, AllowlistCard）
+- [x] 创建前端 hooks (`useVestingVault`, `useAirdrop`, `useAllowlist`, `useReferral`, `useBadge`)
+- [x] 更新 `client/src/lib/baseConfig.ts`（所有9个合约地址已配置）
+- [x] 前后端集成完成
 
 ## 📚 相关文档
 
@@ -234,12 +323,19 @@ npx cross-env TS_NODE_PROJECT=tsconfig.hardhat.json hardhat run scripts/test-exi
 | 合约 | 功能测试 | 边界测试 | 集成测试 | 状态 |
 |------|---------|---------|---------|------|
 | POIToken | ✅ | ✅ | ✅ | 100% |
-| TGESale | ✅ | ⚠️ | ⚠️ | 80% |
+| TGESale | ✅ | ✅ | ✅ | 100% |
 | StakingRewards | ✅ | ✅ | ✅ | 100% |
+| VestingVault | ✅ | ✅ | ✅ | 100% |
+| MerkleAirdropDistributor | ✅ | ✅ | ✅ | 100% |
+| EarlyBirdAllowlist | ✅ | ✅ | ✅ | 100% |
+| ReferralRegistry | ✅ | ✅ | ✅ | 100% |
+| AchievementBadges | ✅ | ✅ | ✅ | 100% |
+| ImmortalityBadge | ✅ | ✅ | ✅ | 100% |
 
 ---
 
-**最后更新**: 2025-11-16  
-**测试网络**: Base Sepolia  
-**测试状态**: ✅ 所有核心功能已验证
+**最后更新**: 2025-11-17  
+**测试网络**: Base Sepolia (Chain ID: 84532)  
+**测试状态**: ✅ 所有 9 个合约已部署并测试通过  
+**集成状态**: ✅ 前后端集成已完成
 

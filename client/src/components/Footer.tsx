@@ -52,31 +52,23 @@ export default function Footer({ lang = "zh" }: FooterProps) {
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href={footerLinks.products.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.products.label}
-                  </a>
+                <Link href={footerLinks.products.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.products.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.creators.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.creators.label}
-                  </a>
+                <Link href={footerLinks.creators.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.creators.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.brands.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.brands.label}
-                  </a>
+                <Link href={footerLinks.brands.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.brands.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.useCases.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.useCases.label}
-                  </a>
+                <Link href={footerLinks.useCases.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.useCases.label}
                 </Link>
               </li>
             </ul>
@@ -89,38 +81,28 @@ export default function Footer({ lang = "zh" }: FooterProps) {
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href={footerLinks.whitepaper.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.whitepaper.label}
-                  </a>
+                <Link href={footerLinks.whitepaper.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.whitepaper.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.tokenomics.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.tokenomics.label}
-                  </a>
+                <Link href={footerLinks.tokenomics.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.tokenomics.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.compliance.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.compliance.label}
-                  </a>
+                <Link href={footerLinks.compliance.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.compliance.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.changelog.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.changelog.label}
-                  </a>
+                <Link href={footerLinks.changelog.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.changelog.label}
                 </Link>
               </li>
               <li>
-                <Link href={footerLinks.company.href}>
-                  <a className="text-slate-400 hover:text-white transition-colors">
-                    {footerLinks.company.label}
-                  </a>
+                <Link href={footerLinks.company.href} className="text-slate-400 hover:text-white transition-colors">
+                  {footerLinks.company.label}
                 </Link>
               </li>
             </ul>
