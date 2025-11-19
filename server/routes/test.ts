@@ -3,9 +3,6 @@ import type { Express } from "express";
 import { isAuthenticated } from "../auth";
 import { testScenarioRunner, type ScenarioName } from "../services/testScenarioRunner";
 import { storage } from "../storage";
-import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import { db } from "../db";
 
 const runScenarioSchema = z.object({
   scenario: z.enum(["immortality-playable-agent", "immortality-demo-seed"]),
