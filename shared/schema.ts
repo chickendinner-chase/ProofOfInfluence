@@ -167,6 +167,28 @@ export const agentkitActions = pgTable("agentkit_actions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const testWallets = pgTable(
+  "test_wallets",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    agentWalletId: varchar("agent_wallet_id", { length: 100 }),
+    address: varchar("address", { length: 42 }).notNull().unique(),
+    label: varchar("label", { length: 120 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("test_wallet_address_idx").on(table.address)],
+);
+
+export const insertTestWalletSchema = createInsertSchema(testWallets, {
+  address: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{40}$/)
+    .transform((value) => value.toLowerCase()),
+});
+
+export type InsertTestWallet = z.infer<typeof insertTestWalletSchema>;
+export type TestWallet = typeof testWallets.$inferSelect;
+
 // POI Tiers - membership levels based on POI balance/staking
 export const poiTiers = pgTable("poi_tiers", {
   id: serial("id").primaryKey(),
