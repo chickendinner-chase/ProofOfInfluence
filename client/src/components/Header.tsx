@@ -9,6 +9,7 @@ import {
 import { Menu, X, ChevronDown, ShoppingCart, Briefcase, Palette, Settings } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import WalletConnectButton from "@/components/WalletConnectButton";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { isAdmin } = useAdminAccess();
   const { theme, toggleTheme } = useTheme();
 
   // Hide Connect Wallet and Login button on /login page
@@ -53,6 +55,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
         { label: "TGE 启动", href: ROUTES.TGE },
         { label: "早鸟空投", href: ROUTES.EARLY_BIRD },
         ...(isDev ? [{ label: "合约调试", href: ROUTES.APP_DEV_CONTRACTS }] : []),
+        ...(isAdmin ? [{ label: "AgentKit 配置", href: ROUTES.APP_DEV_AGENTKIT }] : []),
       ]
     : [
         { label: "Solutions", href: ROUTES.SOLUTIONS },
@@ -63,6 +66,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
         { label: "Early-Bird", href: ROUTES.EARLY_BIRD },
         { label: "Company", href: ROUTES.ABOUT },
         ...(isDev ? [{ label: "Dev / Contracts", href: ROUTES.APP_DEV_CONTRACTS }] : []),
+        ...(isAdmin ? [{ label: "AgentKit Config", href: ROUTES.APP_DEV_AGENTKIT }] : []),
       ];
 
   const resourcesLabel = lang === "zh" ? "资源" : "Resources";
