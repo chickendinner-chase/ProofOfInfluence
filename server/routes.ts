@@ -15,6 +15,8 @@ import { registerReferralContractRoutes } from "./routes/referral";
 import { registerBadgeRoutes } from "./routes/badge";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerTestRoutes } from "./routes/test";
+import { registerImmortalityRoutes } from "./routes/immortality";
+import { registerAgentKitRoutes } from "./routes/agentkit";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
@@ -117,6 +119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerReferralContractRoutes(app);
   registerBadgeRoutes(app);
   registerTestRoutes(app);
+  registerImmortalityRoutes(app);
+  registerAgentKitRoutes(app);
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -188,6 +192,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid address" });
     }
     
+    console.log("[WalletAuth] Nonce request:", { 
+      address, 
+      sessionId: req.sessionID,
+      hasSession: !!req.session 
+    });
+    
     const nonce = createWalletNonce(address);
     
     // SIWE-style message format
@@ -200,11 +210,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `Time: ${new Date().toISOString()}`,
     ].join("\n");
     
+    console.log("[WalletAuth] Nonce created:", { address, nonce });
+    
     res.json({ address, nonce, message });
   });
 
   app.post("/api/auth/wallet/login", async (req: any, res) => {
     try {
+      console.log("[WalletAuth] Login request received:", {
+        sessionId: req.sessionID,
+        hasSession: !!req.session,
+        bodyKeys: Object.keys(req.body || {}),
+      });
+
       const { address, walletAddress, signature, message } = req.body as {
         address?: string;
         walletAddress?: string;
@@ -214,6 +232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 支持两种字段名：address 或 walletAddress（前端发送的是 walletAddress）
       const finalAddress = address || walletAddress;
+      
+      console.log("[WalletAuth] Login attempt for address:", finalAddress);
 
       if (!finalAddress || !/^0x[a-fA-F0-9]{40}$/.test(finalAddress)) {
         return res.status(400).json({ message: "Invalid address" });
@@ -259,9 +279,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 4) Find or create user in database
       // This ensures DB always has the user before session is set
+      console.log("[WalletAuth] Finding or creating user for wallet:", normalized);
       const user = await storage.findOrCreateUserByWallet(normalized);
+      console.log("[WalletAuth] User found/created:", { id: user.id, walletAddress: user.walletAddress, role: user.role });
 
-      // 5) Set wallet user in session
+      // 5) Ensure session exists
+      if (!req.session) {
+        console.error("[WalletAuth] Session not available!");
+        return res.status(500).json({ message: "Session not available" });
+      }
+
+      // 6) Set wallet user in session
       const { setWalletAuthUser } = await import("./auth/walletAuth");
       setWalletAuthUser(req, {
         id: user.id,
@@ -269,11 +297,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         role: user.role,
       });
-
-      // 6) Explicitly save session to ensure it's written to store
-      await new Promise<void>((resolve, reject) => {
-        (req.session as any).save((err: any) => (err ? reject(err) : resolve()));
+      console.log("[WalletAuth] Wallet user set in session:", { 
+        sessionId: req.sessionID, 
+        hasWalletUser: !!(req.session as any).walletUser 
       });
+
+      // 7) Explicitly save session to ensure it's written to store
+      await new Promise<void>((resolve, reject) => {
+        (req.session as any).save((err: any) => {
+          if (err) {
+            console.error("[WalletAuth] Session save error:", err);
+            reject(err);
+          } else {
+            console.log("[WalletAuth] Session saved successfully, sessionId:", req.sessionID);
+            resolve();
+          }
+        });
+      });
+
+      // 8) Verify session was saved (optional check)
+      const savedSession = (req.session as any).walletUser;
+      if (!savedSession) {
+        console.error("[WalletAuth] Warning: walletUser not found in session after save!");
+      }
 
       // Return user directly (not wrapped in { user, authenticated })
       res.json({
@@ -590,6 +636,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to build Immortality actions from user message and context
+  type ImmortalityActionType = "activate_agent" | "upload_memory" | "mint_badge";
+
+  interface ActionMessage {
+    type: "action";
+    actionType: ImmortalityActionType;
+    autoExecute: boolean;
+    content: string;
+  }
+
+  function buildImmortalityActions(params: {
+    message: string;
+    suggestedActions: Array<{ type: string; title: string; description?: string }>;
+    memories: Array<{ id: number; text: string; createdAt: string }>;
+  }): ActionMessage[] {
+    const { message, suggestedActions, memories } = params;
+    const actions: ActionMessage[] = [];
+
+    const lower = (message || "").toLowerCase();
+    const hasMemories = memories.length > 0;
+
+    // Check for activation keywords
+    const wantActivate =
+      lower.includes("激活") ||
+      lower.includes("开通") ||
+      lower.includes("agent") ||
+      lower.includes("启动");
+
+    // Check for memory keywords
+    const wantMemory =
+      lower.includes("记忆") ||
+      lower.includes("回忆") ||
+      lower.includes("记录") ||
+      lower.includes("记住") ||
+      lower.includes("保存");
+
+    // Check for badge/mint keywords
+    const wantMint =
+      lower.includes("徽章") ||
+      lower.includes("badge") ||
+      lower.includes("上链") ||
+      lower.includes("永生") ||
+      lower.includes("铸造") ||
+      lower.includes("mint");
+
+    // 1) Activate Agent (suggestion mode)
+    if (wantActivate) {
+      actions.push({
+        type: "action",
+        actionType: "activate_agent",
+        autoExecute: false,
+        content: "激活你的 Immortality Agent",
+      });
+    }
+
+    // 2) Upload Memory (auto-execute mode)
+    if (wantMemory) {
+      actions.push({
+        type: "action",
+        actionType: "upload_memory",
+        autoExecute: true,
+        content: message, // Use user's message as memory content
+      });
+    }
+
+    // 3) Mint Badge (suggestion mode): requires at least one memory
+    if (hasMemories && wantMint) {
+      actions.push({
+        type: "action",
+        actionType: "mint_badge",
+        autoExecute: false,
+        content: "为你铸造一枚 Immortality 徽章",
+      });
+    }
+
+    // 4) Map suggestedActions to mint_badge if MINT_TEST_BADGE is present
+    if (
+      suggestedActions?.some((a) => a.type === "MINT_TEST_BADGE") &&
+      !actions.some((a) => a.actionType === "mint_badge")
+    ) {
+      // Only add if user has memories (basic requirement)
+      if (hasMemories) {
+        actions.push({
+          type: "action",
+          actionType: "mint_badge",
+          autoExecute: false,
+          content: "根据你的对话，我可以帮你铸造一枚测试徽章。",
+        });
+      }
+    }
+
+    return actions;
+  }
+
   app.post("/api/chat", isAuthenticated, async (req: any, res) => {
     const openAiKey = process.env.OPENAI_API_KEY;
     if (!openAiKey) {
@@ -618,11 +758,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelName: process.env.OPENAI_MODEL,
       });
 
+      // Build actions from message, suggestedActions, and memories
+      const actions = buildImmortalityActions({
+        message: body.message,
+        suggestedActions,
+        memories,
+      });
+
       res.json({
         reply,
         profileUsed: !!profile,
         memoryCount: memories.length,
         suggestedActions,
+        actions,
       });
     } catch (error: any) {
       console.error("Error generating chat reply:", error);

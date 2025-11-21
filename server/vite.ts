@@ -41,8 +41,15 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+  
+  // Catch-all route for frontend pages (exclude API routes)
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip API routes - let them be handled by API handlers or return 404
+    if (url.startsWith("/api/")) {
+      return next(); // Let Express 404 handler deal with unmatched API routes
+    }
 
     try {
       const clientTemplate = path.resolve(

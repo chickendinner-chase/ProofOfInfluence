@@ -35,6 +35,7 @@ export const ROUTES = {
   APP_IMMORTALITY: "/app/immortality",
   APP_DEV_CONTRACTS: "/app/dev-contracts",
   APP_TEST_SCENARIOS: "/app/test-scenarios",
+  APP_DEV_AGENTKIT: "/app/dev/agentkit",
   
   // Payment
   PAYMENT_SUCCESS: "/payment-success",

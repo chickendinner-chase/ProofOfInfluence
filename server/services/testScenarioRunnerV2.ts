@@ -29,16 +29,24 @@ interface ScenarioResult {
   error?: { code: string; message: string; data?: any };
 }
 
+interface ImmortalityMintConfig {
+  method?: "mintSelf" | "mintFor";
+  priceEth?: string;
+}
+
 interface ImmortalityPlayableAgentParams {
   chain?: string;
   memorySeed?: string[];
   chat?: {
     messages: Array<{ role: string; content: string }>;
   };
-  mint?: {
-    method?: "mintSelf" | "mintFor";
-    priceEth?: string;
-  };
+  /**
+   * Mint 配置:
+   * - undefined: 使用默认行为（按当前逻辑）
+   * - 对象: 开启 mint，并按配置执行
+   * - false: 显式关闭 mint（整个场景不铸造）
+   */
+  mint?: ImmortalityMintConfig | false;
 }
 
 /**
@@ -119,6 +127,7 @@ export class TestScenarioRunnerV2 {
     const steps: ScenarioResult["steps"] = [];
     const chain = params.chain || "base-sepolia";
     const chainId = 84532; // base-sepolia
+    const hasMintConfig = params.mint !== false && params.mint !== undefined;
 
     try {
       // Step 1: Allocate vault wallet
@@ -242,7 +251,8 @@ export class TestScenarioRunnerV2 {
       }
 
       // Step 5: Mint badge
-      if (params.mint !== false) {
+      if (hasMintConfig) {
+        const mintConfig = params.mint as ImmortalityMintConfig;
         await agentPermissionService.assertAgentAllowed(
           vault.id,
           this.IMMORTALITY_AI_AGENT_ID,
@@ -261,8 +271,8 @@ export class TestScenarioRunnerV2 {
           });
           await this.recordStep(runId, "mint_badge", "failed", null, error);
         } else {
-          const mintMethod = params.mint?.method || "mintSelf";
-          const priceEth = params.mint?.priceEth || "0";
+          const mintMethod = mintConfig.method || "mintSelf";
+          const priceEth = mintConfig.priceEth || "0";
           const priceWei = BigInt(Math.floor(parseFloat(priceEth) * 1e18));
 
           // Get private key from vault wallet metadata
@@ -320,61 +330,116 @@ export class TestScenarioRunnerV2 {
           ] as const;
 
           // 在 mint_badge 步骤前添加诊断
+          let shouldSkipMint = false;
+          let skipReason = "";
+
           try {
-            // 检查合约状态
             const badge = new ethers.Contract(
               this.BADGE_CONTRACT_ADDRESS,
               [
-                'function paused() view returns (bool)',
-                'function badgeTypes(uint256) view returns (bool enabled, bool transferable, string uri)',
-                'function hasMinted(address) view returns (bool)',
+                "function paused() view returns (bool)",
+                "function badgeTypes(uint256) view returns (bool enabled, bool transferable, string uri)",
+                "function hasMinted(address) view returns (bool)",
+                "function balanceOf(address) view returns (uint256)",
               ],
               walletClient
             );
-            
+
             const isPaused = await badge.paused();
             const badgeType1 = await badge.badgeTypes(1);
             const alreadyMinted = await badge.hasMinted(vaultWallet.walletAddress);
-            
-            if (isPaused) {
-              throw new Error('Contract is paused');
+            const balance = await badge.balanceOf(vaultWallet.walletAddress);
+
+            // ethers v5 返回 BigNumber，需要转换为字符串或使用 gt(0) 方法
+            const hasBalance = balance.gt(0);
+
+            if (hasBalance || alreadyMinted) {
+              shouldSkipMint = true;
+              skipReason = "Address already has a badge";
+            } else if (isPaused) {
+              throw new Error("Contract is paused");
+            } else if (!badgeType1.enabled) {
+              throw new Error("Badge type 1 is not enabled");
             }
-            if (!badgeType1.enabled) {
-              throw new Error('Badge type 1 is not enabled');
-            }
-            if (alreadyMinted && mintMethod === 'mintSelf') {
-              throw new Error('Address has already minted');
-            }
+
+            console.log("[MintBadge] Diagnostic:", {
+              isPaused,
+              badgeTypeEnabled: badgeType1.enabled,
+              alreadyMinted,
+              balance: balance.toString(),
+              shouldSkipMint,
+            });
           } catch (diagnosticError: any) {
-            console.error('[MintBadge] Diagnostic check failed:', diagnosticError);
-            // 记录诊断信息但不阻止执行
+            console.error("[MintBadge] Diagnostic check failed:", diagnosticError);
+            // 诊断失败不阻止执行，后面依旧尝试 mint
           }
 
+          if (shouldSkipMint) {
+            const output = {
+              skipped: true,
+              reason: skipReason,
+              message: "Badge already exists, skipping mint",
+            };
+
+            steps.push({
+              name: "mint_badge",
+              status: "success",
+              output,
+            });
+
+            await this.recordStep(runId, "mint_badge", "success", output);
+          } else {
           const mintResult = await simulateAndWriteContract({
             provider: publicClient,
             signer: walletClient,
             contractAddress: this.BADGE_CONTRACT_ADDRESS,
-            abi,
+              abi: abi as unknown as any[],
             functionName: mintMethod,
             args: mintMethod === "mintFor" ? [vaultWallet.walletAddress] : [],
             value: mintMethod === "mintSelf" ? priceWei : undefined,
           });
 
           if (mintResult.error) {
+              const name = mintResult.error.name;
+              const raw = mintResult.error.raw || "";
+
+              const isAlreadyMinted =
+                name === "AlreadyMinted" ||
+                raw.includes("AlreadyMinted") ||
+                raw.includes("already minted");
+
+              if (isAlreadyMinted) {
+                const output = {
+                  skipped: true,
+                  reason: "AlreadyMinted",
+                  message: "Badge already exists (contract confirmed)",
+                };
+
+                steps.push({
+                  name: "mint_badge",
+                  status: "success",
+                  output,
+                });
+
+                await this.recordStep(runId, "mint_badge", "success", output);
+              } else {
             const error = {
               code: "CONTRACT_REVERT",
-              message: mintResult.error.name || "Contract revert",
+                  message: name || "Contract revert",
               data: {
-                errorName: mintResult.error.name,
+                    errorName: name,
                 errorArgs: mintResult.error.args,
               },
             };
+
             steps.push({
               name: "mint_badge",
               status: "failed",
               error,
             });
+
             await this.recordStep(runId, "mint_badge", "failed", null, error);
+              }
           } else if (mintResult.txHash) {
             steps.push({
               name: "mint_badge",
@@ -390,6 +455,7 @@ export class TestScenarioRunnerV2 {
               await waitForTransaction(publicClient, mintResult.txHash, 1);
             } catch (waitErr) {
               console.warn("[TestRunner] Transaction confirmation wait failed:", waitErr);
+              }
             }
           }
         }
@@ -397,7 +463,7 @@ export class TestScenarioRunnerV2 {
 
       // Step 6: Verify on-chain
       let verifyOutput: any = { owner: vaultWallet.walletAddress };
-      if (this.BADGE_CONTRACT_ADDRESS && params.mint !== false) {
+      if (this.BADGE_CONTRACT_ADDRESS && hasMintConfig) {
         try {
           const publicClient = createBaseSepoliaPublicClient();
           

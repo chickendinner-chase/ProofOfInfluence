@@ -360,8 +360,10 @@ const handleStake = () => {
 **Before:**
 ```typescript
 const handleMint = async () => {
-  const res = await fetch("/api/immortality/actions/mint-test-badge", {
+  const res = await fetch("/api/contracts/ImmortalityBadge/mintBadge", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode: "agentkit", args: {} }),
   });
   const data = await res.json();
 };

@@ -40,6 +40,7 @@ export const users = pgTable("users", {
   username: text("username").unique(),
   walletAddress: text("wallet_address").unique(),
   role: varchar("role", { length: 20 }).default("user").notNull(), // user, admin
+  plan: varchar("plan", { length: 10 }).default("free"), // free, paid
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -508,6 +509,7 @@ export const insertTaxReportSchema = createInsertSchema(taxReports).omit({
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
+export type UserPlan = "free" | "paid";
 export type User = typeof users.$inferSelect;
 
 export type InsertProfile = z.infer<typeof insertProfileSchema>;

@@ -9,7 +9,16 @@ export function getRequestUserId(req: Request): string | undefined {
 }
 
 export function getRequestRole(req: Request): string | undefined {
-  const claims = (req as any)?.user?.claims;
+  // First check req.user.role (set by auth middleware)
+  const user = (req as any)?.user;
+  if (user) {
+    if (typeof user.role === "string" && user.role.length > 0) {
+      return user.role;
+    }
+  }
+
+  // Then check claims.role (fallback)
+  const claims = user?.claims;
   if (claims) {
     if (typeof claims.role === "string" && claims.role.length > 0) {
       return claims.role;
@@ -22,6 +31,7 @@ export function getRequestRole(req: Request): string | undefined {
     }
   }
 
+  // Finally check header (for testing)
   const headerRole = req.headers["x-user-role"];
   if (Array.isArray(headerRole)) {
     return headerRole[0];

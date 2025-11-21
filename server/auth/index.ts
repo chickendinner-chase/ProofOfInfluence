@@ -95,6 +95,12 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const session: any = (req as any).session;
   if (session?.walletUser) {
     const walletUser = session.walletUser;
+    console.log("[Auth] Wallet session found:", { 
+      sessionId: session.id || session.sessionID,
+      userId: walletUser.id,
+      walletAddress: walletUser.walletAddress,
+      role: walletUser.role 
+    });
     (req as any).user = {
       claims: {
         sub: walletUser.id, // 统一当成 userId
@@ -106,6 +112,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 1 week
     };
     return next();
+  } else {
+    // Debug: log session state when wallet session is not found
+    console.log("[Auth] No wallet session found:", {
+      hasSession: !!session,
+      sessionId: session?.id || session?.sessionID,
+      sessionKeys: session ? Object.keys(session) : [],
+    });
   }
 
   // 4. 未登录

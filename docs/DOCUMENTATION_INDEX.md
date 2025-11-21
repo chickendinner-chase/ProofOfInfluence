@@ -87,6 +87,7 @@
 
 ## 🔗 AgentKit 和集成
 
+- **agentkit/OVERVIEW.md** - AgentKit 概览文档（配置、调试、API 说明）
 - **agentkit/ACTIONS_CONTRACT_MAPPING.md** - AgentKit 操作和合约映射
 - **IMMORTALITY_LEDGER.md** - 不朽账本
 

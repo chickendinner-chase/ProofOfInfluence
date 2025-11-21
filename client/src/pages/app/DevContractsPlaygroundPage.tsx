@@ -14,6 +14,7 @@ import { ContractCard } from "@/components/dev/ContractCard";
 import { TransactionStatus } from "@/components/dev/TransactionStatus";
 import { CONTRACTS_CONFIG } from "@/config/contractsPlaygroundConfig";
 import { logOnce } from "@/lib/logOnce";
+import { useMintBadge } from "@/hooks/useContractAction";
 
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const POI_DECIMALS = 18;
@@ -3433,9 +3434,16 @@ function ImmortalityBadgeCard({ address }: { address: `0x${string}` | undefined 
   const publicClient = usePublicClient({ chainId: BASE_CHAIN_ID });
   const isDev = import.meta.env.MODE === "development" || import.meta.env.DEV;
 
-  const [mintTxStatus, setMintTxStatus] = useState<TxStatus>("idle");
-  const [mintTxHash, setMintTxHash] = useState<`0x${string}` | undefined>();
-  const [mintTxError, setMintTxError] = useState<string>("");
+  // Use unified API hook instead of direct contract call for minting
+  const mintBadge = useMintBadge({
+    onSuccess: () => {
+      // Success is handled by hook state
+    },
+    onError: (error) => {
+      // Error is handled by hook state
+      console.error("Mint failed:", error);
+    },
+  });
 
   // Owner functions state
   const [minterAddressInput, setMinterAddressInput] = useState("");
@@ -3495,30 +3503,10 @@ function ImmortalityBadgeCard({ address }: { address: `0x${string}` | undefined 
     query: { enabled: config.isConfigured && !!address },
   });
 
-  const handleMint = async () => {
+  const handleMint = () => {
     if (!address) return;
-
-    setMintTxStatus("pending");
-    setMintTxError("");
-    try {
-      // ImmortalityBadge uses mintBadge(address to, uint256 badgeType)
-      // Using badgeType 1 (Immortality Badge)
-      const hash = await writeContractAsync({
-        address: config.address,
-        abi: config.abi,
-        functionName: "mintBadge",
-        args: [address, 1n], // badgeType 1 for Immortality Badge
-      });
-      setMintTxHash(hash);
-
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({ hash });
-      }
-      setMintTxStatus("success");
-    } catch (error: any) {
-      setMintTxStatus("error");
-      setMintTxError(error?.message || "Mint failed");
-    }
+    // Use unified API via hook
+    mintBadge.execute({ args: {} });
   };
 
   return (
@@ -3578,18 +3566,25 @@ function ImmortalityBadgeCard({ address }: { address: `0x${string}` | undefined 
       </div>
 
       {/* Dev Mint action */}
-      {isDev && balance !== undefined && balance === 0n && (
+      {isDev && balance !== undefined && (
         <div className="space-y-3 border-t pt-4">
           <h3 className={cn("font-semibold text-sm", theme === "cyberpunk" ? "text-cyan-200" : "text-slate-700")}>
-            Dev Mint (Development Only)
+            Dev Mint (Development Only - via AgentKit)
           </h3>
+          {balance !== undefined && balance !== null && typeof balance === "bigint" && balance > 0n && (
+            <Alert className="mb-2">
+              <AlertDescription className="text-xs">
+                You already own a badge (balance: {balance.toString()}). Minting again will fail with AlreadyMinted error.
+              </AlertDescription>
+            </Alert>
+          )}
           <ThemedButton
             onClick={handleMint}
-            disabled={mintTxStatus === "pending"}
+            disabled={mintBadge.isPending}
             variant="outline"
             className="w-full"
           >
-            {mintTxStatus === "pending" ? (
+            {mintBadge.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Minting...
@@ -3598,7 +3593,11 @@ function ImmortalityBadgeCard({ address }: { address: `0x${string}` | undefined 
               "Mint Immortality Badge"
             )}
           </ThemedButton>
-          <TransactionStatus status={mintTxStatus} hash={mintTxHash} error={mintTxError} />
+          <TransactionStatus 
+            status={mintBadge.isPending ? "pending" : mintBadge.isSuccess ? "success" : mintBadge.isError ? "error" : "idle"} 
+            hash={mintBadge.data?.txHash as `0x${string}` | undefined} 
+            error={mintBadge.error?.message || ""} 
+          />
         </div>
       )}
 
