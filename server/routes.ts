@@ -15,6 +15,7 @@ import { registerReferralContractRoutes } from "./routes/referral";
 import { registerBadgeRoutes } from "./routes/badge";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerTestRoutes } from "./routes/test";
+import { registerImmortalityRoutes } from "./routes/immortality";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
@@ -117,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerReferralContractRoutes(app);
   registerBadgeRoutes(app);
   registerTestRoutes(app);
+  registerImmortalityRoutes(app);
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -623,6 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileUsed: !!profile,
         memoryCount: memories.length,
         suggestedActions,
+        actions: [], // Will be populated by AI in future
       });
     } catch (error: any) {
       console.error("Error generating chat reply:", error);
