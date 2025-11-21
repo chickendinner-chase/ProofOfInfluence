@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { ThemedCard, ThemedButton } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare, Coins } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   executeActivateAgent,
@@ -12,12 +12,14 @@ import {
   executeMintBadge,
   type ActionResponse,
 } from "@/lib/immortalityActions";
+import { ChatPayment } from "@/components/ChatPayment";
 
 interface ActionMessage {
   type: "action";
-  actionType: "activate_agent" | "upload_memory" | "mint_badge";
+  actionType: "activate_agent" | "upload_memory" | "mint_badge" | "pay_poi";
   autoExecute: boolean;
   content: string;
+  suggestedAmount?: number; // For pay_poi action
 }
 
 interface ChatMessage {
@@ -25,6 +27,8 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   actions?: ActionMessage[];
+  paymentAction?: boolean; // Flag to show payment component
+  suggestedAmount?: number; // Suggested amount for payment
 }
 
 interface ChatResponse {
@@ -37,15 +41,31 @@ interface ChatResponse {
     description?: string;
   }>;
   actions?: ActionMessage[];
+  newBalance?: number; // Updated balance after charging
+  creditsCharged?: number; // Amount of credits charged
 }
 
 export function ImmortalityChat() {
   const { theme } = useTheme();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
+
+  // Fetch balance
+  const { data: balanceData } = useQuery<{ credits: number; poiCredits: number }>({
+    queryKey: ["/api/immortality/balance"],
+    queryFn: async () => {
+      const response = await fetch("/api/immortality/balance");
+      if (!response.ok) throw new Error("Failed to fetch balance");
+      return response.json();
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const currentBalance = balanceData?.credits ?? 0;
 
   const handleActionMessage = async (action: ActionMessage, messageIndex: number, actionIndex?: number) => {
     // Check authentication before executing any action
@@ -85,6 +105,24 @@ export function ImmortalityChat() {
         case "mint_badge":
           result = await executeMintBadge();
           break;
+        case "pay_poi":
+          // Insert a payment action message instead of calling backend API
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "请充值以继续使用 Immortality Chat",
+              timestamp: new Date().toISOString(),
+              paymentAction: true,
+              suggestedAmount: action.suggestedAmount || 20,
+            },
+          ]);
+          setExecutingActions((prev) => {
+            const next = new Set(prev);
+            next.delete(actionId);
+            return next;
+          });
+          return; // Early return, no backend call needed
         default:
           throw new Error(`Unknown action type: ${action.actionType}`);
       }
@@ -157,26 +195,42 @@ export function ImmortalityChat() {
         ? data.actions 
         : data.suggestedActions?.map((sa) => ({
             type: "action" as const,
-            actionType: sa.type as "activate_agent" | "upload_memory" | "mint_badge",
+            actionType: sa.type as "activate_agent" | "upload_memory" | "mint_badge" | "pay_poi",
             autoExecute: false,
             content: sa.title,
           })) || [];
 
       // Add assistant message with actions
+      let replyContent = data.reply;
+      
+      // Append credits charged info if available
+      if (data.creditsCharged !== undefined && data.creditsCharged > 0) {
+        replyContent += `\n\n💳 已消耗 ${data.creditsCharged} Credits`;
+        if (data.newBalance !== undefined) {
+          replyContent += `，当前余额：${data.newBalance} Credits`;
+        }
+      }
+      
+      replyContent +=
+        (data.suggestedActions?.length && !data.actions?.length
+          ? `\n\n可能的下一步：${data.suggestedActions
+              .map((action) => `${action.title}`)
+              .join(" / ")}` 
+          : "");
+
       const assistantMessage: ChatMessage = {
         role: "assistant",
-        content:
-          data.reply +
-          (data.suggestedActions?.length && !data.actions?.length
-            ? `\n\n可能的下一步：${data.suggestedActions
-                .map((action) => `${action.title}`)
-                .join(" / ")}` 
-            : ""),
+        content: replyContent,
         timestamp: new Date().toISOString(),
         actions: actionsToProcess.length > 0 ? actionsToProcess : undefined,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Refresh balance after charging
+      if (data.newBalance !== undefined) {
+        queryClient.invalidateQueries(["/api/immortality/balance"]);
+      }
 
       // Auto-execute actions that have autoExecute: true
       for (let i = 0; i < actionsToProcess.length; i++) {
@@ -223,9 +277,19 @@ export function ImmortalityChat() {
   return (
     <ThemedCard className="h-full p-6 flex flex-col">
       {/* Header - Fixed */}
-      <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-        <MessageSquare className="w-5 h-5" />
-        <span className="font-semibold">赛博分身对话</span>
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5" />
+          <span className="font-semibold">赛博分身对话</span>
+        </div>
+        {isAuthenticated && (
+          <div className="flex items-center gap-2 text-sm">
+            <Coins className={cn("w-4 h-4", theme === "cyberpunk" ? "text-cyan-400" : "text-primary")} />
+            <span className={cn("font-medium", theme === "cyberpunk" ? "text-cyan-300" : "text-slate-700")}>
+              {currentBalance} Credits
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Messages Area - Scrollable */}
@@ -248,6 +312,19 @@ export function ImmortalityChat() {
                 {msg.role === "user" ? "你" : "Cyber Immortality"}
               </div>
               <p>{msg.content}</p>
+              
+              {/* Render payment component if paymentAction is true */}
+              {msg.paymentAction && (
+                <div className="mt-3">
+                  <ChatPayment
+                    suggestedAmount={msg.suggestedAmount}
+                    onSuccess={() => {
+                      // Invalidate balance query to refresh balance after payment
+                      queryClient.invalidateQueries(["/api/immortality/balance"]);
+                    }}
+                  />
+                </div>
+              )}
               
               {/* Render action buttons for non-auto-execute actions */}
               {msg.actions && msg.actions.length > 0 && (
@@ -317,6 +394,24 @@ export function ImmortalityChat() {
           )}
           placeholder="输入想对分身说的话..."
         />
+        <ThemedButton
+          size="sm"
+          onClick={() => {
+            // Insert a payment action message with default suggested amount
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: "充值 Immortality Credits 以继续使用聊天功能",
+                timestamp: new Date().toISOString(),
+                paymentAction: true,
+                suggestedAmount: 20,
+              },
+            ]);
+          }}
+        >
+          充值
+        </ThemedButton>
         <ThemedButton emphasis disabled={!input.trim() || chatMutation.status === "pending"} onClick={handleSend}>
           {chatMutation.status === "pending" ? (
             <>

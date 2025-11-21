@@ -637,13 +637,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to build Immortality actions from user message and context
-  type ImmortalityActionType = "activate_agent" | "upload_memory" | "mint_badge";
+  type ImmortalityActionType = "activate_agent" | "upload_memory" | "mint_badge" | "pay_poi";
 
   interface ActionMessage {
     type: "action";
     actionType: ImmortalityActionType;
     autoExecute: boolean;
     content: string;
+    suggestedAmount?: number; // For pay_poi action
   }
 
   function buildImmortalityActions(params: {
