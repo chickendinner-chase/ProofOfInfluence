@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { WagmiProvider } from 'wagmi';
 import { config } from './lib/wagmi';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { I18nProvider } from './i18n';
 import { AppRouter } from "./routerConfig";
 
 function Router() {
@@ -18,14 +19,16 @@ function Router() {
 function App() {
   return (
     <ThemeProvider>
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <I18nProvider>
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </WagmiProvider>
+      </I18nProvider>
     </ThemeProvider>
   );
 }
