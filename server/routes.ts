@@ -17,6 +17,7 @@ import { registerAuthRoutes } from "./routes/auth";
 import { registerTestRoutes } from "./routes/test";
 import { registerImmortalityRoutes } from "./routes/immortality";
 import { registerAgentKitRoutes } from "./routes/agentkit";
+import { getRwaItems } from "./routes/rwa";
 import { mintTestBadge } from "./agentkit";
 import { generateImmortalityReply } from "./chatbot/generateReply";
 import { z } from "zod";
@@ -122,6 +123,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTestRoutes(app);
   registerImmortalityRoutes(app);
   registerAgentKitRoutes(app);
+
+  // RWA routes
+  app.get("/api/rwa/items", getRwaItems);
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {

@@ -94,7 +94,21 @@ export interface Messages {
       empty: string;
     };
   };
+  market: {
+    ticker: {
+      title: string;
+      cta: string;
+    };
+    status: {
+      preparing: string;
+      open: string;
+      closed: string;
+    };
+    listTitle: string;
+    listSubtitle: string;
+  };
   rwa: {
+    tickerPrefix: string;
     market: {
       title: string;
       subtitle: string;

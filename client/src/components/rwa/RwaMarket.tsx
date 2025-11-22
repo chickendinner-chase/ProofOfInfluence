@@ -1,22 +1,22 @@
 import React from "react";
 import { useI18n } from "../../i18n";
 import { useTheme } from "@/contexts/ThemeContext";
-import type { RwaItem, RwaType } from "../../../../../shared/rwa-types";
-import { fetchRwaItems } from "../../lib/rwa/api";
+import type { RwaItem } from "../../../../shared/types/rwa";
+import { useRwaItems } from "../../hooks/useRwaItems";
 import { cn } from "@/lib/utils";
 import { ThemedCard } from "../themed";
 
 export function RwaMarket() {
   const { t } = useI18n();
   const { theme } = useTheme();
-  const [items, setItems] = React.useState<RwaItem[] | null>(null);
+  const { items, loading, error } = useRwaItems();
 
-  React.useEffect(() => {
-    fetchRwaItems().then(setItems);
-  }, []);
-
-  if (!items) {
+  if (loading) {
     return <div className="p-8 text-center">{t("rwa.market.loading")}</div>;
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-red-500">{error.message}</div>;
   }
 
   if (items.length === 0) {
@@ -25,27 +25,15 @@ export function RwaMarket() {
 
   const dash = t("common.placeholder.dash") ?? "-";
 
-  const typeLabel = (type: RwaType) => {
-    switch (type) {
-      case "LICENSE":
-        return t("rwa.type.license");
-      case "PATENT":
-        return t("rwa.type.patent");
-      case "LAND":
-        return t("rwa.type.land");
-      default:
-        return dash;
-    }
-  };
-
+  // Map RwaStatus to i18n keys
   const statusLabel = (status: RwaItem["status"]) => {
     switch (status) {
       case "PREPARING":
-        return t("rwa.item.status.preparing");
+        return t("market.status.preparing");
       case "OPEN":
-        return t("rwa.item.status.open");
+        return t("market.status.open");
       case "CLOSED":
-        return t("rwa.item.status.closed");
+        return t("market.status.closed");
       default:
         return dash;
     }
@@ -57,11 +45,11 @@ export function RwaMarket() {
         <h1 className={cn(
             "text-3xl font-bold mb-2",
             theme === 'cyberpunk' ? "text-cyan-400 font-orbitron" : "text-slate-900 font-fredoka"
-        )}>{t("rwa.market.title")}</h1>
+        )}>{t("market.listTitle")}</h1>
         <p className={cn(
             "text-lg",
             theme === 'cyberpunk' ? "text-slate-400 font-rajdhani" : "text-slate-600 font-poppins"
-        )}>{t("rwa.market.subtitle")}</p>
+        )}>{t("market.listSubtitle")}</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -77,7 +65,7 @@ export function RwaMarket() {
                     </span>
                 )}
                 <span className={cn(
-                    "text-xs font-bold",
+                    "text-xs font-bold uppercase",
                     theme === 'cyberpunk' ? "text-green-400" : "text-green-600"
                 )}>
                     {statusLabel(item.status)}
@@ -93,8 +81,15 @@ export function RwaMarket() {
                 "text-sm mb-6",
                 theme === 'cyberpunk' ? "text-slate-400" : "text-slate-500"
             )}>
-                {typeLabel(item.type)}
+                {item.type}
             </div>
+
+            <p className={cn(
+                "text-sm mb-6 flex-grow",
+                theme === 'cyberpunk' ? "text-slate-300" : "text-slate-600"
+            )}>
+                {item.shortDescription}
+            </p>
 
             <div className="mt-auto space-y-3 pt-4 border-t border-slate-200/10">
               <div className="flex justify-between text-sm">
@@ -104,20 +99,7 @@ export function RwaMarket() {
               <div className="flex justify-between text-sm">
                 <span className="opacity-60">{t("rwa.item.field.minAllocation")}</span>
                 <span className="font-medium">
-                  {item.minAllocationUsd != null
-                    ? `$${item.minAllocationUsd.toLocaleString()}`
-                    : dash}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="opacity-60">{t("rwa.item.field.expectedYield")}</span>
-                <span className={cn(
-                    "font-bold",
-                    theme === 'cyberpunk' ? "text-green-400" : "text-green-600"
-                )}>
-                  {item.expectedYieldApr != null
-                    ? `${item.expectedYieldApr}%`
-                    : dash}
+                  {item.minAllocation ?? dash}
                 </span>
               </div>
             </div>

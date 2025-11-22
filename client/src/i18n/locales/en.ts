@@ -96,7 +96,21 @@ export const en: Messages = {
       empty: 'No RWA items available',
     },
   },
+  market: {
+    ticker: {
+      title: 'Immortality RWA preview',
+      cta: 'View details',
+    },
+    status: {
+      preparing: 'Preparing',
+      open: 'Open',
+      closed: 'Closed',
+    },
+    listTitle: 'Immortality RWA market',
+    listSubtitle: 'Preview real-world assets that can be linked to your immortal identity.',
+  },
   rwa: {
+    tickerPrefix: '[RWA]',
     market: {
       title: 'Immortality RWA Market',
       subtitle: 'Preview Real World Assets that can be linked to your Cyber Immortality identity.',
