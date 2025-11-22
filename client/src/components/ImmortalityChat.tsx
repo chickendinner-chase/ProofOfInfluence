@@ -346,16 +346,36 @@ export function ImmortalityChat() {
   };
 
   const handleRwaSelected = (item: RwaItem) => {
-    // Just add a message for now or trigger a state change
-    setMessages((prev) => [
+    // Dispatch RWA selection event to state machine
+    // This can trigger RWA_UNLOCK step if badge is already minted
+    const newState = handleImmortalityEvent(flowState, {
+      rwaItemId: item.id,
+    });
+    
+    if (newState.currentStep !== flowState.currentStep) {
+      setFlowState(newState);
+      setMessages((prev) => [
         ...prev,
         {
-            role: "user",
-            content: `I'm interested in ${item.name}`,
-            timestamp: new Date().toISOString(),
+          role: 'assistant',
+          content: t(mapStepToReplyKey(newState.currentStep)),
+          timestamp: new Date().toISOString(),
         },
+      ]);
+    } else {
+      setFlowState(newState);
+    }
+    
+    // Add user message and trigger chat
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: `I'm interested in ${item.name}`,
+        timestamp: new Date().toISOString(),
+      },
     ]);
-    chatMutation.mutate(`I'm interested in ${item.name}`);
+    chatMutation.mutate(`I'm interested in ${item.name}. Can you tell me more about this RWA asset?`);
   };
 
   return (
