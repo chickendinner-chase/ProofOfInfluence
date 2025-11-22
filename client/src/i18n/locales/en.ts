@@ -89,6 +89,12 @@ export const en: Messages = {
       completed: 'Setup complete. Your AI is now active and linked to your RWA portfolio.',
       default: 'Processing...',
     },
+    rwa: {
+      preview_redirect: 'Opening the asset detail page for you...',
+      after_preview_prompt: '💡 Interested in this asset? You can preview details or register your interest below.',
+      register_success: '✅ Your interest for this asset has been registered. We will reach out when subscription is available.',
+    },
+    initial_hint: 'You can click the RWA preview bar above to explore assets, or simply type your questions below. When you find an asset you like, use the buttons on its card to preview details or register your interest.',
   },
   chat: {
     rwaTicker: {
@@ -134,6 +140,10 @@ export const en: Messages = {
         preparing: 'Preparing',
         open: 'Open',
         closed: 'Closed',
+      },
+      action: {
+        preview: 'Preview',
+        registerInterest: 'Register Interest',
       },
     },
   },

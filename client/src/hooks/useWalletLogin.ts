@@ -34,12 +34,20 @@ export function useWalletLogin() {
         message,
       });
 
-      // 3) Login with signature
+      // 3) Check for referral info in localStorage
+      const refProfileId = localStorage.getItem('ref_profile_id');
+
+      // 4) Login with signature and referral info
       const loginRes = await fetch("/api/auth/wallet/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ walletAddress: address, signature, message }),
+        body: JSON.stringify({ 
+          walletAddress: address, 
+          signature, 
+          message,
+          refProfileId: refProfileId || undefined,
+        }),
       });
 
       if (!loginRes.ok) {
@@ -73,7 +81,9 @@ export function useWalletLogin() {
     },
     isConnected,
     isPending: mutation.isPending,
-    ...mutation,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError,
+    error: mutation.error,
   };
 }
 

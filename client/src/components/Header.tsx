@@ -6,12 +6,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, ChevronDown, ShoppingCart, Briefcase, Palette, Settings } from "lucide-react";
+import { Menu, X, ChevronDown, ShoppingCart, Briefcase, Palette, Settings, Languages } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import WalletConnectButton from "@/components/WalletConnectButton";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useI18n } from "@/i18n";
+import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 
@@ -25,6 +27,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
   const { isAuthenticated } = useAuth();
   const { isAdmin } = useAdminAccess();
   const { theme, toggleTheme } = useTheme();
+  const { locale, setLocale } = useI18n();
 
   // Hide Connect Wallet and Login button on /login page
   const isLoginPage = location === ROUTES.LOGIN;
@@ -133,6 +136,43 @@ export default function Header({ lang = "zh" }: HeaderProps) {
 
         {/* Right Actions */}
         <div className="flex items-center gap-3">
+          {/* Language Switcher */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                'p-2 rounded-md transition-all outline-none',
+                theme === 'cyberpunk'
+                  ? 'hover:bg-cyan-400/10 text-cyan-300'
+                  : 'hover:bg-slate-100 text-slate-700'
+              )}
+              aria-label="Select language"
+              title="Switch language"
+            >
+              <Languages className="w-5 h-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className={cn(
+              theme === 'cyberpunk'
+                ? 'bg-slate-800 border-slate-700'
+                : 'bg-white border-slate-200'
+            )}>
+              {Object.entries(SUPPORTED_LOCALES).map(([key, value]) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() => setLocale(value)}
+                  className={cn(
+                    'cursor-pointer',
+                    locale === value && 'bg-cyan-400/10 text-cyan-300',
+                    theme === 'cyberpunk'
+                      ? 'text-slate-300 hover:text-white hover:bg-slate-700'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  )}
+                >
+                  {LOCALE_LABELS[value]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}

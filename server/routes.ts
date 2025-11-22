@@ -5,7 +5,8 @@ import { ethers } from "ethers";
 import { storage } from "./storage";
 import { setupAuth } from "./auth/session";
 import { isAuthenticated } from "./auth";
-import { insertProfileSchema, insertLinkSchema } from "@shared/schema";
+import { insertProfileSchema, insertLinkSchema, agents } from "@shared/schema";
+import { db } from "./db";
 import { stripe } from "./stripe";
 import { registerMarketRoutes } from "./routes/market";
 import { registerReservePoolRoutes } from "./routes/reservePool";
@@ -1098,10 +1099,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment profile views
       await storage.incrementProfileViews(user.id);
 
-      res.json({ profile, links, user });
+      // Get extended stats (Phase 3)
+      const stats = await storage.getProfileStatsByUserId(user.id);
+
+      // Check if current user is the owner
+      const currentUserId = (req as any).user?.claims?.sub;
+      const isOwner = currentUserId === user.id;
+
+      // Check if this is an AI agent profile and get creator info
+      let creatorInfo = null;
+      try {
+        // Try to find agent by username or wallet
+        const allAgents = await db.select().from(agents);
+        const agent = allAgents.find(a => {
+          // Check if agent id matches username or wallet matches
+          return a.id === username || 
+                 (a.walletAddress && user.walletAddress && a.walletAddress.toLowerCase() === user.walletAddress.toLowerCase());
+        });
+        
+        if (agent && agent.metadata) {
+          const metadata = agent.metadata as any;
+          if (metadata.creatorUserId) {
+            const creator = await storage.getUser(metadata.creatorUserId);
+            if (creator && creator.username) {
+              creatorInfo = {
+                username: creator.username,
+                userId: creator.id,
+              };
+            }
+          }
+        }
+      } catch (error) {
+        // Silently fail if agent lookup fails
+        console.warn('Error looking up agent creator:', error);
+      }
+
+      res.json({ 
+        profile, 
+        links, 
+        user: { id: user.id, username: user.username, role: user.role },
+        stats,
+        isOwner,
+        creator: creatorInfo,
+      });
     } catch (error) {
       console.error("Error fetching public profile:", error);
       res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // Get user badges (by username - public)
+  app.get("/api/profile/:username/badges", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const badgeStatuses = await storage.getUserBadgeStatuses(user.id);
+      res.json({ badges: badgeStatuses });
+    } catch (error) {
+      console.error("Error fetching user badges:", error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  // Get user activity (by username - public)
+  app.get("/api/profile/:username/activity", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const activities = await storage.getProfileActivity(user.id, limit);
+      res.json({ activities });
+    } catch (error) {
+      console.error("Error fetching user activity:", error);
+      res.status(500).json({ message: "Failed to fetch activity" });
+    }
+  });
+
+  // Get agents created by user (by username - public)
+  app.get("/api/profile/:username/agents", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const agents = await storage.getAgentsByCreator(user.id);
+      res.json({ agents });
+    } catch (error) {
+      console.error("Error fetching user agents:", error);
+      res.status(500).json({ message: "Failed to fetch agents" });
+    }
+  });
+
+  // Get my profile (authenticated - with stats)
+  app.get("/api/profile/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const profile = await storage.getProfile(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      const links = await storage.getLinks(userId);
+      const stats = await storage.getProfileStatsByUserId(userId);
+
+      res.json({ 
+        profile, 
+        user: { id: user?.id, username: user?.username },
+        links,
+        stats,
+        isOwner: true 
+      });
+    } catch (error) {
+      console.error("Error fetching my profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // Get my badges (authenticated)
+  app.get("/api/profile/me/badges", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const badgeStatuses = await storage.getUserBadgeStatuses(userId);
+      res.json({ badges: badgeStatuses });
+    } catch (error) {
+      console.error("Error fetching my badges:", error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  // Get my activity (authenticated)
+  app.get("/api/profile/me/activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const activities = await storage.getProfileActivity(userId, limit);
+      res.json({ activities });
+    } catch (error) {
+      console.error("Error fetching my activity:", error);
+      res.status(500).json({ message: "Failed to fetch activity" });
+    }
+  });
+
+  // Get dashboard stats (authenticated)
+  app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get profile stats
+      const stats = await storage.getProfileStatsByUserId(userId);
+      
+      // Get user balance
+      const balance = await storage.getUserBalance(userId);
+      const totalBalance = balance?.immortalityCredits || 0;
+      
+      // Calculate XP level based on tasks completed (simple formula: level = tasks / 5 + 1)
+      const xpLevel = Math.floor((stats.tasksCompleted || 0) / 5) + 1;
+      
+      // Calculate 24h PnL (simplified - use pnl7d / 7 for now, or 0 if not available)
+      const pnl24h = stats.pnl7d ? (stats.pnl7d / 7) : 0;
+      const pnl24hFormatted = pnl24h > 0 ? `+$${Math.round(pnl24h * 100) / 100}` : `$${Math.round(pnl24h * 100) / 100}`;
+      const pnlPercentage = stats.pnl7d ? `+${(pnl24h / 100).toFixed(1)}%` : "0%";
+      
+      res.json({
+        totalBalance: `$${totalBalance.toLocaleString()}`,
+        pnl24h: pnl24hFormatted,
+        pnlPercentage,
+        xpLevel,
+        trend: pnl24h >= 0 ? "up" : "down",
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 

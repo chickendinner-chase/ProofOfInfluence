@@ -36,6 +36,7 @@ import {
   testWallets,
   testRuns,
   testSteps,
+  agents,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -117,6 +118,9 @@ import {
   type InsertTestRun,
   type TestStep,
   type InsertTestStep,
+  type ProfileStats,
+  type ProfileActivity,
+  type UserBadgeStatus,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, or, lte } from "drizzle-orm";
@@ -306,6 +310,12 @@ export interface IStorage {
   getTestWalletsByScenario(scenario: string): Promise<TestWallet[]>;
   updateTestWalletStatus(id: number, status: string): Promise<TestWallet>;
   getAvailableTestWallets(scenario: string): Promise<TestWallet[]>;
+  
+  // Phase 3: Profile Stats, Badges, and Activity Feed
+  getProfileStatsByUserId(userId: string): Promise<ProfileStats>;
+  getUserBadgeStatuses(userId: string): Promise<UserBadgeStatus[]>;
+  getProfileActivity(userId: string, limit: number): Promise<ProfileActivity[]>;
+  getAgentsByCreator(userId: string): Promise<Agent[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -359,13 +369,16 @@ export class DatabaseStorage implements IStorage {
     
     // Create new user
     const userId = `wallet_${normalized.slice(2, 10)}_${Date.now()}`;
-    user = await this.upsertUser({
-      id: userId,
-      walletAddress: normalized,
-      role: "user",
-    });
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        id: userId,
+        walletAddress: normalized,
+        role: "user",
+      })
+      .returning();
     
-    return user;
+    return newUser;
   }
 
   async updateUserWallet(userId: string, walletAddress: string): Promise<User> {
@@ -1671,22 +1684,37 @@ export class DatabaseStorage implements IStorage {
     return badge;
   }
 
+  async updateBadge(tokenId: string, updates: Partial<InsertBadge>): Promise<Badge> {
+    const [badge] = await db
+      .update(badges)
+      .set(updates)
+      .where(eq(badges.tokenId, tokenId))
+      .returning();
+    return badge;
+  }
+
   // Event sync state operations
-  async getOrCreateSyncState(contractName: string): Promise<EventSyncState> {
-    const [existing] = await db
+  async getEventSyncState(contractName: string): Promise<EventSyncState | undefined> {
+    const [state] = await db
       .select()
       .from(eventSyncState)
       .where(eq(eventSyncState.contractName, contractName));
+    return state;
+  }
 
-    if (existing) {
-      return existing;
-    }
-
-    const [newState] = await db
+  async upsertEventSyncState(state: InsertEventSyncState): Promise<EventSyncState> {
+    const [result] = await db
       .insert(eventSyncState)
-      .values({ contractName, lastBlockNumber: null })
+      .values(state)
+      .onConflictDoUpdate({
+        target: eventSyncState.contractName,
+        set: { 
+          lastBlockNumber: state.lastBlockNumber,
+          updatedAt: new Date() 
+        },
+      })
       .returning();
-    return newState;
+    return result;
   }
 
   async updateLastIndexedBlock(contractName: string, lastBlockNumber: string): Promise<EventSyncState> {
@@ -1809,6 +1837,213 @@ export class DatabaseStorage implements IStorage {
       .from(testSteps)
       .where(eq(testSteps.runId, runId))
       .orderBy(testSteps.createdAt);
+  }
+
+  // Phase 3: Profile Stats, Badges, and Activity Feed methods
+
+  /**
+   * Get extended profile stats for a user
+   * Computes PnL, tasks completed, referrals, etc.
+   */
+  async getProfileStatsByUserId(userId: string): Promise<ProfileStats> {
+    // Get profile for views
+    const profile = await this.getProfile(userId);
+    const views = profile?.totalViews || 0;
+
+    // Get links for link clicks
+    const userLinks = await this.getLinks(userId);
+    const linkClicks = userLinks.reduce((sum, link) => sum + link.clicks, 0);
+
+    // Count referrals (users referred by this user's profile)
+    const userProfile = await this.getProfile(userId);
+    const [referralsResult] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(users)
+      .where(eq(users.referredByProfileId, userProfile?.id || ''));
+    const referralsCount = Number(referralsResult?.count || 0);
+
+    // Count completed tasks
+    const [tasksResult] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(userEarlyBirdProgress)
+      .where(and(
+        eq(userEarlyBirdProgress.userId, userId),
+        eq(userEarlyBirdProgress.completed, true)
+      ));
+    const tasksCompleted = Number(tasksResult?.count || 0);
+
+    // Calculate PnL from market orders (simplified - just count successful trades for now)
+    // TODO: Implement proper PnL calculation from trades
+    const pnl7d = null;
+    const pnl30d = null;
+    const pnlAll = null;
+
+    // Social stats (defer for now)
+    const followersCount = null;
+
+    // AI-specific stats (defer for now)
+    const aiSubscribersCount = null;
+    const aiWinRate = null;
+    const aiVolatility = null;
+
+    return {
+      views,
+      referralsCount,
+      linkClicks,
+      pnl7d,
+      pnl30d,
+      pnlAll,
+      tasksCompleted,
+      followersCount,
+      aiSubscribersCount,
+      aiWinRate,
+      aiVolatility,
+    };
+  }
+
+  /**
+   * Get user badge statuses (unlocked/locked) mapped to 12 badge definitions
+   */
+  async getUserBadgeStatuses(userId: string): Promise<UserBadgeStatus[]> {
+    // Get user's wallet address
+    const user = await this.getUser(userId);
+    if (!user || !user.walletAddress) {
+      // Return all 12 badges as locked
+      return Array.from({ length: 12 }, (_, i) => ({
+        badgeId: i + 1,
+        unlocked: false,
+        unlockedAt: null,
+        tokenId: null,
+      }));
+    }
+
+    // Get user's badges from database
+    const userBadges = await this.getBadgesByOwner(user.walletAddress);
+    
+    // Create a map of badgeType to badge data
+    const badgeMap = new Map<number, Badge>();
+    for (const badge of userBadges) {
+      badgeMap.set(badge.badgeType, badge);
+    }
+
+    // Return status for all 12 badge types
+    return Array.from({ length: 12 }, (_, i) => {
+      const badgeId = i + 1;
+      const badge = badgeMap.get(badgeId);
+      return {
+        badgeId,
+        unlocked: !!badge,
+        unlockedAt: badge?.mintedAt?.toISOString() || null,
+        tokenId: badge?.tokenId || null,
+      };
+    });
+  }
+
+  /**
+   * Get recent activity for a user profile
+   * Aggregates from tasks, trades, actions, badges
+   */
+  async getProfileActivity(userId: string, limit: number = 10): Promise<ProfileActivity[]> {
+    const activities: ProfileActivity[] = [];
+
+    // Get completed tasks
+    const tasks = await db
+      .select({
+        id: userEarlyBirdProgress.id,
+        taskId: userEarlyBirdProgress.taskId,
+        completedAt: userEarlyBirdProgress.completedAt,
+      })
+      .from(userEarlyBirdProgress)
+      .where(and(
+        eq(userEarlyBirdProgress.userId, userId),
+        eq(userEarlyBirdProgress.completed, true)
+      ))
+      .orderBy(desc(userEarlyBirdProgress.completedAt))
+      .limit(limit);
+
+    for (const task of tasks) {
+      if (task.completedAt) {
+        // Get task title
+        const [taskData] = await db
+          .select()
+          .from(earlyBirdTasks)
+          .where(eq(earlyBirdTasks.id, task.taskId));
+
+        activities.push({
+          id: `task-${task.id}`,
+          type: 'task_completed',
+          title: `Completed quest: ${taskData?.title || 'Task'}`,
+          createdAt: task.completedAt.toISOString(),
+        });
+      }
+    }
+
+    // Get recent market orders
+    const orders = await db
+      .select()
+      .from(marketOrders)
+      .where(and(
+        eq(marketOrders.userId, userId),
+        eq(marketOrders.status, 'COMPLETED')
+      ))
+      .orderBy(desc(marketOrders.createdAt))
+      .limit(limit);
+
+    for (const order of orders) {
+      activities.push({
+        id: `trade-${order.id}`,
+        type: 'trade_opened',
+        title: `Opened position on ${order.tokenIn}/${order.tokenOut}`,
+        createdAt: order.createdAt!.toISOString(),
+      });
+    }
+
+    // Get recent agentkit actions
+    const actions = await db
+      .select()
+      .from(agentkitActions)
+      .where(eq(agentkitActions.userId, userId))
+      .orderBy(desc(agentkitActions.createdAt))
+      .limit(limit);
+
+    for (const action of actions) {
+      activities.push({
+        id: `action-${action.id}`,
+        type: 'action_executed',
+        title: `Executed ${action.actionType}`,
+        createdAt: action.createdAt!.toISOString(),
+      });
+    }
+
+    // Sort all activities by timestamp and limit
+    activities.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    return activities.slice(0, limit);
+  }
+
+  /**
+   * Get agents created by a user
+   * Note: agents table needs creatorUserId field or metadata
+   */
+  async getAgentsByCreator(userId: string): Promise<Agent[]> {
+    // For now, check if metadata contains creatorUserId
+    // If no agents table has creator info, return empty array
+    try {
+      const allAgents = await db
+        .select()
+        .from(agents);
+
+      // Filter agents where metadata.creatorUserId matches
+      return allAgents.filter(agent => {
+        const metadata = agent.metadata as any;
+        return metadata?.creatorUserId === userId;
+      });
+    } catch (error) {
+      console.error('Error getting agents by creator:', error);
+      return [];
+    }
   }
 }
 

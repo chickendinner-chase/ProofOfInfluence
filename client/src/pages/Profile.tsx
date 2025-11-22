@@ -7,7 +7,9 @@ import { ThemedCard, ThemedButton, ThemedInput } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Palette, Bell, Shield, Wallet, Save, LogOut, Brain, Lock, Link as LinkIcon, CheckCircle2 } from "lucide-react";
+import { useMeProfile } from "@/hooks/useMeProfile";
+import { LinksManager } from "@/components/dashboard/LinksManager";
+import { User, Mail, Palette, Bell, Shield, Wallet, Save, LogOut, Brain, Lock, Link as LinkIcon, CheckCircle2, Loader2 } from "lucide-react";
 import type { User as UserType } from "@shared/schema";
 import { useAccount, useWalletClient, useDisconnect } from "wagmi";
 import { ROUTES } from "@/routes";
@@ -26,6 +28,9 @@ export default function Profile() {
   const { disconnect } = useDisconnect();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+  // Use the new useMeProfile hook
+  const { data: meProfileData, isLoading: profileLoading, refetch: refetchProfile } = useMeProfile();
 
   // Fetch user data (keeping existing API integration)
   const { data: user } = useQuery<UserType>({
@@ -57,12 +62,40 @@ export default function Profile() {
   const [exploration, setExploration] = useState(0.5);
   const [safety, setSafety] = useState(0.5);
 
+  // Profile form state
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    bio: '',
+    avatarUrl: '',
+    googleUrl: '',
+    twitterUrl: '',
+    weiboUrl: '',
+    tiktokUrl: '',
+    isPublic: true,
+  });
+
   useEffect(() => {
     if (user) {
       setUsername(user.username ?? "");
       setEmail(user.email ?? "");
     }
   }, [user]);
+
+  // Load profile data into form
+  useEffect(() => {
+    if (meProfileData?.profile) {
+      setProfileForm({
+        name: meProfileData.profile.name || '',
+        bio: meProfileData.profile.bio || '',
+        avatarUrl: meProfileData.profile.avatarUrl || '',
+        googleUrl: meProfileData.profile.googleUrl || '',
+        twitterUrl: meProfileData.profile.twitterUrl || '',
+        weiboUrl: meProfileData.profile.weiboUrl || '',
+        tiktokUrl: meProfileData.profile.tiktokUrl || '',
+        isPublic: meProfileData.profile.isPublic,
+      });
+    }
+  }, [meProfileData]);
 
   const { data: personality } = useQuery<PersonalityProfile>({
     queryKey: ["/api/me/personality"],
@@ -157,6 +190,51 @@ export default function Profile() {
     refetchIdentities();
   };
 
+  // Profile save mutation
+  const profileMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(profileForm),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to save profile");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Profile updated successfully" });
+      refetchProfile();
+      queryClient.invalidateQueries({ queryKey: ['/api/profile/me'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to save profile", variant: "destructive" });
+    },
+  });
+
+  const handleSaveProfile = () => {
+    profileMutation.mutate();
+  };
+
+  // Loading state
+  if (profileLoading) {
+    return (
+      <PageLayout>
+        <Section>
+          <div className="text-center py-12">
+            <Loader2 className={cn(
+              "w-12 h-12 animate-spin mx-auto mb-4",
+              theme === 'cyberpunk' ? 'text-cyan-400' : 'text-blue-500'
+            )} />
+            <p className="text-sm opacity-70">Loading profile...</p>
+          </div>
+        </Section>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout>
       <Section>
@@ -203,6 +281,100 @@ export default function Profile() {
               </ThemedButton>
             </div>
           </ThemedCard>
+
+          {/* Profile Information */}
+          <ThemedCard className="p-6 mb-6">
+            <h3 className={cn(
+              'text-lg font-bold mb-4 flex items-center gap-2',
+              theme === 'cyberpunk' ? 'font-rajdhani text-cyan-200' : 'font-poppins text-slate-900'
+            )}>
+              <User className="w-5 h-5" />
+              Profile Information
+            </h3>
+
+            <div className="space-y-4">
+              <ThemedInput
+                label="Display Name"
+                placeholder="Your Name"
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+              />
+
+              <div>
+                <label className="text-sm opacity-70 mb-1 block">Bio</label>
+                <textarea
+                  className={cn(
+                    "w-full p-3 rounded-lg border transition-all resize-none",
+                    theme === 'cyberpunk'
+                      ? 'bg-slate-900/60 border-cyan-400/30 focus:border-cyan-400 text-cyan-100'
+                      : 'bg-white border-slate-200 focus:border-blue-400 text-slate-900'
+                  )}
+                  rows={3}
+                  placeholder="Tell us about yourself..."
+                  value={profileForm.bio}
+                  onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                />
+              </div>
+
+              <ThemedInput
+                label="Avatar URL"
+                placeholder="https://example.com/avatar.jpg"
+                value={profileForm.avatarUrl}
+                onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ThemedInput
+                  label="Google Profile URL"
+                  placeholder="https://google.com/..."
+                  value={profileForm.googleUrl}
+                  onChange={(e) => setProfileForm({ ...profileForm, googleUrl: e.target.value })}
+                />
+
+                <ThemedInput
+                  label="Twitter URL"
+                  placeholder="https://twitter.com/..."
+                  value={profileForm.twitterUrl}
+                  onChange={(e) => setProfileForm({ ...profileForm, twitterUrl: e.target.value })}
+                />
+
+                <ThemedInput
+                  label="Weibo URL"
+                  placeholder="https://weibo.com/..."
+                  value={profileForm.weiboUrl}
+                  onChange={(e) => setProfileForm({ ...profileForm, weiboUrl: e.target.value })}
+                />
+
+                <ThemedInput
+                  label="TikTok URL"
+                  placeholder="https://tiktok.com/@..."
+                  value={profileForm.tiktokUrl}
+                  onChange={(e) => setProfileForm({ ...profileForm, tiktokUrl: e.target.value })}
+                />
+              </div>
+
+              <ThemedButton emphasis onClick={handleSaveProfile} disabled={profileMutation.isPending}>
+                {profileMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save Profile
+              </ThemedButton>
+            </div>
+          </ThemedCard>
+
+          {/* Links Management */}
+          <div className="mb-6">
+            <h3 className={cn(
+              'text-lg font-bold mb-4 flex items-center gap-2',
+              theme === 'cyberpunk' ? 'font-rajdhani text-cyan-200' : 'font-poppins text-slate-900'
+            )}>
+              <LinkIcon className="w-5 h-5" />
+              My Links
+            </h3>
+            <LinksManager />
+          </div>
 
           {/* Personality Profile */}
           <ThemedCard className="p-6 mb-6">

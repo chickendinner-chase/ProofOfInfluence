@@ -9,6 +9,7 @@ import { AirdropCard } from "@/components/AirdropCard";
 import { AllowlistCard } from "@/components/AllowlistCard";
 import { ReferralCard } from "@/components/ReferralCard";
 import { BadgeCard } from "@/components/BadgeCard";
+import { PublicProfileCard } from "@/components/dashboard/PublicProfileCard";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
@@ -25,37 +26,124 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { User } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Dashboard() {
   const { theme } = useTheme();
 
-  // Fetch user data (keeping existing API integration)
+  // Fetch user data
   const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
   });
 
-  // Mock data for demonstration
-  const stats = {
-    totalBalance: "$128,431",
-    pnl24h: "+$1,230",
-    pnlPercentage: "+2.4%",
-    xpLevel: 4,
+  // Fetch dashboard stats
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery<{
+    totalBalance: string;
+    pnl24h: string;
+    pnlPercentage: string;
+    xpLevel: number;
+    trend: "up" | "down";
+    stats: any;
+  }>({
+    queryKey: ["/api/dashboard/stats"],
+    enabled: !!user,
+  });
+
+  // Fetch recent activities
+  const { data: activityData } = useQuery<{ activities: Array<{
+    id: string;
+    type: string;
+    title: string;
+    createdAt: string;
+  }> }>({
+    queryKey: ["/api/profile/me/activity"],
+    queryFn: async () => {
+      const res = await fetch("/api/profile/me/activity?limit=5");
+      if (!res.ok) return { activities: [] };
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  // Fetch tasks
+  const { data: tasksData } = useQuery<Array<{
+    id: string;
+    title: string;
+    description: string;
+    reward: number;
+  }>>({
+    queryKey: ["/api/early-bird/tasks"],
+    queryFn: async () => {
+      const res = await fetch("/api/early-bird/tasks");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Fetch user task progress
+  const { data: progressData } = useQuery<Array<{
+    taskId: string;
+    completed: boolean;
+    completedAt?: string;
+  }>>({
+    queryKey: ["/api/early-bird/user/progress"],
+    queryFn: async () => {
+      const res = await fetch("/api/early-bird/user/progress");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  // Transform activities for display
+  const recentActivities = (activityData?.activities || []).map(activity => {
+    // Map activity types to display format
+    let action = activity.title;
+    let amount = "";
+    let type: "stake" | "reward" | "bonus" | "other" = "other";
+    
+    if (activity.type === "task_completed") {
+      action = activity.title;
+      type = "reward";
+      amount = "+XP";
+    } else if (activity.type === "trade_opened") {
+      action = activity.title;
+      type = "stake";
+      amount = "Trade";
+    } else if (activity.type === "action_executed") {
+      action = activity.title;
+      type = "other";
+    }
+    
+    return {
+      action,
+      amount,
+      time: formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true }),
+      type,
+    };
+  });
+
+  // Transform tasks with progress
+  const tasks = (tasksData || []).slice(0, 3).map(task => {
+    const progress = progressData?.find(p => p.taskId === task.id);
+    return {
+      id: task.id,
+      label: task.title,
+      reward: `+${task.reward} POI`,
+      completed: progress?.completed || false,
+    };
+  });
+
+  // Use dashboard stats or fallback
+  const stats = dashboardStats || {
+    totalBalance: "$0",
+    pnl24h: "$0",
+    pnlPercentage: "0%",
+    xpLevel: 1,
     trend: "up" as const,
   };
 
-  const recentActivities = [
-    { action: "Staked POI", amount: "1,000 POI", time: "2 hours ago", type: "stake" },
-    { action: "Claimed Rewards", amount: "+50 POI", time: "5 hours ago", type: "reward" },
-    { action: "Referral Bonus", amount: "+25 POI", time: "1 day ago", type: "bonus" },
-  ];
-
-  const tasks = [
-    { id: 1, label: "每日签到", reward: "+5 XP", completed: true },
-    { id: 2, label: "完成充值", reward: "+30 XP", completed: false },
-    { id: 3, label: "邀请 1 位好友", reward: "+20 XP", completed: false },
-  ];
-
-  if (userLoading) {
+  if (userLoading || statsLoading) {
     return (
       <PageLayout>
         <Section>
@@ -154,6 +242,13 @@ export default function Dashboard() {
         </div>
       </Section>
 
+      {/* Public Profile Section */}
+      <Section title="My Public Profile" subtitle="Share your profile with others">
+        <div className="max-w-3xl mx-auto">
+          <PublicProfileCard />
+        </div>
+      </Section>
+
       {/* Staking Section */}
       <Section title="Staking" subtitle="Stake POI to earn rewards">
         <StakingCard />
@@ -242,7 +337,7 @@ export default function Dashboard() {
             </h3>
 
             <div className="space-y-3">
-              {tasks.map((task) => (
+              {tasks.length > 0 ? tasks.map((task) => (
                 <div
                   key={task.id}
                   className={cn(
@@ -275,7 +370,14 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className={cn(
+                  'text-center py-4 text-sm opacity-70',
+                  theme === 'cyberpunk' ? 'font-rajdhani' : 'font-poppins'
+                )}>
+                  No tasks available
+                </div>
+              )}
             </div>
 
             <Link href={ROUTES.AIRDROP}>
@@ -291,7 +393,7 @@ export default function Dashboard() {
       <Section title="Recent Activity" subtitle="Your latest transactions">
         <ThemedCard className="p-6">
           <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
+            {recentActivities.length > 0 ? recentActivities.map((activity, index) => (
               <div
                 key={index}
                 className={cn(
@@ -334,7 +436,14 @@ export default function Dashboard() {
                   {activity.amount}
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className={cn(
+                'text-center py-8 text-sm opacity-70',
+                theme === 'cyberpunk' ? 'font-rajdhani' : 'font-poppins'
+              )}>
+                No recent activity
+              </div>
+            )}
           </div>
         </ThemedCard>
       </Section>

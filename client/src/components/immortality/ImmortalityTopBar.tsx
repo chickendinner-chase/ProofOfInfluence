@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { ThemedButton } from "@/components/themed";
@@ -30,6 +30,10 @@ export function ImmortalityTopBar({
   const { address, isConnected } = useAccount();
   const { open } = useAppKit();
   const { loginWithWallet, isPending: isWalletLoginPending } = useWalletLogin();
+  const [location] = useLocation();
+  
+  // Hide recharge button on Immortality page (recharge is available in chat)
+  const isImmortalityPage = location?.startsWith("/app/immortality");
 
   return (
     <div
@@ -167,12 +171,15 @@ export function ImmortalityTopBar({
               </div>
             )}
             
-            <ThemedButton emphasis size="sm" asChild className="flex-1 md:flex-initial">
-              <Link href={ROUTES.APP_RECHARGE}>
-                充值 Credits
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Link>
-            </ThemedButton>
+            {/* Hide recharge button on Immortality page - recharge is available in chat */}
+            {!isImmortalityPage && (
+              <ThemedButton emphasis size="sm" asChild className="flex-1 md:flex-initial">
+                <Link href={ROUTES.APP_RECHARGE}>
+                  充值 Credits
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </ThemedButton>
+            )}
           </div>
         </div>
       </div>

@@ -4,8 +4,10 @@ import { ThemedCard, ThemedButton } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, MessageSquare, Coins } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useDemoUser } from "@/hooks/useDemoUser";
+import { useLocation } from "wouter";
 import {
   executeActivateAgent,
   executeUploadMemory,
@@ -14,6 +16,7 @@ import {
 } from "@/lib/immortalityActions";
 import { ChatPayment } from "@/components/ChatPayment";
 import { RwaTicker } from "./rwa/RwaTicker";
+import { RwaChatCard } from "./rwa/RwaChatCard";
 import { useI18n } from "@/i18n";
 import { ImmortalityFlowStep, ImmortalityFlowState } from "../../../shared/immortality-flow";
 import type { RwaItem } from "../../../shared/types/rwa";
@@ -34,6 +37,7 @@ interface ChatMessage {
   actions?: ActionMessage[];
   paymentAction?: boolean; // Flag to show payment component
   suggestedAmount?: number; // Suggested amount for payment
+  rwaItems?: RwaItem[]; // NEW: RWA assets attached to this message
 }
 
 interface ChatResponse {
@@ -55,7 +59,9 @@ export function ImmortalityChat() {
   const { t } = useI18n();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const demoUser = useDemoUser();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
@@ -92,14 +98,24 @@ export function ImmortalityChat() {
     }
   }, [isAuthenticated, user, flowState, t]);
 
-  // Initial Welcome Message
+  // Initial Welcome Message + Action Hint
   useEffect(() => {
       if (messages.length === 0) {
-          setMessages([{
+          const now = new Date().toISOString();
+          
+          const welcomeMessage: ChatMessage = {
               role: 'assistant',
               content: t(mapStepToReplyKey(flowState.currentStep)),
-              timestamp: new Date().toISOString()
-          }]);
+              timestamp: now,
+          };
+          
+          const hintMessage: ChatMessage = {
+              role: 'assistant',
+              content: t('immortality.initial_hint'),
+              timestamp: new Date().toISOString(),
+          };
+          
+          setMessages([welcomeMessage, hintMessage]);
       }
   }, []);
 
@@ -113,8 +129,6 @@ export function ImmortalityChat() {
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
-
-  const currentBalance = balanceData?.credits ?? 0;
 
   const handleActionMessage = async (action: ActionMessage, messageIndex: number, actionIndex?: number) => {
     // Check authentication before executing any action
@@ -345,18 +359,17 @@ export function ImmortalityChat() {
   };
 
   const handleRwaSelected = (item: RwaItem) => {
-    // Dispatch RWA selection event to state machine
-    // This can trigger RWA_UNLOCK step if badge is already minted
+    // 1) Update state machine
     const newState = handleImmortalityEvent(flowState, {
       rwaItemId: item.id,
     });
-    
+
     if (newState.currentStep !== flowState.currentStep) {
       setFlowState(newState);
       setMessages((prev) => [
         ...prev,
         {
-          role: 'assistant',
+          role: "assistant",
           content: t(mapStepToReplyKey(newState.currentStep)),
           timestamp: new Date().toISOString(),
         },
@@ -364,40 +377,97 @@ export function ImmortalityChat() {
     } else {
       setFlowState(newState);
     }
-    
-    // Add user message and trigger chat
+
+    // 2) Insert user message + assistant message with RWA card immediately
+    const now = new Date().toISOString();
+
     setMessages((prev) => [
       ...prev,
       {
         role: "user",
         content: `I'm interested in ${item.name}`,
+        timestamp: now,
+      },
+      {
+        role: "assistant",
+        content: t("immortality.rwa.after_preview_prompt"),
+        timestamp: new Date().toISOString(),
+        rwaItems: [item],
+      },
+    ]);
+
+    // Note: No automatic chat mutation - user can ask follow-up questions manually
+  };
+
+  const handleRwaPreview = (item: RwaItem) => {
+    // Optional: Insert a prompt message in chat
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: t("immortality.rwa.preview_redirect"),
         timestamp: new Date().toISOString(),
       },
     ]);
-    chatMutation.mutate(`I'm interested in ${item.name}. Can you tell me more about this RWA asset?`);
+
+    // Navigate to detail page
+    setLocation(`/app/rwa-market?id=${item.id}`);
+  };
+
+  const handleRwaBuy = (item: RwaItem) => {
+    // V0: Frontend-only feedback, no backend call required
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: t("immortality.rwa.register_success"),
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    toast({
+      title: t("common.success"),
+      description: t("immortality.rwa.register_success"),
+    });
+
+    // TODO: If backend API /api/rwa/register-interest is ready, add fetch call here
   };
 
   return (
-    <ThemedCard className="h-full flex flex-col overflow-hidden">
+    <ThemedCard className="h-full w-full flex flex-col overflow-hidden">
       {/* RWA Ticker */}
       <RwaTicker onSelectItem={handleRwaSelected} />
 
       <div className="flex flex-col flex-1 min-h-0 p-6">
-        {/* Header - Fixed */}
+        {/* Header - Fixed: Chat Title + Credits/Agent Info */}
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          <span className="font-semibold">{t('immortality.title')}</span>
-        </div>
-        {isAuthenticated && (
-          <div className="flex items-center gap-2 text-sm">
-            <Coins className={cn("w-4 h-4", theme === "cyberpunk" ? "text-cyan-400" : "text-primary")} />
-            <span className={cn("font-medium", theme === "cyberpunk" ? "text-cyan-300" : "text-slate-700")}>
-              {currentBalance} {t('immortality.credits')}
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            <span className="font-semibold">{t('immortality.title')}</span>
+          </div>
+          
+          {/* Credits and Agent Info */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm opacity-80">
+            <span>
+              Immortality Credits <span className="font-semibold">{balanceData?.credits ?? 0}</span>
+            </span>
+            <span className="hidden sm:inline">·</span>
+            <span>
+              POI Credits <span className="font-semibold">{balanceData?.poiCredits ?? 0}</span>
+            </span>
+            <span className="hidden sm:inline">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              Agent: {demoUser.isUsingDemoUser
+                ? (demoUser.selectedDemoUser?.username || demoUser.selectedDemoUser?.label || demoUser.selectedDemoUser?.walletAddress.slice(0, 6))
+                : (user?.username ?? "Guest")}
+              <span className={cn(
+                "h-2 w-2 rounded-full",
+                theme === "cyberpunk" ? "bg-emerald-400" : "bg-green-500"
+              )} />
+              <span>Online</span>
             </span>
           </div>
-        )}
-      </div>
+        </div>
 
       {/* Messages Area - Scrollable */}
       <div
@@ -428,10 +498,24 @@ export function ImmortalityChat() {
                 </div>
               )}
               
-              {/* Render action buttons for non-auto-execute actions */}
-              {msg.actions && msg.actions.length > 0 && (
+              {/* Render RWA cards if rwaItems are attached */}
+              {msg.rwaItems && msg.rwaItems.length > 0 && (
+                <div className="mt-2 flex flex-col gap-2">
+                  {msg.rwaItems.map((item) => (
+                    <RwaChatCard
+                      key={item.id}
+                      item={item}
+                      onPreview={() => handleRwaPreview(item)}
+                      onRegister={() => handleRwaBuy(item)}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Generic action buttons temporarily hidden - only RWA card buttons are shown */}
+              {false && msg.actions && (msg.actions?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {msg.actions.map((action, actionIdx) => {
+                  {msg.actions?.map((action, actionIdx) => {
                     const actionId = `${idx}-${action.actionType}-${actionIdx}`;
                     const isAutoExecuting = action.autoExecute && executingActions.has(actionId);
                     
@@ -440,8 +524,7 @@ export function ImmortalityChat() {
                       return null; // Already handled in onSuccess
                     }
                     
-                    const buttonActionId = `${idx}-${action.actionType}-${actionIdx}`;
-                    const buttonIsExecuting = executingActions.has(buttonActionId);
+                    const buttonIsExecuting = executingActions.has(actionId);
                     
                     return (
                       <ThemedButton

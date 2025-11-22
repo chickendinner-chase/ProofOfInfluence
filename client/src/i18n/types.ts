@@ -87,6 +87,12 @@ export interface Messages {
       completed: string;
       default: string;
     };
+    rwa: {
+      preview_redirect: string;
+      after_preview_prompt: string;
+      register_success: string;
+    };
+    initial_hint: string;
   };
   chat: {
     rwaTicker: {
@@ -132,6 +138,10 @@ export interface Messages {
         preparing: string;
         open: string;
         closed: string;
+      };
+      action: {
+        preview: string;
+        registerInterest: string;
       };
     };
   };

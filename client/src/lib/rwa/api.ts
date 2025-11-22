@@ -1,11 +1,13 @@
-import type { RwaItem } from "../../../../../shared/rwa-types";
-import { MOCK_RWA_ITEMS } from "../../../../../shared/rwa-mock";
+import type { RwaItem } from "../../../../shared/types/rwa";
 
+// Note: This file is currently not used - useRwaItems hook fetches from /api/rwa/items directly
+// Keeping for potential future use
 export async function fetchRwaItems(): Promise<RwaItem[]> {
   // Simulating an API call
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve(MOCK_RWA_ITEMS);
+      // Return empty array as this is not currently used
+      resolve([]);
     }, 500);
   });
 }
