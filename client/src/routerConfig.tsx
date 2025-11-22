@@ -18,6 +18,7 @@ import Token from "@/pages/Token";
 import Immortality from "@/pages/Immortality";
 import RWAMarket from "@/pages/RWAMarket";
 import About from "@/pages/About";
+import Whitepaper from "@/pages/Whitepaper";
 import NotFound from "@/pages/not-found";
 import DevContractsPlayground from "@/pages/app/DevContractsPlaygroundPage";
 import TestScenariosPage from "@/pages/TestScenariosPage";
@@ -49,6 +50,12 @@ export function AppRouter() {
       <Route path={ROUTES.TOKEN} component={Token} />
       <Route path={ROUTES.ABOUT} component={About} />
       <Route path={ROUTES.USE_CASES} component={UseCases} />
+      
+      {/* Whitepaper Documentation - must be before 404 */}
+      {/* Match all paths starting with /docs/whitepaper */}
+      <Route path="/docs/whitepaper/:dir/:file" component={Whitepaper} />
+      <Route path="/docs/whitepaper/:file" component={Whitepaper} />
+      <Route path="/docs/whitepaper" component={Whitepaper} />
       
       {/* App routes (projectEX) - More specific routes first */}
       <Route path={ROUTES.APP_SETTINGS} component={Profile} />

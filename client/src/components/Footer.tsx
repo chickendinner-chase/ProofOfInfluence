@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { ROUTES } from "@/routes";
 
 interface FooterProps {
   lang?: "zh" | "en";
@@ -9,26 +10,26 @@ export default function Footer({ lang = "zh" }: FooterProps) {
 
   const footerLinks = lang === "zh"
     ? {
-        products: { label: "产品", href: "/products" },
-        creators: { label: "创作者", href: "/for-creators" },
-        brands: { label: "品牌", href: "/for-brands" },
-        useCases: { label: "应用案例", href: "/use-cases" },
-        whitepaper: { label: "白皮书", href: "/whitepaper" },
-        tokenomics: { label: "代币经济", href: "/tokenomics" },
-        compliance: { label: "合规", href: "/compliance" },
-        changelog: { label: "更新日志", href: "/changelog" },
-        company: { label: "公司", href: "/company" },
+        products: { label: "产品", href: ROUTES.SOLUTIONS },
+        creators: { label: "创作者", href: ROUTES.SOLUTIONS },
+        brands: { label: "品牌", href: ROUTES.SOLUTIONS },
+        useCases: { label: "应用案例", href: ROUTES.USE_CASES },
+        whitepaper: { label: "白皮书", href: ROUTES.WHITEPAPER },
+        tokenomics: { label: "代币经济", href: `${ROUTES.WHITEPAPER}/tokenomics.md` },
+        compliance: { label: "合规", href: ROUTES.ABOUT },
+        changelog: { label: "更新日志", href: ROUTES.ABOUT },
+        company: { label: "公司", href: ROUTES.ABOUT },
       }
     : {
-        products: { label: "Products", href: "/products" },
-        creators: { label: "For Creators", href: "/for-creators" },
-        brands: { label: "For Brands", href: "/for-brands" },
-        useCases: { label: "Use Cases", href: "/use-cases" },
-        whitepaper: { label: "Whitepaper", href: "/whitepaper" },
-        tokenomics: { label: "Tokenomics", href: "/tokenomics" },
-        compliance: { label: "Compliance", href: "/compliance" },
-        changelog: { label: "Changelog", href: "/changelog" },
-        company: { label: "Company", href: "/company" },
+        products: { label: "Products", href: ROUTES.SOLUTIONS },
+        creators: { label: "For Creators", href: ROUTES.SOLUTIONS },
+        brands: { label: "For Brands", href: ROUTES.SOLUTIONS },
+        useCases: { label: "Use Cases", href: ROUTES.USE_CASES },
+        whitepaper: { label: "Whitepaper", href: ROUTES.WHITEPAPER },
+        tokenomics: { label: "Tokenomics", href: `${ROUTES.WHITEPAPER}/tokenomics.md` },
+        compliance: { label: "Compliance", href: ROUTES.ABOUT },
+        changelog: { label: "Changelog", href: ROUTES.ABOUT },
+        company: { label: "Company", href: ROUTES.ABOUT },
       };
 
   return (

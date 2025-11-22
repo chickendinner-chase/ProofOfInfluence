@@ -24,6 +24,7 @@ export const ROUTES = {
   TOKEN: "/token",
   ABOUT: "/about",
   USE_CASES: "/use-cases",
+  WHITEPAPER: "/docs/whitepaper",
   
   // App routes (projectEX structure)
   APP: "/app",
