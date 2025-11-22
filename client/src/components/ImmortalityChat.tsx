@@ -16,7 +16,6 @@ import { ChatPayment } from "@/components/ChatPayment";
 import { RwaTicker } from "./rwa/RwaTicker";
 import { useI18n } from "@/i18n";
 import { ImmortalityFlowStep, ImmortalityFlowState } from "../../../shared/immortality-flow";
-import { useImmortalityFlow } from "@/lib/immortality/flow/hook"; // Assuming this hook will be created or logic moved
 import type { RwaItem } from "../../../shared/types/rwa";
 import { handleImmortalityEvent, mapStepToReplyKey } from "@/lib/immortality/flow/engine";
 
@@ -307,7 +306,7 @@ export function ImmortalityChat() {
 
       // Refresh balance after charging
       if (data.newBalance !== undefined) {
-        queryClient.invalidateQueries(["/api/immortality/balance"]);
+        queryClient.invalidateQueries({ queryKey: ["/api/immortality/balance"] });
       }
 
       // Auto-execute actions that have autoExecute: true
@@ -423,7 +422,7 @@ export function ImmortalityChat() {
                     suggestedAmount={msg.suggestedAmount}
                     onSuccess={() => {
                       // Invalidate balance query to refresh balance after payment
-                      queryClient.invalidateQueries(["/api/immortality/balance"]);
+                      queryClient.invalidateQueries({ queryKey: ["/api/immortality/balance"] });
                     }}
                   />
                 </div>
