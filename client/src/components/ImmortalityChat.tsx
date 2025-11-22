@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { ThemedCard, ThemedButton } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -13,6 +13,9 @@ import {
   type ActionResponse,
 } from "@/lib/immortalityActions";
 import { ChatPayment } from "@/components/ChatPayment";
+import { useI18n } from "@/i18n";
+import { ImmortalityFlowStep, ImmortalityFlowState } from "../../../shared/immortality-flow";
+import { handleImmortalityEvent, mapStepToReplyKey } from "@/lib/immortality/flow/engine";
 
 interface ActionMessage {
   type: "action";
@@ -47,12 +50,56 @@ interface ChatResponse {
 
 export function ImmortalityChat() {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
+
+  // Flow State
+  const [flowState, setFlowState] = useState<ImmortalityFlowState>({
+    currentStep: ImmortalityFlowStep.ENTRY,
+    context: {
+      walletConnected: false,
+      socialConnected: false,
+      badgeMinted: false,
+      questionsAnswered: 0,
+    },
+    history: [],
+  });
+
+  // Effect to sync auth state with flow context
+  useEffect(() => {
+    if (isAuthenticated !== flowState.context.walletConnected || user?.id !== flowState.context.userId) {
+        const newState = handleImmortalityEvent(flowState, {
+            walletConnected: isAuthenticated,
+            userId: user?.id
+        });
+        if (newState.currentStep !== flowState.currentStep) {
+             setFlowState(newState);
+             setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: t(mapStepToReplyKey(newState.currentStep)),
+                timestamp: new Date().toISOString()
+            }]);
+        } else if (newState.context !== flowState.context) {
+             setFlowState(newState);
+        }
+    }
+  }, [isAuthenticated, user, flowState, t]);
+
+  // Initial Welcome Message
+  useEffect(() => {
+      if (messages.length === 0) {
+          setMessages([{
+              role: 'assistant',
+              content: t(mapStepToReplyKey(flowState.currentStep)),
+              timestamp: new Date().toISOString()
+          }]);
+      }
+  }, []);
 
   // Fetch balance
   const { data: balanceData } = useQuery<{ credits: number; poiCredits: number }>({
@@ -70,18 +117,18 @@ export function ImmortalityChat() {
   const handleActionMessage = async (action: ActionMessage, messageIndex: number, actionIndex?: number) => {
     // Check authentication before executing any action
     if (!isAuthenticated || !user) {
-      const errorMessage = "请先使用钱包登录后再执行此操作";
+      const errorMessage = t('common.error'); // Simplified error or use a specific key
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: errorMessage,
+          content: "Please connect wallet first.",
           timestamp: new Date().toISOString(),
         },
       ]);
       toast({
-        title: "需要登录",
-        description: errorMessage,
+        title: t('common.error'),
+        description: "Please connect wallet first.",
         variant: "destructive",
       });
       return;
@@ -104,6 +151,19 @@ export function ImmortalityChat() {
           break;
         case "mint_badge":
           result = await executeMintBadge();
+          if (result.success) {
+              const newState = handleImmortalityEvent(flowState, { badgeMinted: true });
+              if (newState.currentStep !== flowState.currentStep) {
+                 setFlowState(newState);
+                 setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: t(mapStepToReplyKey(newState.currentStep)),
+                    timestamp: new Date().toISOString()
+                }]);
+             } else {
+                 setFlowState(newState);
+             }
+          }
           break;
         case "pay_poi":
           // Insert a payment action message instead of calling backend API
@@ -111,7 +171,7 @@ export function ImmortalityChat() {
             ...prev,
             {
               role: "assistant",
-              content: "请充值以继续使用 Immortality Chat",
+              content: "Please recharge to continue.",
               timestamp: new Date().toISOString(),
               paymentAction: true,
               suggestedAmount: action.suggestedAmount || 20,
@@ -133,20 +193,20 @@ export function ImmortalityChat() {
         {
           role: "assistant",
           content: result.success
-            ? `${result.message}${result.txHash ? ` (交易哈希: ${result.txHash})` : ""}`
-            : `操作失败: ${result.message}`,
+            ? `${result.message}${result.txHash ? ` (Tx: ${result.txHash})` : ""}`
+            : `${t('common.error')}: ${result.message}`,
           timestamp: new Date().toISOString(),
         },
       ]);
 
       if (result.success) {
         toast({
-          title: "操作成功",
+          title: t('common.success'),
           description: result.message,
         });
       } else {
         toast({
-          title: "操作失败",
+          title: t('common.error'),
           description: result.message,
           variant: "destructive",
         });
@@ -157,13 +217,13 @@ export function ImmortalityChat() {
         ...prev,
         {
           role: "assistant",
-          content: `操作执行失败: ${error.message || "未知错误"}`,
+          content: `${t('common.error')}: ${error.message || "Unknown error"}`,
           timestamp: new Date().toISOString(),
         },
       ]);
       toast({
-        title: "操作失败",
-        description: error.message || "执行操作时发生错误",
+        title: t('common.error'),
+        description: error.message || "Unknown error",
         variant: "destructive",
       });
     } finally {
@@ -190,6 +250,21 @@ export function ImmortalityChat() {
     onSuccess: async (data, variables) => {
       const messageIndex = messages.length; // Index for the new assistant message (user message already added)
 
+      // Check for flow progress (Training Questions)
+      if (flowState.currentStep === ImmortalityFlowStep.TRAINING_QUESTIONS) {
+           const newState = handleImmortalityEvent(flowState, { questionsAnswered: flowState.context.questionsAnswered + 1 });
+           if (newState.currentStep !== flowState.currentStep) {
+               setFlowState(newState);
+               setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: t(mapStepToReplyKey(newState.currentStep)),
+                  timestamp: new Date().toISOString()
+              }]);
+           } else {
+               setFlowState(newState);
+           }
+      }
+
       // Process actions (prioritize actions array, fallback to suggestedActions)
       const actionsToProcess = data.actions && data.actions.length > 0 
         ? data.actions 
@@ -205,15 +280,15 @@ export function ImmortalityChat() {
       
       // Append credits charged info if available
       if (data.creditsCharged !== undefined && data.creditsCharged > 0) {
-        replyContent += `\n\n💳 已消耗 ${data.creditsCharged} Credits`;
+        replyContent += `\n\n💳 -${data.creditsCharged} Credits`;
         if (data.newBalance !== undefined) {
-          replyContent += `，当前余额：${data.newBalance} Credits`;
+          replyContent += ` | Balance: ${data.newBalance}`;
         }
       }
       
       replyContent +=
         (data.suggestedActions?.length && !data.actions?.length
-          ? `\n\n可能的下一步：${data.suggestedActions
+          ? `\n\nNext steps: ${data.suggestedActions
               .map((action) => `${action.title}`)
               .join(" / ")}` 
           : "");
@@ -239,18 +314,11 @@ export function ImmortalityChat() {
           await handleActionMessage(action, messageIndex, i);
         }
       }
-
-      toast({
-        title: "分身回复完成",
-        description: data.profileUsed
-          ? `已参考人格档案与 ${data.memoryCount} 条记忆`
-          : "尚未录入人格或记忆，回复为通用建议",
-      });
     },
     onError: () => {
       toast({
-        title: "回复失败",
-        description: "暂时无法连接分身，请稍后再试",
+        title: t('common.error'),
+        description: "Failed to get reply",
         variant: "destructive",
       });
     },
@@ -280,13 +348,13 @@ export function ImmortalityChat() {
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
-          <span className="font-semibold">赛博分身对话</span>
+          <span className="font-semibold">{t('immortality.title')}</span>
         </div>
         {isAuthenticated && (
           <div className="flex items-center gap-2 text-sm">
             <Coins className={cn("w-4 h-4", theme === "cyberpunk" ? "text-cyan-400" : "text-primary")} />
             <span className={cn("font-medium", theme === "cyberpunk" ? "text-cyan-300" : "text-slate-700")}>
-              {currentBalance} Credits
+              {currentBalance} {t('immortality.credits')}
             </span>
           </div>
         )}
@@ -299,17 +367,12 @@ export function ImmortalityChat() {
           theme === "cyberpunk" ? "border-cyan-400/30 bg-cyan-400/5" : "border-slate-200 bg-white",
         )}
       >
-        {messages.length === 0 && (
-          <p className="text-sm opacity-70">
-            告诉你的分身最近的感受，它会结合人格档案与记忆给出建议。
-          </p>
-        )}
         {messages.map((msg, idx) => {
 
           return (
             <div key={`${msg.timestamp}-${idx}`} className={cn("text-sm space-y-2", msg.role === "assistant" && "italic")}>
               <div className="text-xs opacity-60">
-                {msg.role === "user" ? "你" : "Cyber Immortality"}
+                {msg.role === "user" ? "You" : "Cyber Immortality"}
               </div>
               <p>{msg.content}</p>
               
@@ -352,10 +415,10 @@ export function ImmortalityChat() {
                         {buttonIsExecuting ? (
                           <>
                             <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                            执行中...
+                            {t('common.loading')}
                           </>
                         ) : (
-                          action.content || `执行 ${action.actionType}`
+                          action.content || `Execute ${action.actionType}`
                         )}
                       </ThemedButton>
                     );
@@ -368,7 +431,7 @@ export function ImmortalityChat() {
                msg.actions.some((a, ai) => executingActions.has(`${idx}-${a.actionType}-${ai}`)) && (
                 <div className="flex items-center gap-2 text-xs opacity-70">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>正在执行操作...</span>
+                  <span>Executing...</span>
                 </div>
               )}
             </div>
@@ -392,7 +455,7 @@ export function ImmortalityChat() {
             "flex-1 min-w-[240px] rounded-xl border bg-transparent p-3 text-sm outline-none focus:ring-2",
             theme === "cyberpunk" ? "border-cyan-500/40 focus:ring-cyan-400/40" : "border-slate-200 focus:ring-blue-200",
           )}
-          placeholder="输入想对分身说的话..."
+          placeholder={t('immortality.chat_placeholder')}
         />
         <ThemedButton
           size="sm"
@@ -402,7 +465,7 @@ export function ImmortalityChat() {
               ...prev,
               {
                 role: "assistant",
-                content: "充值 Immortality Credits 以继续使用聊天功能",
+                content: "Recharge Immortality Credits",
                 timestamp: new Date().toISOString(),
                 paymentAction: true,
                 suggestedAmount: 20,
@@ -410,20 +473,19 @@ export function ImmortalityChat() {
             ]);
           }}
         >
-          充值
+          Recharge
         </ThemedButton>
         <ThemedButton emphasis disabled={!input.trim() || chatMutation.status === "pending"} onClick={handleSend}>
           {chatMutation.status === "pending" ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              等待回复...
+              {t('common.loading')}
             </>
           ) : (
-            "发送"
+            t('common.send')
           )}
         </ThemedButton>
       </div>
     </ThemedCard>
   );
 }
-
