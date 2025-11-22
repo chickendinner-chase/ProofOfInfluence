@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   walletAddress: text("wallet_address").unique(),
   role: varchar("role", { length: 20 }).default("user").notNull(), // user, admin
   plan: varchar("plan", { length: 10 }).default("free"), // free, paid
+  referredByProfileId: varchar("referred_by_profile_id"), // Profile ID of referrer
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -993,4 +994,48 @@ export type TestRun = typeof testRuns.$inferSelect;
 
 export type InsertTestStep = z.infer<typeof insertTestStepSchema>;
 export type TestStep = typeof testSteps.$inferSelect;
+
+// Phase 3: Profile Stats, Badges, and Activity Feed types
+
+/**
+ * ProfileStats - Extended stats for profile pages
+ */
+export interface ProfileStats {
+  // Existing stats
+  views: number;
+  referralsCount: number;
+  linkClicks: number;
+  // New stats - PnL (Profit and Loss)
+  pnl7d?: number | null;
+  pnl30d?: number | null;
+  pnlAll?: number | null;
+  // Task completion
+  tasksCompleted?: number;
+  // Social stats (defer if not implemented)
+  followersCount?: number | null;
+  // AI-specific stats
+  aiSubscribersCount?: number | null;
+  aiWinRate?: number | null;
+  aiVolatility?: number | null;
+}
+
+/**
+ * ProfileActivity - Recent activity events
+ */
+export interface ProfileActivity {
+  id: string;
+  type: 'task_completed' | 'trade_opened' | 'action_executed' | 'badge_earned';
+  title: string;
+  createdAt: string;
+}
+
+/**
+ * UserBadgeStatus - Badge unlock status for a user
+ */
+export interface UserBadgeStatus {
+  badgeId: number; // Badge type ID (1-12)
+  unlocked: boolean;
+  unlockedAt?: string | null; // ISO timestamp
+  tokenId?: string | null; // If unlocked, the NFT tokenId
+}
 

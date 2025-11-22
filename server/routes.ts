@@ -1098,10 +1098,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment profile views
       await storage.incrementProfileViews(user.id);
 
-      res.json({ profile, links, user });
+      // Get extended stats (Phase 3)
+      const stats = await storage.getProfileStatsByUserId(user.id);
+
+      // Check if current user is the owner
+      const currentUserId = (req as any).user?.claims?.sub;
+      const isOwner = currentUserId === user.id;
+
+      res.json({ 
+        profile, 
+        links, 
+        user: { id: user.id, username: user.username },
+        stats,
+        isOwner
+      });
     } catch (error) {
       console.error("Error fetching public profile:", error);
       res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // Get user badges (by username - public)
+  app.get("/api/profile/:username/badges", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const badgeStatuses = await storage.getUserBadgeStatuses(user.id);
+      res.json({ badges: badgeStatuses });
+    } catch (error) {
+      console.error("Error fetching user badges:", error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  // Get user activity (by username - public)
+  app.get("/api/profile/:username/activity", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const activities = await storage.getProfileActivity(user.id, limit);
+      res.json({ activities });
+    } catch (error) {
+      console.error("Error fetching user activity:", error);
+      res.status(500).json({ message: "Failed to fetch activity" });
+    }
+  });
+
+  // Get agents created by user (by username - public)
+  app.get("/api/profile/:username/agents", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const agents = await storage.getAgentsByCreator(user.id);
+      res.json({ agents });
+    } catch (error) {
+      console.error("Error fetching user agents:", error);
+      res.status(500).json({ message: "Failed to fetch agents" });
+    }
+  });
+
+  // Get my profile (authenticated - with stats)
+  app.get("/api/profile/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const profile = await storage.getProfile(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      const links = await storage.getLinks(userId);
+      const stats = await storage.getProfileStatsByUserId(userId);
+
+      res.json({ 
+        profile, 
+        user: { id: user?.id, username: user?.username },
+        links,
+        stats,
+        isOwner: true 
+      });
+    } catch (error) {
+      console.error("Error fetching my profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // Get my badges (authenticated)
+  app.get("/api/profile/me/badges", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const badgeStatuses = await storage.getUserBadgeStatuses(userId);
+      res.json({ badges: badgeStatuses });
+    } catch (error) {
+      console.error("Error fetching my badges:", error);
+      res.status(500).json({ message: "Failed to fetch badges" });
     }
   });
 

@@ -16,7 +16,10 @@ import {
   Trophy,
   Loader2,
   ExternalLink,
+  Clock,
 } from "lucide-react";
+import { getAllBadgeDefinitions } from "@shared/badgeDefinitions";
+import { formatDistanceToNow } from "date-fns";
 
 interface PublicProfileData {
   profile: {
@@ -39,9 +42,32 @@ interface PublicProfileData {
   }>;
   stats: {
     views: number;
-    linksCount: number;
+    referralsCount: number;
+    linkClicks: number;
+    tasksCompleted?: number;
+    pnl7d?: number | null;
+    pnl30d?: number | null;
+    pnlAll?: number | null;
+    followersCount?: number | null;
+    aiSubscribersCount?: number | null;
+    aiWinRate?: number | null;
+    aiVolatility?: number | null;
   };
   isOwner: boolean;
+}
+
+interface UserBadgeStatus {
+  badgeId: number;
+  unlocked: boolean;
+  unlockedAt?: string | null;
+  tokenId?: string | null;
+}
+
+interface ProfileActivity {
+  id: string;
+  type: 'task_completed' | 'trade_opened' | 'action_executed' | 'badge_earned';
+  title: string;
+  createdAt: string;
 }
 
 export default function PublicProfile() {
@@ -62,6 +88,28 @@ export default function PublicProfile() {
       }
       return res.json();
     },
+  });
+
+  // Fetch badges
+  const { data: badgesData } = useQuery<{ badges: UserBadgeStatus[] }>({
+    queryKey: ['/api/profile', username, 'badges'],
+    queryFn: async () => {
+      const res = await fetch(`/api/profile/${username}/badges`);
+      if (!res.ok) return { badges: [] };
+      return res.json();
+    },
+    enabled: !!username,
+  });
+
+  // Fetch activity
+  const { data: activityData } = useQuery<{ activities: ProfileActivity[] }>({
+    queryKey: ['/api/profile', username, 'activity'],
+    queryFn: async () => {
+      const res = await fetch(`/api/profile/${username}/activity?limit=10`);
+      if (!res.ok) return { activities: [] };
+      return res.json();
+    },
+    enabled: !!username,
   });
 
   // Store referral info in localStorage (if not owner)
@@ -183,22 +231,21 @@ export default function PublicProfile() {
 
   // Main profile view
   const profile = data!;
+  
+  // Get badge definitions and merge with user's status
+  const badgeDefinitions = getAllBadgeDefinitions();
+  const badgeStatuses = badgesData?.badges || [];
+  const badges = badgeDefinitions.map(def => {
+    const status = badgeStatuses.find(s => s.badgeId === def.id);
+    return {
+      ...def,
+      earned: status?.unlocked || false,
+      unlockedAt: status?.unlockedAt,
+    };
+  });
 
-  // Example badges (still mock for now)
-  const badges = [
-    { id: 1, earned: true, color: "from-cyan-400 to-blue-500" },
-    { id: 2, earned: true, color: "from-pink-400 to-purple-500" },
-    { id: 3, earned: true, color: "from-yellow-400 to-orange-500" },
-    { id: 4, earned: true, color: "from-green-400 to-teal-500" },
-    { id: 5, earned: false, color: "from-purple-400 to-pink-500" },
-    { id: 6, earned: false, color: "from-blue-400 to-cyan-500" },
-    { id: 7, earned: false, color: "from-orange-400 to-red-500" },
-    { id: 8, earned: false, color: "from-indigo-400 to-purple-500" },
-    { id: 9, earned: false, color: "from-red-400 to-pink-500" },
-    { id: 10, earned: false, color: "from-teal-400 to-green-500" },
-    { id: 11, earned: false, color: "from-violet-400 to-purple-500" },
-    { id: 12, earned: false, color: "from-amber-400 to-yellow-500" },
-  ];
+  // Get activities
+  const activities = activityData?.activities || [];
 
   return (
     <PageLayout>
@@ -267,7 +314,7 @@ export default function PublicProfile() {
                   <p className="text-sm opacity-90 mb-4">{profile.profile.bio}</p>
                 )}
 
-                {/* Stats Grid */}
+                {/* Stats Grid - Real Data */}
                 <div className="grid grid-cols-3 gap-3">
                   <ThemedCard className="p-3 text-center">
                     <div className="text-xs opacity-70 mb-1">Views</div>
@@ -279,27 +326,85 @@ export default function PublicProfile() {
                     </div>
                   </ThemedCard>
                   <ThemedCard className="p-3 text-center">
-                    <div className="text-xs opacity-70 mb-1">Links</div>
+                    <div className="text-xs opacity-70 mb-1">Invites</div>
                     <div className={cn(
                       'font-bold',
                       theme === 'cyberpunk' ? 'font-rajdhani text-cyan-300' : 'font-poppins text-blue-600'
                     )}>
-                      {profile.stats.linksCount}
+                      {profile.stats.referralsCount || 0}
                     </div>
                   </ThemedCard>
                   <ThemedCard className="p-3 text-center">
-                    <div className="text-xs opacity-70 mb-1">Level</div>
+                    <div className="text-xs opacity-70 mb-1">Tasks</div>
                     <div className={cn(
                       'font-bold',
                       theme === 'cyberpunk' ? 'font-rajdhani text-cyan-300' : 'font-poppins text-blue-600'
                     )}>
-                      4
+                      {profile.stats.tasksCompleted || 0}
                     </div>
                   </ThemedCard>
                 </div>
               </div>
             </div>
           </ThemedCard>
+
+          {/* Stats Section - Extended */}
+          {(profile.stats.pnl30d !== undefined || profile.stats.tasksCompleted !== undefined) && (
+            <ThemedCard className="p-6 mb-6">
+              <h3 className={cn(
+                'text-lg font-bold mb-4',
+                theme === 'cyberpunk' ? 'font-rajdhani text-cyan-200' : 'font-poppins text-slate-900'
+              )}>
+                Performance Stats
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {profile.stats.pnl30d !== null && (
+                  <div>
+                    <div className="text-xs opacity-70 mb-1">PnL (30d)</div>
+                    <div className={cn(
+                      'font-bold',
+                      theme === 'cyberpunk' ? 'font-rajdhani text-cyan-300' : 'font-poppins text-blue-600'
+                    )}>
+                      {profile.stats.pnl30d ? `+${profile.stats.pnl30d}%` : '-'}
+                    </div>
+                  </div>
+                )}
+                {profile.stats.tasksCompleted !== undefined && (
+                  <div>
+                    <div className="text-xs opacity-70 mb-1">Tasks Done</div>
+                    <div className={cn(
+                      'font-bold',
+                      theme === 'cyberpunk' ? 'font-rajdhani text-cyan-300' : 'font-poppins text-blue-600'
+                    )}>
+                      {profile.stats.tasksCompleted}
+                    </div>
+                  </div>
+                )}
+                {profile.stats.linkClicks !== undefined && (
+                  <div>
+                    <div className="text-xs opacity-70 mb-1">Link Clicks</div>
+                    <div className={cn(
+                      'font-bold',
+                      theme === 'cyberpunk' ? 'font-rajdhani text-cyan-300' : 'font-poppins text-blue-600'
+                    )}>
+                      {profile.stats.linkClicks}
+                    </div>
+                  </div>
+                )}
+                {profile.stats.followersCount !== null && (
+                  <div>
+                    <div className="text-xs opacity-70 mb-1">Followers</div>
+                    <div className={cn(
+                      'font-bold',
+                      theme === 'cyberpunk' ? 'font-rajdhani text-cyan-300' : 'font-poppins text-blue-600'
+                    )}>
+                      {profile.stats.followersCount || 0}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ThemedCard>
+          )}
 
           {/* Links Section */}
           {profile.links.length > 0 && (
@@ -336,20 +441,21 @@ export default function PublicProfile() {
             </ThemedCard>
           )}
 
-          {/* Badges Wall */}
-          <ThemedCard className="p-6">
+          {/* Badges Wall - Real Data */}
+          <ThemedCard className="p-6 mb-6">
             <h3 className={cn(
               'text-lg font-bold mb-4 flex items-center gap-2',
               theme === 'cyberpunk' ? 'font-rajdhani text-cyan-200' : 'font-poppins text-slate-900'
             )}>
               <Award className="w-5 h-5" />
-              徽章墙
+              Achievement Badges
             </h3>
 
             <div className="grid grid-cols-6 md:grid-cols-12 gap-2">
               {badges.map((badge) => (
                 <div
                   key={badge.id}
+                  title={badge.earned ? `${badge.name} - ${badge.description}` : `🔒 ${badge.name}`}
                   className={cn(
                     'aspect-square rounded-lg transition-all relative group cursor-pointer',
                     badge.earned
@@ -361,7 +467,7 @@ export default function PublicProfile() {
                 >
                   {badge.earned ? (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Trophy className="w-6 h-6 text-white drop-shadow-lg" />
+                      <div className="text-2xl">{badge.icon || <Trophy className="w-6 h-6 text-white drop-shadow-lg" />}</div>
                     </div>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -379,39 +485,47 @@ export default function PublicProfile() {
               'mt-4 text-center text-sm opacity-70',
               theme === 'cyberpunk' ? 'font-rajdhani' : 'font-poppins'
             )}>
-              已解锁 {badges.filter(b => b.earned).length} / {badges.length} 徽章
+              Unlocked {badges.filter(b => b.earned).length} / {badges.length} badges
             </div>
           </ThemedCard>
 
-          {/* Recent Activity - mock for now */}
-          <ThemedCard className="p-6 mt-6">
+          {/* Recent Activity - Real Data */}
+          <ThemedCard className="p-6">
             <h3 className={cn(
-              'text-lg font-bold mb-4',
+              'text-lg font-bold mb-4 flex items-center gap-2',
               theme === 'cyberpunk' ? 'font-rajdhani text-cyan-200' : 'font-poppins text-slate-900'
             )}>
+              <Clock className="w-5 h-5" />
               Recent Activity
             </h3>
 
-            <div className="space-y-3">
-              {[
-                { action: "Completed Early-Bird task", time: "2 hours ago" },
-                { action: "Referred a new user", time: "5 hours ago" },
-                { action: "Earned 'Community Hero' badge", time: "1 day ago" },
-              ].map((activity, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    'flex justify-between p-3 rounded-lg',
-                    theme === 'cyberpunk'
-                      ? 'bg-slate-900/60 border border-cyan-400/10'
-                      : 'bg-slate-50 border border-slate-100'
-                  )}
-                >
-                  <span className="text-sm">{activity.action}</span>
-                  <span className="text-xs opacity-70">{activity.time}</span>
-                </div>
-              ))}
-            </div>
+            {activities.length > 0 ? (
+              <div className="space-y-3">
+                {activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className={cn(
+                      'flex justify-between p-3 rounded-lg',
+                      theme === 'cyberpunk'
+                        ? 'bg-slate-900/60 border border-cyan-400/10'
+                        : 'bg-slate-50 border border-slate-100'
+                    )}
+                  >
+                    <span className="text-sm">{activity.title}</span>
+                    <span className="text-xs opacity-70">
+                      {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={cn(
+                'text-center text-sm opacity-70 py-8',
+                theme === 'cyberpunk' ? 'font-rajdhani' : 'font-poppins'
+              )}>
+                No recent activity yet
+              </div>
+            )}
           </ThemedCard>
         </div>
       </Section>
