@@ -22,51 +22,60 @@ import {
 export default function Token() {
   const { theme } = useTheme();
 
-  // Token distribution
+  // Token distribution - 根据 tokenomics.md 文档
   const distribution = [
-    { label: "生态发展", value: 28, color: theme === 'cyberpunk' ? 'cyan' : 'blue' },
-    { label: "投资者", value: 20, color: theme === 'cyberpunk' ? 'pink' : 'green' },
-    { label: "团队", value: 15, color: theme === 'cyberpunk' ? 'purple' : 'purple' },
-    { label: "做市商", value: 12, color: theme === 'cyberpunk' ? 'green' : 'orange' },
-    { label: "流动性池", value: 25, color: theme === 'cyberpunk' ? 'yellow' : 'red' },
+    { label: "私募投资者", value: 30, color: theme === 'cyberpunk' ? 'pink' : 'green' },
+    { label: "社区激励/KOL", value: 20, color: theme === 'cyberpunk' ? 'cyan' : 'blue' },
+    { label: "团队与顾问", value: 15, color: theme === 'cyberpunk' ? 'purple' : 'purple' },
+    { label: "储备金库", value: 10, color: theme === 'cyberpunk' ? 'green' : 'orange' },
+    { label: "质押挖矿池", value: 10, color: theme === 'cyberpunk' ? 'yellow' : 'yellow' },
+    { label: "影响力挖矿池", value: 10, color: theme === 'cyberpunk' ? 'blue' : 'cyan' },
+    { label: "协议流动性", value: 5, color: theme === 'cyberpunk' ? 'red' : 'red' },
   ];
 
-  // Token utilities
+  // Token utilities - 根据 tokenomics.md 文档
   const utilities = [
     {
       icon: DollarSign,
       title: "支付与折扣",
-      desc: "使用 $POI 支付平台服务费，享受专属折扣",
-      examples: ["手续费折扣 20%", "VIP 会员权益", "优先服务"],
+      desc: "订阅、打赏、付费内容、升级、应用内市场，使用 $POI 支付享受优惠价格",
+      examples: ["订阅服务", "打赏创作者", "付费内容解锁", "应用内市场交易"],
     },
     {
       icon: Gift,
       title: "激励与奖励",
-      desc: "完成任务、推荐好友获得 $POI 代币奖励",
-      examples: ["每日任务奖励", "推荐返利", "创作者激励"],
+      desc: "质押奖励和影响力挖矿奖励，与 GMV 和留存相关",
+      examples: ["质押挖矿奖励", "影响力挖矿奖励", "长期质押倍数", "粉丝任务奖励"],
     },
     {
       icon: Vote,
-      title: "治理与权限",
-      desc: "持有 $POI 参与平台治理，决定发展方向",
-      examples: ["提案投票", "参数调整", "功能优先级"],
+      title: "治理与参数",
+      desc: "参与排放、燃烧、费用分配、金库使用的参数投票",
+      examples: ["排放参数投票", "燃烧率调整", "费用分配决策", "金库使用提案"],
+    },
+    {
+      icon: Zap,
+      title: "燃烧机制",
+      desc: "退出、DeFi 操作、高影响平台操作触发代币燃烧，维持净通胀 ≤ 5%",
+      examples: ["法币提现燃烧 3-8%", "DeFi 操作燃烧 1-3%", "打赏燃烧 3%", "自适应燃烧控制"],
     },
   ];
 
-  // Key metrics
+  // Key metrics - 根据 tokenomics.md 文档
   const metrics = [
-    { label: "总供应量", value: "1,000,000,000", unit: "POI" },
-    { label: "初始流通", value: "100,000,000", unit: "POI (10%)" },
-    { label: "TGE 价格", value: "$0.05", unit: "USDC/POI" },
-    { label: "市值 (FDV)", value: "$50,000,000", unit: "at TGE" },
+    { label: "总供应量", value: "TBD", unit: "待治理决定" },
+    { label: "净通胀目标", value: "≤ 5%", unit: "年化" },
+    { label: "质押 APY", value: "8-25%", unit: "目标区间" },
+    { label: "解锁方式", value: "每日线性", unit: "链上可验证" },
   ];
 
-  // Vesting schedule
+  // Vesting schedule - 根据 tokenomics.md 文档
   const vestingSchedule = [
-    { category: "TGE 公开发售", unlock: "15% TGE unlock, 3 months linear" },
-    { category: "团队", unlock: "12 months cliff, 36 months linear" },
-    { category: "投资者", unlock: "6 months cliff, 24 months linear" },
-    { category: "生态发展", unlock: "5% quarterly unlock over 5 years" },
+    { category: "Phase 0 (TGE)", unlock: "应用内可用但不可转账/交易，初始解锁包括 LP + 质押 + 影响力池" },
+    { category: "Phase 1 (交易启用)", unlock: "启用链上转账/交易，私募解锁开始（锁定期 + 每日线性解锁）" },
+    { category: "Phase 2 (创始人解锁)", unlock: "创始人解锁开始（锁定期 + 每日线性解锁）" },
+    { category: "储备金库", unlock: "默认长期线性解锁（治理可调整）" },
+    { category: "挖矿池", unlock: "每日按规则发放，未发放余额保持锁定" },
   ];
 
   return (
@@ -146,24 +155,32 @@ export default function Token() {
 
             <div className="space-y-3 text-sm">
               <div>
-                <div className="font-semibold mb-1">生态发展 (28%)</div>
-                <p className="opacity-80">用于平台开发、营销推广和社区建设</p>
+                <div className="font-semibold mb-1">私募投资者 (30%)</div>
+                <p className="opacity-80">战略分配，锁定期 + 线性解锁</p>
               </div>
               <div>
-                <div className="font-semibold mb-1">投资者 (20%)</div>
-                <p className="opacity-80">早期投资者和战略合作伙伴</p>
+                <div className="font-semibold mb-1">社区激励/KOL (20%)</div>
+                <p className="opacity-80">根据奖励参与度发放</p>
               </div>
               <div>
-                <div className="font-semibold mb-1">团队 (15%)</div>
-                <p className="opacity-80">核心团队和顾问激励</p>
+                <div className="font-semibold mb-1">团队与顾问 (15%)</div>
+                <p className="opacity-80">长期对齐，锁定期 + 线性解锁</p>
               </div>
               <div>
-                <div className="font-semibold mb-1">做市商 (12%)</div>
-                <p className="opacity-80">保证二级市场流动性</p>
+                <div className="font-semibold mb-1">储备金库 (10%)</div>
+                <p className="opacity-80">回购、紧急情况、增长、生态系统</p>
               </div>
               <div>
-                <div className="font-semibold mb-1">流动性池 (25%)</div>
-                <p className="opacity-80">DEX 流动性挖矿激励</p>
+                <div className="font-semibold mb-1">质押挖矿池 (10%)</div>
+                <p className="opacity-80">每日向质押者发放，APY 目标 8-25%</p>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">影响力挖矿池 (10%)</div>
+                <p className="opacity-80">每日向创作者/粉丝发放，与 GMV 和留存相关</p>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">协议流动性 (5%)</div>
+                <p className="opacity-80">上市后的做市和稳定性</p>
               </div>
             </div>
           </ThemedCard>
@@ -172,7 +189,7 @@ export default function Token() {
 
       {/* Token Utility */}
       <Section title="代币用途" subtitle="$POI 在生态系统中的作用">
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {utilities.map((utility) => {
             const Icon = utility.icon;
             return (
@@ -248,7 +265,7 @@ export default function Token() {
               <div>
                 <div className="font-semibold mb-1">解锁保障</div>
                 <p className="opacity-90 text-xs">
-                  所有解锁计划通过智能合约自动执行，透明可查。团队和投资者代币设有锁定期，确保长期发展激励一致。
+                  所有线性解锁通过智能合约每日计算，链上可验证。团队和投资者代币设有锁定期，确保长期发展激励一致。所有参数受治理控制，可根据发展需要调整。
                 </p>
               </div>
             </div>
@@ -257,25 +274,26 @@ export default function Token() {
       </Section>
 
       {/* Roadmap */}
-      <Section title="发展路线" subtitle="2025-2026 规划">
-        <div className="grid gap-4 md:grid-cols-4">
+      <Section title="发展路线" subtitle="根据 tokenomics 文档的阶段性规划">
+        <div className="grid gap-4 md:grid-cols-5">
           {[
-            { quarter: "Q4 2025", milestone: "TGE 启动 & DEX 上市" },
-            { quarter: "Q1 2026", milestone: "CEX 上市 & 质押功能" },
-            { quarter: "Q2 2026", milestone: "跨链桥 & NFT 集成" },
-            { quarter: "Q3 2026", milestone: "DAO 治理 & 移动端" },
+            { phase: "Phase 0", milestone: "TGE → Phase 1: 应用内消费/挖矿，反女巫系统，质押和影响力挖矿封闭测试" },
+            { phase: "Phase 1", milestone: "交易启用：上市 + LP 初始注入，开放转账，私募线性解锁开始" },
+            { phase: "Phase 2", milestone: "创始人解锁：创始人线性解锁开始，DeFi 钩子，治理 v1" },
+            { phase: "Phase 3", milestone: "扩展开发：扩展创作者经济，NFT 实用工具，收入分成试点" },
+            { phase: "Phase 4", milestone: "成熟阶段：程序化 LP 管理，金库优化，成熟治理" },
           ].map((item, index) => (
-            <ThemedCard key={item.quarter} hover className="p-5 text-center">
+            <ThemedCard key={item.phase} hover className="p-5">
               <div className={cn(
-                'w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold',
+                'w-10 h-10 rounded-full flex items-center justify-center mb-3 text-lg font-bold',
                 theme === 'cyberpunk'
                   ? 'bg-cyan-400/20 text-cyan-300 border border-cyan-400/40'
                   : 'bg-blue-100 text-blue-600 border border-blue-300'
               )}>
-                {index + 1}
+                {index}
               </div>
-              <div className="font-bold mb-1">{item.quarter}</div>
-              <div className="text-sm opacity-80">{item.milestone}</div>
+              <div className="font-bold mb-2">{item.phase}</div>
+              <div className="text-xs opacity-80 leading-relaxed">{item.milestone}</div>
             </ThemedCard>
           ))}
         </div>
@@ -303,7 +321,7 @@ export default function Token() {
                 加入 TGE
               </ThemedButton>
             </Link>
-            <Link href="/docs/whitepaper/tokenomics">
+            <Link href="/docs/whitepaper/tokenomics.md">
               <ThemedButton variant="outline" size="lg">
                 查看代币经济学
               </ThemedButton>

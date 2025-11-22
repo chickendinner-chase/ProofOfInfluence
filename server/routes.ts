@@ -2505,6 +2505,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Whitepaper documentation API
+  app.get("/api/docs/whitepaper/:file(*)", async (req, res) => {
+    try {
+      let filePath = req.params.file as string;
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      
+      // If no file specified, default to README.md
+      if (!filePath || filePath === "") {
+        filePath = "README.md";
+      }
+      
+      // Security: only allow files from docs/whitepaper directory
+      const docsDir = path.resolve(import.meta.dirname, "..", "docs", "whitepaper");
+      const requestedPath = path.resolve(docsDir, filePath);
+      
+      // Normalize paths to handle .. and . segments
+      const normalizedDocsDir = path.normalize(docsDir);
+      const normalizedRequestedPath = path.normalize(requestedPath);
+      
+      // Ensure the requested path is within docs/whitepaper
+      if (!normalizedRequestedPath.startsWith(normalizedDocsDir)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Only allow .md files
+      if (!filePath.endsWith(".md")) {
+        return res.status(400).json({ message: "Only markdown files are allowed" });
+      }
+      
+      const content = await fs.readFile(normalizedRequestedPath, "utf-8");
+      res.json({ content, path: filePath });
+    } catch (error: any) {
+      if (error.code === "ENOENT") {
+        res.status(404).json({ message: "Document not found" });
+      } else {
+        console.error("Error reading whitepaper document:", error);
+        res.status(500).json({ message: "Failed to read document" });
+      }
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
