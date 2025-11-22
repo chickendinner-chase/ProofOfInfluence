@@ -5,15 +5,15 @@
  * Imports ABIs from shared/contracts/*.json and addresses from baseConfig.ts
  */
 
-import poiTokenData from "../../../shared/contracts/poi.json";
-import tgeSaleData from "../../../shared/contracts/poi_tge.json";
-import stakingRewardsData from "../../../shared/contracts/staking_rewards.json";
-import vestingVaultData from "../../../shared/contracts/vesting_vault.json";
-import merkleAirdropData from "../../../shared/contracts/merkle_airdrop.json";
-import earlyBirdAllowlistData from "../../../shared/contracts/early_bird_allowlist.json";
-import referralRegistryData from "../../../shared/contracts/referral_registry.json";
-import achievementBadgesData from "../../../shared/contracts/achievement_badges.json";
-import immortalityBadgeData from "../../../shared/contracts/immortality_badge.json";
+import poiTokenData from "@shared/contracts/poi.json";
+import tgeSaleData from "@shared/contracts/poi_tge.json";
+import stakingRewardsData from "@shared/contracts/staking_rewards.json";
+import vestingVaultData from "@shared/contracts/vesting_vault.json";
+import merkleAirdropData from "@shared/contracts/merkle_airdrop.json";
+import earlyBirdAllowlistData from "@shared/contracts/early_bird_allowlist.json";
+import referralRegistryData from "@shared/contracts/referral_registry.json";
+import achievementBadgesData from "@shared/contracts/achievement_badges.json";
+import immortalityBadgeData from "@shared/contracts/immortality_badge.json";
 
 import {
   POI_TOKEN_ADDRESS,

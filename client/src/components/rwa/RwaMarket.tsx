@@ -1,0 +1,129 @@
+import React from "react";
+import { useI18n } from "../../i18n";
+import { useTheme } from "@/contexts/ThemeContext";
+import type { RwaItem, RwaType } from "@shared/rwa-types";
+import { fetchRwaItems } from "../../lib/rwa/api";
+import { cn } from "@/lib/utils";
+import { ThemedCard } from "../themed";
+
+export function RwaMarket() {
+  const { t } = useI18n();
+  const { theme } = useTheme();
+  const [items, setItems] = React.useState<RwaItem[] | null>(null);
+
+  React.useEffect(() => {
+    fetchRwaItems().then(setItems);
+  }, []);
+
+  if (!items) {
+    return <div className="p-8 text-center">{t("rwa.market.loading")}</div>;
+  }
+
+  if (items.length === 0) {
+    return <div className="p-8 text-center">{t("rwa.market.empty")}</div>;
+  }
+
+  const dash = t("common.placeholder.dash") ?? "-";
+
+  const typeLabel = (type: RwaType) => {
+    switch (type) {
+      case "LICENSE":
+        return t("rwa.type.license");
+      case "PATENT":
+        return t("rwa.type.patent");
+      case "LAND":
+        return t("rwa.type.land");
+      default:
+        return dash;
+    }
+  };
+
+  const statusLabel = (status: RwaItem["status"]) => {
+    switch (status) {
+      case "PREPARING":
+        return t("rwa.item.status.preparing");
+      case "OPEN":
+        return t("rwa.item.status.open");
+      case "CLOSED":
+        return t("rwa.item.status.closed");
+      default:
+        return dash;
+    }
+  };
+
+  return (
+    <section className="w-full max-w-6xl mx-auto">
+      <div className="mb-8">
+        <h1 className={cn(
+            "text-3xl font-bold mb-2",
+            theme === 'cyberpunk' ? "text-cyan-400 font-orbitron" : "text-slate-900 font-fredoka"
+        )}>{t("rwa.market.title")}</h1>
+        <p className={cn(
+            "text-lg",
+            theme === 'cyberpunk' ? "text-slate-400 font-rajdhani" : "text-slate-600 font-poppins"
+        )}>{t("rwa.market.subtitle")}</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((item) => (
+          <ThemedCard key={item.id} className="flex flex-col h-full p-6" hover>
+            <div className="flex justify-between items-start mb-4">
+                {item.highlightTag && (
+                    <span className={cn(
+                        "text-xs px-2 py-1 rounded",
+                        theme === 'cyberpunk' ? "bg-cyan-900/50 text-cyan-300 border border-cyan-700/50" : "bg-blue-100 text-blue-700"
+                    )}>
+                        {item.highlightTag}
+                    </span>
+                )}
+                <span className={cn(
+                    "text-xs font-bold",
+                    theme === 'cyberpunk' ? "text-green-400" : "text-green-600"
+                )}>
+                    {statusLabel(item.status)}
+                </span>
+            </div>
+
+            <h2 className={cn(
+                "text-xl font-bold mb-2",
+                theme === 'cyberpunk' ? "text-slate-100" : "text-slate-800"
+            )}>{item.name}</h2>
+            
+            <div className={cn(
+                "text-sm mb-6",
+                theme === 'cyberpunk' ? "text-slate-400" : "text-slate-500"
+            )}>
+                {typeLabel(item.type)}
+            </div>
+
+            <div className="mt-auto space-y-3 pt-4 border-t border-slate-200/10">
+              <div className="flex justify-between text-sm">
+                <span className="opacity-60">{t("rwa.item.field.chain")}</span>
+                <span className="font-medium">{item.chain ?? dash}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="opacity-60">{t("rwa.item.field.minAllocation")}</span>
+                <span className="font-medium">
+                  {item.minAllocationUsd != null
+                    ? `$${item.minAllocationUsd.toLocaleString()}`
+                    : dash}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="opacity-60">{t("rwa.item.field.expectedYield")}</span>
+                <span className={cn(
+                    "font-bold",
+                    theme === 'cyberpunk' ? "text-green-400" : "text-green-600"
+                )}>
+                  {item.expectedYieldApr != null
+                    ? `${item.expectedYieldApr}%`
+                    : dash}
+                </span>
+              </div>
+            </div>
+          </ThemedCard>
+        ))}
+      </div>
+    </section>
+  );
+}

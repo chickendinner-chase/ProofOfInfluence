@@ -5,7 +5,7 @@
 
 import { ethers } from "ethers";
 import { storage } from "../storage";
-import achievementBadgesConfig from "../../shared/contracts/achievement_badges.json";
+import achievementBadgesConfig from "@shared/contracts/achievement_badges.json";
 
 const ACHIEVEMENT_BADGES_ADDRESS = achievementBadgesConfig.address;
 

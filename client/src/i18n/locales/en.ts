@@ -19,6 +19,9 @@ export const en: Messages = {
     dashboard: 'Dashboard',
     settings: 'Settings',
     send: 'Send',
+    placeholder: {
+      dash: '-',
+    },
   },
   landing: {
     hero: {
@@ -85,6 +88,39 @@ export const en: Messages = {
       rwa_unlock: 'Badge minted! Unlocking Real World Asset opportunities...',
       completed: 'Setup complete. Your AI is now active and linked to your RWA portfolio.',
       default: 'Processing...',
+    },
+  },
+  chat: {
+    rwaTicker: {
+      title: 'Immortality RWA',
+      empty: 'No RWA items available',
+    },
+  },
+  rwa: {
+    market: {
+      title: 'Immortality RWA Market',
+      subtitle: 'Preview Real World Assets that can be linked to your Cyber Immortality identity.',
+      loading: 'Loading RWA Assets...',
+      empty: 'No RWA assets available at the moment. Stay tuned.',
+    },
+    type: {
+      license: 'Regulated Commercial License Bundle',
+      patent: 'Precision Materials & Surface Engineering Patent Bundle',
+      land: 'US Agricultural State Non-Residential Farmland',
+    },
+    item: {
+      field: {
+        type: 'Asset Type',
+        status: 'Status',
+        chain: 'Chain',
+        minAllocation: 'Min Allocation (USD)',
+        expectedYield: 'Expected Yield',
+      },
+      status: {
+        preparing: 'Preparing',
+        open: 'Open',
+        closed: 'Closed',
+      },
     },
   },
 };

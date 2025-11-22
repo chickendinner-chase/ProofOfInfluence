@@ -17,6 +17,9 @@ export interface Messages {
     dashboard: string;
     settings: string;
     send: string;
+    placeholder: {
+      dash: string;
+    };
   };
   landing: {
     hero: {
@@ -83,6 +86,39 @@ export interface Messages {
       rwa_unlock: string;
       completed: string;
       default: string;
+    };
+  };
+  chat: {
+    rwaTicker: {
+      title: string;
+      empty: string;
+    };
+  };
+  rwa: {
+    market: {
+      title: string;
+      subtitle: string;
+      loading: string;
+      empty: string;
+    };
+    type: {
+      license: string;
+      patent: string;
+      land: string;
+    };
+    item: {
+      field: {
+        type: string;
+        status: string;
+        chain: string;
+        minAllocation: string;
+        expectedYield: string;
+      };
+      status: {
+        preparing: string;
+        open: string;
+        closed: string;
+      };
     };
   };
 }

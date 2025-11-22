@@ -3,7 +3,7 @@ import {
   ImmortalityFlowContext,
   IMMORTALITY_FLOW_DEFINITION,
   ImmortalityFlowState
-} from '../../../../../shared/immortality-flow';
+} from '@shared/immortality-flow';
 
 export function handleImmortalityEvent(
   currentState: ImmortalityFlowState,

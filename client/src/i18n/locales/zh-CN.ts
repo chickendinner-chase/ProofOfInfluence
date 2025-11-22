@@ -19,6 +19,9 @@ export const zhCN: Messages = {
     dashboard: '仪表盘',
     settings: '设置',
     send: '发送',
+    placeholder: {
+      dash: '-',
+    },
   },
   landing: {
     hero: {
@@ -85,6 +88,39 @@ export const zhCN: Messages = {
       rwa_unlock: '徽章已铸造！正在解锁现实世界资产机会...',
       completed: '设置完成。您的AI现已激活并连接到您的RWA投资组合。',
       default: '处理中...',
+    },
+  },
+  chat: {
+    rwaTicker: {
+      title: '永生 RWA 商品',
+      empty: '当前暂无可展示的 RWA 商品',
+    },
+  },
+  rwa: {
+    market: {
+      title: '永生 RWA 市场',
+      subtitle: '预览可与赛博永生身份绑定的现实世界资产。',
+      loading: '正在加载 RWA 资产...',
+      empty: '目前没有可展示的 RWA 资产，敬请期待。',
+    },
+    type: {
+      license: '监管类商业许可资产包',
+      patent: '高精度材料学与表面工程专利包',
+      land: '美国农业大州非住宅农业用地',
+    },
+    item: {
+      field: {
+        type: '资产类型',
+        status: '状态',
+        chain: '所在链',
+        minAllocation: '起投金额（USD）',
+        expectedYield: '预期收益率',
+      },
+      status: {
+        preparing: '筹备中',
+        open: '开放中',
+        closed: '已结束',
+      },
     },
   },
 };

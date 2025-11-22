@@ -13,8 +13,9 @@ import {
   type ActionResponse,
 } from "@/lib/immortalityActions";
 import { ChatPayment } from "@/components/ChatPayment";
+import { RwaTicker } from "./rwa/RwaTicker";
 import { useI18n } from "@/i18n";
-import { ImmortalityFlowStep, ImmortalityFlowState } from "../../../shared/immortality-flow";
+import { ImmortalityFlowStep, ImmortalityFlowState } from "@shared/immortality-flow";
 import { handleImmortalityEvent, mapStepToReplyKey } from "@/lib/immortality/flow/engine";
 
 interface ActionMessage {
@@ -304,7 +305,7 @@ export function ImmortalityChat() {
 
       // Refresh balance after charging
       if (data.newBalance !== undefined) {
-        queryClient.invalidateQueries(["/api/immortality/balance"]);
+        queryClient.invalidateQueries({ queryKey: ["/api/immortality/balance"] });
       }
 
       // Auto-execute actions that have autoExecute: true
@@ -343,9 +344,13 @@ export function ImmortalityChat() {
   };
 
   return (
-    <ThemedCard className="h-full p-6 flex flex-col">
-      {/* Header - Fixed */}
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
+    <ThemedCard className="h-full flex flex-col overflow-hidden">
+      {/* RWA Ticker */}
+      <RwaTicker />
+
+      <div className="flex flex-col flex-1 min-h-0 p-6">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
           <span className="font-semibold">{t('immortality.title')}</span>
@@ -383,7 +388,7 @@ export function ImmortalityChat() {
                     suggestedAmount={msg.suggestedAmount}
                     onSuccess={() => {
                       // Invalidate balance query to refresh balance after payment
-                      queryClient.invalidateQueries(["/api/immortality/balance"]);
+                      queryClient.invalidateQueries({ queryKey: ["/api/immortality/balance"] });
                     }}
                   />
                 </div>
@@ -485,6 +490,7 @@ export function ImmortalityChat() {
             t('common.send')
           )}
         </ThemedButton>
+      </div>
       </div>
     </ThemedCard>
   );
