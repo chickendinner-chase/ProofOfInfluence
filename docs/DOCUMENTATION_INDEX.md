@@ -73,7 +73,7 @@
 - **whitepaper/README.md** - 白皮书索引
 - **whitepaper/cyber-immortality/overview.md** - 网络不朽概述
 - **whitepaper/value-internet.md** - 价值互联网
-- **whitepaper/projectex/overview.md** - ProjectX 概述
+- **whitepaper/projectex/overview.md** - ProjectEX 概述
 - **whitepaper/poi/role-and-boundaries.md** - POI 角色和边界
 - **whitepaper/roadmap/phases-2025-2030.md** - 路线图
 - **whitepaper/glossary.md** - 术语表

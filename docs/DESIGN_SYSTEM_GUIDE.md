@@ -47,7 +47,7 @@
 - animate-glitch
 
 **应用到以下页面:**
-1. `/` - Landing (除 ProjectX 模块外)
+1. `/` - Landing (除 ProjectEX 模块外)
 2. `/solutions` - 解决方案 (已应用)
 3. `/token` - Token 文档 (已应用)
 4. `/about` - 关于我们 (已应用)
@@ -61,7 +61,7 @@
 
 ---
 
-### ProjectX Roblox 风格
+### ProjectEX Roblox 风格
 
 **配置文件:** `client/src/styles/roblox-theme.ts`
 
@@ -91,7 +91,7 @@
 3. `/app/settings` - 个人设置
 4. `/app/recharge` - 充值
 5. `/payment-success` - 支付成功
-6. `/` - Landing 的 ProjectX 模块部分
+6. `/` - Landing 的 ProjectEX 模块部分
 
 ---
 
@@ -112,7 +112,7 @@
 10. `/login` - 登录 (待重新设计)
 11. `/:username` - 公开个人主页 (待重新设计)
 
-#### 应用内页面 (5个) - **ProjectX Roblox 风格**
+#### 应用内页面 (5个) - **ProjectEX Roblox 风格**
 12. `/app` - Dashboard (待重新设计)
 13. `/app/market` - 交易市场 (待重新设计)
 14. `/app/settings` - 个人设置 (待重新设计)
@@ -149,12 +149,12 @@
 ### 需要重新设计的页面（视觉设计）
 
 #### ACEE 赛博朋克风格 (8个待设计)
-1. **Landing** - 主页（保留 ProjectX 模块为 Roblox 风格）
+1. **Landing** - 主页（保留 ProjectEX 模块为 Roblox 风格）
    - Hero 部分：赛博朋克
    - TGE 横幅：赛博朋克
    - 统计条：赛博朋克
    - 快速开始：赛博朋克
-   - **ProjectX 模块：Roblox 风格**（保留）
+   - **ProjectEX 模块：Roblox 风格**（保留）
    
 2. **TGE** - TGE 启动页
    - 倒计时：霓虹数字显示
@@ -182,7 +182,7 @@
 8. **PublicProfile** - 公开主页
    - 个人卡片：赛博朋克风格
 
-#### ProjectX Roblox 风格 (4个待设计)
+#### ProjectEX Roblox 风格 (4个待设计)
 1. **Dashboard** - 仪表板
    - 任务卡片：圆角+3D阴影
    - 奖励显示：彩色积分徽章
@@ -238,7 +238,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
 
 - [ ] **P1: Landing 页面重新设计**
   - 文件: `client/src/pages/Landing.tsx`
-  - 任务: 应用赛博朋克风格，但保留 ProjectX 模块的 Roblox 风格
+  - 任务: 应用赛博朋克风格，但保留 ProjectEX 模块的 Roblox 风格
   
 - [ ] **P1: TGE 冷启动页面重新设计 (4个)**
   - `client/src/pages/TGE.tsx`
@@ -255,7 +255,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
   - `client/src/pages/Login.tsx`
   - `client/src/pages/PublicProfile.tsx`
 
-#### ProjectX Roblox 页面
+#### ProjectEX Roblox 页面
 
 - [ ] **P1: Dashboard 重新设计**
   - 文件: `client/src/pages/Dashboard.tsx`
@@ -337,7 +337,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
 - 首页 (/)
 - 现货交易 (/app/market)
 - RWA市场 (/app)
-- ProjectX (/solutions)
+- ProjectEX (/solutions)
 
 **资源下拉菜单:**
 - 解决方案 (/solutions)
@@ -380,7 +380,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
   - Hero 部分改为赛博朋克
   - TGE 横幅改为霓虹风格
   - 统计条改为赛博朋克
-  - **保留 ProjectX 模块的 Roblox 风格**
+  - **保留 ProjectEX 模块的 Roblox 风格**
   
 - [ ] TGE 页面
   - 倒计时改为霓虹数字
@@ -403,7 +403,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
   - 安全警告改为红色霓虹
   - 领取按钮改为发光效果
 
-#### ProjectX Roblox 风格
+#### ProjectEX Roblox 风格
 - [ ] Dashboard
   - TaskCenterWidget 改为彩色圆角卡片
   - RewardsSummaryWidget 改为游戏风格
@@ -433,7 +433,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
 5. 按钮使用霓虹色和发光效果
 6. 使用 `backdrop-blur-sm` 创建玻璃态
 
-### 对于 ProjectX 页面
+### 对于 ProjectEX 页面
 1. 使用明亮背景 `bg-white` 或 `bg-gray-50`
 2. 卡片使用 `rounded-2xl` 和 3D 阴影
 3. 标题使用 `font-fredoka` 或 `font-poppins`
@@ -455,7 +455,7 @@ animate-bounce-click, animate-pop-in, animate-wiggle, animate-shimmer, animate-f
 
 ### 视觉设计部分 (待其他 AI 完成)
 - ⏳ 应用赛博朋克风格到 ACEE 页面
-- ⏳ 应用 Roblox 风格到 ProjectX 页面
+- ⏳ 应用 Roblox 风格到 ProjectEX 页面
 - ⏳ 添加自定义字体
 - ⏳ 优化动画效果
 - ⏳ 响应式测试

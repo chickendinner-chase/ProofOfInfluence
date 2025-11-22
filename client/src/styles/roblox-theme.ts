@@ -1,5 +1,5 @@
 /**
- * ProjectX Roblox-Inspired Theme
+ * ProjectEX Roblox-Inspired Theme
  * 
  * Design Principles:
  * - Bright, colorful, and playful

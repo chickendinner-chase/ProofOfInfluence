@@ -17,13 +17,13 @@ export default function About() {
             'text-3xl md:text-5xl font-extrabold mb-4',
             theme === 'cyberpunk' ? 'font-orbitron' : 'font-fredoka'
           )}>
-            ACEE – About Us（对外安全版）
+            About Acee
           </h1>
           <p className={cn(
             'text-lg opacity-80',
             theme === 'cyberpunk' ? 'text-slate-300' : 'text-slate-600'
           )}>
-            构建下一代价值基础设施
+            构建价值互联网
           </p>
         </div>
       </Section>
@@ -32,13 +32,13 @@ export default function About() {
       <Section title="我们是谁">
         <ThemedCard className="p-6 space-y-3 max-w-4xl mx-auto">
           <p className="text-sm opacity-90">
-            Acee 是一家位于美国的技术与合规公司，专注于为新一代数字经济提供<strong>价值基础设施</strong>。
+            Acee 是一家位于美国的技术与合规公司，专注于为新一代数字经济提供<strong>价值基础设施</strong>。我们正在构建<strong>价值互联网</strong>——一个统一的基础设施，将影响力、身份、AI 行为和现实世界资产（RWA）标准化为可验证、可组合和可激励的价值单元。
           </p>
           <p className="text-sm opacity-90">
-            在今天的互联网中，影响力、内容、身份、AI 行为以及现实世界资产（RWA）被分散在不同平台和系统之中，难以统一记录和协同使用。
+            在今天的互联网中，这些价值要素分散在不同的平台和系统中，难以统一记录和协同使用。我们的使命是为这些新型价值要素建立一套<strong>标准化、可验证、可协作</strong>的技术底层。
           </p>
           <p className="text-sm opacity-90">
-            我们的目标，是为这些新型价值要素，建立一套<strong>标准化、可验证、可协作</strong>的技术底层。
+            通过 ProjectEX 平台和 Cyber Immortality 旗舰项目，我们展示了如何将技术创新与人文关怀相结合，为人类和智能代理（AI/数字人格）构建统一的价值与记忆层。
           </p>
         </ThemedCard>
       </Section>
@@ -56,15 +56,15 @@ export default function About() {
           </ThemedCard>
 
           <ThemedCard className="p-6">
-            <h3 className="font-bold mb-2">2. ProjectEX – 资产与行为的网络化平台</h3>
+            <h3 className="font-bold mb-2">2. ProjectEX – 价值互联网的社交金融枢纽</h3>
             <ul className="text-sm opacity-90 list-disc pl-5 space-y-1">
-              <li>将多种资产（如 RWA、IP、品牌权益、创作者影响力等）统一数字化；</li>
-              <li>为这些资产提供交易、流动性与金融工具（如兑换、质押、抵押等）；</li>
-              <li>通过任务、邀请、空投、徽章等机制，连接用户行为与价值分配；</li>
-              <li>在链上建立身份与基础声望体系，为长期关系提供记录。</li>
+              <li><strong>代币化</strong>：将 RWA、IP、品牌权益、创作者影响力和 AI 资产转换为链上代币；</li>
+              <li><strong>链上协调</strong>：提供去中心化交易、流动性池、质押和抵押等金融工具；</li>
+              <li><strong>激励机制</strong>：通过任务系统、推荐计划、空投和徽章连接用户行为与价值分配；</li>
+              <li><strong>身份与声誉</strong>：在链上建立身份和声誉体系，支持跨平台价值转移。</li>
             </ul>
             <p className="text-sm opacity-80 mt-2">
-              我们的目标，是让<strong>更多真实的价值</strong>能在开放网络中被记录和使用。
+              ProjectEX 作为价值互联网的应用层，让<strong>更多真实的价值</strong>能在开放网络中被记录、交易和协调。
             </p>
           </ThemedCard>
 
@@ -85,10 +85,13 @@ export default function About() {
       <Section title="关于激励与代币">
         <ThemedCard className="p-6 space-y-2 max-w-4xl mx-auto">
           <p className="text-sm opacity-90">
-            在价值网络中，激励与协调机制至关重要。Acee 正在设计统一的激励与治理机制（包括 POI 在内），用于连接：平台使用、不同项目的价值分配、长期参与者的权益与治理权。
+            在价值互联网中，激励与协调机制至关重要。POI（Proof of Influence）代币作为<strong>统一价值层</strong>，连接平台使用、不同项目的价值分配、长期参与者的权益与治理权。
           </p>
           <p className="text-sm opacity-90">
-            相关细节会以<strong>单独文档（如 Token 与技术白皮书）</strong>的形式向社区与合作伙伴公开，About 页面不做具体参数和规则描述。
+            POI 不仅仅是代币，更是一种协调机制，它协调不同利益相关者（用户、创作者、品牌、开发者）的激励，支持长期价值捕获和可持续增长。相关细节会以<strong>单独文档（如 Token 与技术白皮书）</strong>的形式向社区与合作伙伴公开。
+          </p>
+          <p className="text-sm opacity-90">
+            详细的白皮书文档请参阅：<strong>docs/whitepaper/</strong> 目录，包含 Value Internet 愿景、ProjectEX 平台、Cyber Immortality 项目等完整说明。
           </p>
         </ThemedCard>
       </Section>
@@ -108,7 +111,8 @@ export default function About() {
             <h3 className="font-bold mb-2">长期：统一的价值与记忆层</h3>
             <ul className="text-sm opacity-90 list-disc pl-5 space-y-1">
               <li>面向人类与智能体（AI/数字人格）的统一价值与记忆层；</li>
-              <li>Acee 希望为这一层，提供最早的一块底座。</li>
+              <li>支持跨代价值转移、遗产保存和长期数字身份；</li>
+              <li>Acee 希望为这一层，提供最早的一块底座，成为价值互联网的基础设施。</li>
             </ul>
           </ThemedCard>
         </div>

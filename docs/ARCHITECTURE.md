@@ -18,7 +18,7 @@ Complete architecture overview including information structure, access control, 
 #### Public Pages (No Auth Required)
 
 1. **Landing** (`/`) - Homepage with platform overview
-2. **Products** (`/products`) - ProjectX modules overview
+2. **Products** (`/products`) - ProjectEX modules overview
 3. **For Creators** (`/for-creators`) - Creator services
 4. **For Brands** (`/for-brands`) - Brand solutions
 5. **Use Cases** (`/use-cases`) - Real-world applications
@@ -383,7 +383,7 @@ Response:
 
 ### Desktop Header
 ```
-ACEE | 首页 | 🛒 现货交易 | 💼 RWA市场 | ProjectX | 资源▼ | [钱包] [登录/App]
+ACEE | 首页 | 🛒 现货交易 | 💼 RWA市场 | ProjectEX | 资源▼ | [钱包] [登录/App]
 ```
 
 ### Resources Dropdown

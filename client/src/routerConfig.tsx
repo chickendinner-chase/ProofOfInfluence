@@ -50,7 +50,7 @@ export function AppRouter() {
       <Route path={ROUTES.ABOUT} component={About} />
       <Route path={ROUTES.USE_CASES} component={UseCases} />
       
-      {/* App routes (projectX) - More specific routes first */}
+      {/* App routes (projectEX) - More specific routes first */}
       <Route path={ROUTES.APP_SETTINGS} component={Profile} />
       <Route path={ROUTES.APP_RECHARGE} component={Recharge} />
       <Route path={ROUTES.APP_TRADE} component={Market} />

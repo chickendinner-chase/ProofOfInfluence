@@ -104,7 +104,7 @@ export default function Recharge() {
           </h1>
           <p className="text-sm opacity-80">
             使用法币充值，获得 Immortality Credits。Credits 会记录在中心化账本中，
-            可在 Roblox / AgentKit / ProjectX 中消费或兑换成 POI。
+            可在 Roblox / AgentKit / ProjectEX 中消费或兑换成 POI。
           </p>
                   </div>
       </Section>

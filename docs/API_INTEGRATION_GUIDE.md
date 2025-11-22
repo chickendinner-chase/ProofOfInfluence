@@ -103,7 +103,7 @@ VITE_USE_MOCK_MERCHANT=false
 ## 🔄 Codex 后端完成进度追踪
 
 ### **Market API** ✅ 完成
-- **分支**: `codex/develop-acee-projectx-backend-api`
+- **分支**: `codex/develop-acee-projectex-backend-api`
 - **文件**: `server/routes/market.ts` (502 行)
 - **数据表**: `market_orders`, `market_trades`
 - **端点**: 8/8 全部实现

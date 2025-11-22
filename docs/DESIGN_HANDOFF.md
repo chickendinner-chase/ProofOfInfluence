@@ -12,7 +12,7 @@
 
 ### 1. 设计系统配置文件
 - ✅ `client/src/styles/cyberpunk-theme.ts` - ACEE 赛博朋克主题
-- ✅ `client/src/styles/roblox-theme.ts` - ProjectX Roblox 主题
+- ✅ `client/src/styles/roblox-theme.ts` - ProjectEX Roblox 主题
 - ✅ `tailwind.config.ts` - 扩展配置（颜色、字体、动画）
 
 ### 2. 页面整合
@@ -48,7 +48,7 @@
 - [ ] TGE 横幅 → 霓虹边框 + 发光效果
 - [ ] 统计条 → 赛博朋克数据显示
 - [ ] 快速开始卡片 → 玻璃态 + 霓虹边框
-- [ ] **保留** ProjectX 模块 → 使用 Roblox 风格（明亮、圆角）
+- [ ] **保留** ProjectEX 模块 → 使用 Roblox 风格（明亮、圆角）
 
 **2. TGE 页面** (`client/src/pages/TGE.tsx`)
 当前状态: 深色主题，需要赛博朋克化
@@ -94,7 +94,7 @@
 
 ---
 
-### ProjectX Roblox 风格页面 (4个)
+### ProjectEX Roblox 风格页面 (4个)
 
 #### P1 - 高优先级
 
@@ -169,7 +169,7 @@
 
 ---
 
-### ProjectX Roblox 元素清单
+### ProjectEX Roblox 元素清单
 
 **必须使用的元素:**
 1. 背景色: `bg-white` 或 `bg-gray-50`
@@ -255,7 +255,7 @@ git commit -m "style(design): redesign TGE page with cyberpunk neon effects (Cod
 
 ### 视觉设计部分 (待其他 AI)
 - ⏳ ACEE 赛博朋克页面 (8个)
-- ⏳ ProjectX Roblox 页面 (4个)
+- ⏳ ProjectEX Roblox 页面 (4个)
 - ⏳ 字体导入
 - ⏳ 动画优化
 - ⏳ 响应式测试
@@ -267,12 +267,12 @@ git commit -m "style(design): redesign TGE page with cyberpunk neon effects (Cod
 ### Landing 页面特殊要求
 **双风格混合:**
 - Hero, TGE横幅, 统计条, 快速开始 → **ACEE 赛博朋克**
-- ProjectX 模块部分 → **Roblox 风格**（保持明亮、圆角、游戏化）
+- ProjectEX 模块部分 → **Roblox 风格**（保持明亮、圆角、游戏化）
 
 这是唯一一个混合两种风格的页面！
 
 ### Dashboard 和 Market
-这是 **ProjectX 核心应用**，必须使用 **Roblox 风格**：
+这是 **ProjectEX 核心应用**，必须使用 **Roblox 风格**：
 - 明亮主题
 - 游戏化元素
 - 友好亲切

@@ -59,7 +59,7 @@
 - Hero 部分：主标题 + 副标题 + 双 CTA 按钮
 - 特色数据条：3 个统计卡片
 - 平台优势：4 个特性卡片
-- ProjectX 模块：3 个核心功能展示
+- ProjectEX 模块：3 个核心功能展示
 - TGE 横幅：CTA 引导
 - 快速导航：4 个链接卡片
 
@@ -203,7 +203,7 @@
 - ✅ 动画：neon-pulse, scan-line（已在 tailwind.config.ts 配置）
 - ✅ 边框：霓虹发光效果
 
-### Playful 主题（ProjectX）
+### Playful 主题（ProjectEX）
 - ✅ 背景：`#ffffff` 白色
 - ✅ 主色：blue `#0066ff`, green `#00cc66`, yellow `#ffcc00`
 - ✅ 字体：Fredoka（标题）, Poppins（正文）

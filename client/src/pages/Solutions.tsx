@@ -61,23 +61,23 @@ export default function Solutions() {
   const keyFeatures = [
     {
       icon: Zap,
-      title: "一站式平台",
-      desc: "从注册到变现，所有功能集成在统一平台",
+      title: "标准化能力",
+      desc: "将影响力、身份、AI 行为和 RWA 标准化为可互操作的价值单元",
     },
     {
       icon: Globe,
-      title: "多链支持",
-      desc: "支持 Ethereum、Base、Arbitrum、Polygon 等主流网络",
+      title: "价值协调",
+      desc: "通过智能合约和跨链协议实现价值交换、质押和协调",
     },
     {
       icon: TrendingUp,
-      title: "数据驱动",
-      desc: "实时数据分析，帮助优化运营策略",
+      title: "激励机制",
+      desc: "统一的 POI 激励机制连接平台使用、价值分配和治理权",
     },
     {
       icon: Shield,
-      title: "安全合规",
-      desc: "KYC/AML 认证，确保平台安全可靠",
+      title: "身份与声誉",
+      desc: "链上身份和声誉体系，支持跨平台价值转移和验证",
     },
   ];
 
@@ -123,7 +123,7 @@ export default function Solutions() {
             'text-lg opacity-80',
             theme === 'cyberpunk' ? 'text-slate-300' : 'text-slate-600'
           )}>
-            为用户、创作者、品牌和项目提供端到端的影响力变现解决方案
+            ProjectEX 平台提供端到端解决方案，帮助品牌、创作者和用户将价值代币化、协调和变现
           </p>
         </div>
 
@@ -171,7 +171,7 @@ export default function Solutions() {
       </Section>
 
       {/* Key Features */}
-      <Section title="平台优势" subtitle="为什么选择 ProofOfInfluence">
+      <Section title="平台优势" subtitle="价值互联网的核心能力">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {keyFeatures.map((feature) => {
             const Icon = feature.icon;

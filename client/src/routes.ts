@@ -25,7 +25,7 @@ export const ROUTES = {
   ABOUT: "/about",
   USE_CASES: "/use-cases",
   
-  // App routes (projectX structure)
+  // App routes (projectEX structure)
   APP: "/app",
   APP_DASHBOARD: "/app",
   APP_SETTINGS: "/app/settings",

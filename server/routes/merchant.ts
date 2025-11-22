@@ -472,7 +472,7 @@ export function registerMerchantRoutes(app: Express) {
         idempotencyKey: parsed.data.idempotencyKey,
       });
 
-      const fileUrl = `https://files.projectx.dev/tax-reports/${report.id}.csv`;
+      const fileUrl = `https://files.projectex.dev/tax-reports/${report.id}.csv`;
       const withFileUrl = await storage.updateTaxReport(report.id, { fileUrl });
 
       console.info("[merchant] tax report generated", {
@@ -504,7 +504,7 @@ export function registerMerchantRoutes(app: Express) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const fileUrl = report.fileUrl ?? `https://files.projectx.dev/tax-reports/${report.id}.csv`;
+      const fileUrl = report.fileUrl ?? `https://files.projectex.dev/tax-reports/${report.id}.csv`;
       res.json({ url: fileUrl });
     } catch (error) {
       console.error("[merchant] failed to provide tax report download", error);

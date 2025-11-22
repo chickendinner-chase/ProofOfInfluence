@@ -8,7 +8,7 @@
 
 ## 📊 项目概览
 
-ProofOfInfluence (ProjectX) 是 ACEE Ventures 研发的 Web3 影响力变现平台，$POI 作为流量价值载体，帮助创作者和品牌将影响力转化为真实价值。
+ProofOfInfluence (ProjectEX) 是 ACEE Ventures 研发的 Web3 影响力变现平台，$POI 作为流量价值载体，帮助创作者和品牌将影响力转化为真实价值。
 
 ---
 

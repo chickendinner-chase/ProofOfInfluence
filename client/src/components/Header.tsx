@@ -35,13 +35,13 @@ export default function Header({ lang = "zh" }: HeaderProps) {
         { label: "首页", href: ROUTES.HOME },
         { label: "现货交易", href: ROUTES.APP_TRADE, icon: ShoppingCart, highlight: true },
         { label: "RWA市场", href: ROUTES.APP_RWA_MARKET, icon: Briefcase },
-        { label: "projectX", href: ROUTES.APP },
+        { label: "ProjectEX", href: ROUTES.APP },
       ]
     : [
         { label: "Home", href: ROUTES.HOME },
         { label: "Spot Trading", href: ROUTES.APP_TRADE, icon: ShoppingCart, highlight: true },
         { label: "RWA Market", href: ROUTES.APP_RWA_MARKET, icon: Briefcase },
-        { label: "projectX", href: ROUTES.APP },
+        { label: "ProjectEX", href: ROUTES.APP },
       ];
 
   // Resources dropdown items
@@ -70,7 +70,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
       ];
 
   const resourcesLabel = lang === "zh" ? "资源" : "Resources";
-  const projectXLabel = lang === "zh" ? "projectX" : "projectX";
+  const projectEXLabel = lang === "zh" ? "ProjectEX" : "ProjectEX";
   const loginLabel = lang === "zh" ? "登录" : "Login";
   const settingsLabel = lang === "zh" ? "设置" : "Settings";
 
@@ -155,7 +155,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
             </div>
           )}
 
-          {/* projectX / Login Link (hidden on login page) */}
+          {/* projectEX / Login Link (hidden on login page) */}
           {!isLoginPage && (
             <>
               {isAuthenticated ? (
@@ -165,7 +165,7 @@ export default function Header({ lang = "zh" }: HeaderProps) {
                       variant="default"
                       className="bg-white text-slate-900 hover:bg-slate-100"
                     >
-                      {projectXLabel}
+                      {projectEXLabel}
                     </Button>
                   </Link>
                   <Link href={ROUTES.APP_SETTINGS}>

@@ -1504,7 +1504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               currency,
               product_data: {
                 name: "Immortality Credits",
-                description: "Recharge credits for ProjectX Immortality services",
+                description: "Recharge credits for ProjectEX Immortality services",
               },
               unit_amount: amountInCents,
             },

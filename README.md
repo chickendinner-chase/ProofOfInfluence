@@ -1,8 +1,10 @@
 # ProofOfInfluence
 
-**ACEE Ventures** - 一站式影响力变现平台
+**ACEE Ventures** - 构建价值互联网
 
-ProofOfInfluence (projectX) 是 ACEE Ventures 研发的 Web3 影响力变现平台，$POI 作为流量价值载体，帮助创作者和品牌将影响力转化为真实价值。
+Acee 正在构建**价值互联网**——一个统一的基础设施，将影响力、身份、AI 行为和现实世界资产（RWA）标准化为可验证、可组合和可激励的价值单元。
+
+**ProjectEX** 是价值互联网的社交金融枢纽，帮助品牌、创作者和用户将价值代币化、协调和变现。**Cyber Immortality** 是我们的旗舰项目，展示了 AI、身份和长期价值捕获的完整潜力。
 
 ## 🚀 Quick Start
 
@@ -48,10 +50,11 @@ Visit `http://localhost:5000` to see the app.
   - Real estate
   - Art & collectibles
 
-- **🎯 ProjectX** - Complete influence monetization platform
-  - Token issuance
-  - Community management  
-  - Value circulation
+- **🎯 ProjectEX** - Social-financial hub for the Value Internet
+  - Tokenization of RWA, IP, brand rights, and influence
+  - On-chain coordination and trading
+  - Incentive systems and identity/reputation
+  - Complete influence monetization platform
 
 ### Platform Features
 
@@ -183,6 +186,15 @@ Later:
 ---
 
 ## 📚 Documentation
+
+### 白皮书文档
+- **[Whitepaper Overview](docs/whitepaper/README.md)** - 价值互联网愿景和产品栈概览
+- **[Value Internet](docs/whitepaper/value-internet.md)** - 价值互联网架构和四层设计
+- **[ProjectEX Platform](docs/whitepaper/projectex/overview.md)** - 社交金融枢纽详细说明
+- **[Cyber Immortality](docs/whitepaper/cyber-immortality/overview.md)** - 旗舰项目介绍
+- **[Tokenomics](docs/whitepaper/tokenomics.md)** - POI 代币经济学和货币政策
+- **[Contributing Guide](docs/whitepaper/contributing.md)** - 贡献指南
+- **[API Documentation](docs/whitepaper/api-docs.md)** - API 集成指南
 
 ### 核心文档
 - **[文档索引](docs/DOCUMENTATION_INDEX.md)** - 所有文档的索引和概览

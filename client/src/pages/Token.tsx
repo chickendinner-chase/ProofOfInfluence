@@ -90,7 +90,7 @@ export default function Token() {
             'text-lg opacity-80',
             theme === 'cyberpunk' ? 'text-slate-300' : 'text-slate-600'
           )}>
-            ProofOfInfluence 生态系统的价值载体和治理代币
+            POI（Proof of Influence）作为价值互联网的统一价值层，连接平台使用、价值分配和治理权
           </p>
         </div>
 
@@ -303,9 +303,16 @@ export default function Token() {
                 加入 TGE
               </ThemedButton>
             </Link>
-            <ThemedButton variant="outline" size="lg">
-              下载白皮书
-            </ThemedButton>
+            <Link href="/docs/whitepaper/tokenomics">
+              <ThemedButton variant="outline" size="lg">
+                查看代币经济学
+              </ThemedButton>
+            </Link>
+            <Link href="/docs/whitepaper">
+              <ThemedButton variant="outline" size="lg">
+                查看白皮书
+              </ThemedButton>
+            </Link>
           </div>
         </ThemedCard>
       </Section>
