@@ -90,7 +90,7 @@ export default function UseCases() {
             'text-lg opacity-80',
             theme === 'cyberpunk' ? 'text-slate-300' : 'text-slate-600'
           )}>
-            分场景展示如何使用 ProofOfInfluence
+            ProjectEX 平台的应用场景：展示价值互联网如何帮助品牌、创作者和用户实现价值代币化和协调
           </p>
         </div>
 

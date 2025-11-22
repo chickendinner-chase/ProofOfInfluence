@@ -28,49 +28,49 @@ export default function Landing() {
     { label: "Rewards Paid", value: "$183k" },
   ];
 
-  // Platform features
+  // Platform features - aligned with Value Internet vision
   const features = [
     {
       icon: Zap,
-      title: "一站式服务",
-      desc: "从代币发行到社区管理，所有功能集成在统一仪表盘",
+      title: "标准化",
+      desc: "将影响力、身份、AI 行为和 RWA 标准化为可互操作的价值单元",
     },
     {
       icon: Globe,
-      title: "多角色支持",
-      desc: "为品牌方、创作者和开发者提供定制化解决方案",
+      title: "可验证",
+      desc: "所有价值单元在链上可验证，确保真实性和防止欺诈",
     },
     {
       icon: Lock,
-      title: "安全合规",
-      desc: "严格遵守 KYC/AML 要求，确保平台安全可靠",
+      title: "可协作",
+      desc: "价值单元可以跨应用和网络组合、交易和协调",
     },
     {
       icon: TrendingUp,
-      title: "生态增长",
-      desc: "通过 $POI 代币激励和治理机制促进生态发展",
+      title: "可激励",
+      desc: "统一的 POI 激励机制连接平台使用、价值分配和治理权",
     },
   ];
 
-  // ProjectX modules
+  // ProjectEX modules - social-financial hub
   const modules = [
     {
       icon: ShoppingCart,
-      title: "交易市场",
-      desc: "去中心化的影响力代币交易平台，支持实时报价、订单撮合和低手续费交易通道",
-      features: ["实时交易", "订单撮合", "低手续费"],
+      title: "代币化与交易",
+      desc: "将 RWA、IP、品牌权益和影响力代币化，提供去中心化交易和流动性管理",
+      features: ["资产代币化", "DEX 集成", "流动性池"],
     },
     {
       icon: Wallet,
-      title: "Reserve Pool",
-      desc: "智能资金池管理系统，自动归集手续费、管理金库并执行 $POI 回购策略",
-      features: ["手续费归集", "金库管理", "$POI 回购"],
+      title: "链上协调",
+      desc: "通过智能合约实现价值交换、质押、抵押和跨链互操作性",
+      features: ["智能合约", "跨链协议", "价值协调"],
     },
     {
       icon: BarChart3,
-      title: "商家后台",
-      desc: "专业的商家管理界面，支持自主定价、订单管理和税务报表生成",
-      features: ["自主定价", "订单管理", "税务报表"],
+      title: "激励与身份",
+      desc: "任务系统、推荐计划、徽章成就和链上身份声誉体系",
+      features: ["任务系统", "推荐奖励", "链上声誉"],
     },
   ];
 
@@ -95,20 +95,20 @@ export default function Landing() {
             <h1 className={titleStyles}>
               {theme === 'cyberpunk' ? (
                 <>
-                  Trade-grade UX for{' '}
-                  <span className={accentTextStyles}>On-chain</span> Growth
+                  Building the{' '}
+                  <span className={accentTextStyles}>Value Internet</span>
                 </>
               ) : (
                 <>
-                  Play • Earn • Share —{' '}
-                  <span className={accentTextStyles}>ProjectX</span>
+                  Welcome to the{' '}
+                  <span className={accentTextStyles}>Value Internet</span>
                 </>
               )}
             </h1>
             <p className={subtitleStyles}>
               {theme === 'cyberpunk'
-                ? '深色赛博 + 霓虹风的专业体验：更快的决策、更高的信息密度、更冷静的视觉干扰。'
-                : '明亮友好的新手入口：积分、勋章与任务系统，把增长做成好玩又容易传播的事情。'}
+                ? 'Acee 正在构建价值互联网——将影响力、身份、AI 行为和现实世界资产标准化为可验证、可组合和可激励的价值单元。'
+                : 'ProjectEX 是价值互联网的社交金融枢纽，帮助品牌、创作者和用户将价值代币化、协调和变现。'}
             </p>
 
             {/* CTA Buttons */}
@@ -181,7 +181,7 @@ export default function Landing() {
       </Section>
 
       {/* Platform Features */}
-      <Section title="平台优势" subtitle="为什么选择 ProofOfInfluence">
+      <Section title="价值互联网核心原则" subtitle="标准化、可验证、可协作、可激励">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => {
             const Icon = feature.icon;
@@ -204,10 +204,10 @@ export default function Landing() {
         </div>
       </Section>
 
-      {/* ProjectX Modules */}
+      {/* ProjectEX Modules */}
       <Section
-        title="ProjectX 核心模块"
-        subtitle="构建完整的影响力变现生态系统"
+        title="ProjectEX 核心模块"
+        subtitle="价值互联网的社交金融枢纽"
       >
         <div className="grid gap-6 md:grid-cols-3">
           {modules.map((module) => {
@@ -250,7 +250,7 @@ export default function Landing() {
             TGE 即将启动
           </h3>
           <p className="text-sm opacity-80 mb-6 max-w-2xl mx-auto">
-            加入早鸟计划，获取独家空投和推荐奖励
+            加入价值互联网的早期建设者，通过 POI 代币参与统一价值层的激励与治理
           </p>
           <div className="flex justify-center gap-3">
             <Link href={ROUTES.TGE}>
