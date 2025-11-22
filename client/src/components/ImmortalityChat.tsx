@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { ThemedCard, ThemedButton } from "@/components/themed";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -14,17 +14,20 @@ import {
 } from "@/lib/immortalityActions";
 import { ChatPayment } from "@/components/ChatPayment";
 import { RwaTicker } from "./rwa/RwaTicker";
+import { RwaRecommendationCard } from "./immortality/RwaRecommendationCard";
 import { useI18n } from "@/i18n";
 import { ImmortalityFlowStep, ImmortalityFlowState } from "../../../shared/immortality-flow";
 import type { RwaItem } from "../../../shared/types/rwa";
 import { handleImmortalityEvent, mapStepToReplyKey } from "@/lib/immortality/flow/engine";
+import { useLocation } from "wouter";
 
 interface ActionMessage {
   type: "action";
-  actionType: "activate_agent" | "upload_memory" | "mint_badge" | "pay_poi";
+  actionType: "activate_agent" | "upload_memory" | "mint_badge" | "pay_poi" | "buy_rwa";
   autoExecute: boolean;
   content: string;
   suggestedAmount?: number; // For pay_poi action
+  payload?: { rwaItemId?: string }; // For buy_rwa action
 }
 
 interface ChatMessage {
@@ -34,6 +37,7 @@ interface ChatMessage {
   actions?: ActionMessage[];
   paymentAction?: boolean; // Flag to show payment component
   suggestedAmount?: number; // Suggested amount for payment
+  rwaRecommendations?: RwaItem[]; // RWA items to display in message
 }
 
 interface ChatResponse {
@@ -56,9 +60,12 @@ export function ImmortalityChat() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [processingRwaAction, setProcessingRwaAction] = useState(false);
 
   // Flow State
   const [flowState, setFlowState] = useState<ImmortalityFlowState>({
@@ -101,6 +108,15 @@ export function ImmortalityChat() {
               timestamp: new Date().toISOString()
           }]);
       }
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Fetch balance
@@ -185,6 +201,14 @@ export function ImmortalityChat() {
             return next;
           });
           return; // Early return, no backend call needed
+        case "buy_rwa":
+          const rwaItemId = action.payload?.rwaItemId;
+          if (!rwaItemId) {
+            throw new Error("Missing rwaItemId in buy_rwa action");
+          }
+          await handleRwaBuy(rwaItemId);
+          result = { success: true, message: "Interest registered successfully" };
+          break;
         default:
           throw new Error(`Unknown action type: ${action.actionType}`);
       }
@@ -377,6 +401,112 @@ export function ImmortalityChat() {
     chatMutation.mutate(`I'm interested in ${item.name}. Can you tell me more about this RWA asset?`);
   };
 
+  const handleRwaBuy = async (rwaItemId: string) => {
+    try {
+      const response = await fetch("/api/rwa/register-interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rwaItemId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Failed to register interest" }));
+        throw new Error(error.message || "Failed to register interest");
+      }
+
+      const data = await response.json();
+      toast({
+        title: t('common.success'),
+        description: data.message || "Interest registered successfully",
+      });
+    } catch (error: any) {
+      console.error("[ImmortalityChat] Error registering RWA interest:", error);
+      toast({
+        title: t('common.error'),
+        description: error.message || "Failed to register interest",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleRwaPreview = (rwaItemId: string) => {
+    // Prevent multiple simultaneous preview actions
+    if (processingRwaAction) {
+      return;
+    }
+
+    setProcessingRwaAction(true);
+
+    // Update flow state with rwaItemId
+    const newState = handleImmortalityEvent(flowState, {
+      rwaItemId,
+    });
+    setFlowState(newState);
+
+    // Add immediate message
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "Opening detail page...",
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    // Navigate to detail page
+    setLocation(`/app/rwa-market/${rwaItemId}`);
+
+    // Find the selected item from messages
+    const selectedItem = messages
+      .flatMap((msg) => msg.rwaRecommendations || [])
+      .find((item) => item.id === rwaItemId);
+
+    // If item not found in messages, fetch from API
+    if (!selectedItem) {
+      fetch("/api/rwa/items")
+        .then((res) => res.json())
+        .then((data) => {
+          const item = data.items?.find((i: RwaItem) => i.id === rwaItemId);
+          if (item) {
+            // After 1500ms delay, add follow-up message
+            previewTimeoutRef.current = setTimeout(() => {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: t('immortality.rwa.after_preview_prompt'),
+                  timestamp: new Date().toISOString(),
+                  rwaRecommendations: [item],
+                },
+              ]);
+              setProcessingRwaAction(false);
+            }, 1500);
+          } else {
+            setProcessingRwaAction(false);
+          }
+        })
+        .catch(() => {
+          setProcessingRwaAction(false);
+        });
+    } else {
+      // After 1500ms delay, add follow-up message
+      previewTimeoutRef.current = setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: t('immortality.rwa.after_preview_prompt'),
+            timestamp: new Date().toISOString(),
+            rwaRecommendations: [selectedItem],
+          },
+        ]);
+        setProcessingRwaAction(false);
+      }, 1500);
+    }
+  };
+
   return (
     <ThemedCard className="h-full flex flex-col overflow-hidden">
       {/* RWA Ticker */}
@@ -425,6 +555,31 @@ export function ImmortalityChat() {
                       queryClient.invalidateQueries({ queryKey: ["/api/immortality/balance"] });
                     }}
                   />
+                </div>
+              )}
+
+              {/* Render RWA recommendations */}
+              {msg.rwaRecommendations && msg.rwaRecommendations.length > 0 && (
+                <div className="space-y-2">
+                  {msg.rwaRecommendations.map((item) => (
+                    <RwaRecommendationCard
+                      key={item.id}
+                      item={item}
+                      onPreview={handleRwaPreview}
+                      onBuy={(itemId) => {
+                        handleActionMessage(
+                          {
+                            type: "action",
+                            actionType: "buy_rwa",
+                            autoExecute: false,
+                            content: t('immortality.rwa.quick_buy_prompt').replace('{{name}}', item.name),
+                            payload: { rwaItemId: itemId },
+                          },
+                          idx
+                        );
+                      }}
+                    />
+                  ))}
                 </div>
               )}
               

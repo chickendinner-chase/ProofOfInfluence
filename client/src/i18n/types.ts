@@ -87,6 +87,10 @@ export interface Messages {
       completed: string;
       default: string;
     };
+    rwa: {
+      after_preview_prompt: string;
+      quick_buy_prompt: string;
+    };
   };
   chat: {
     rwaTicker: {

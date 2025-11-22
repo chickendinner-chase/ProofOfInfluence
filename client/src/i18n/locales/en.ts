@@ -89,6 +89,10 @@ export const en: Messages = {
       completed: 'Setup complete. Your AI is now active and linked to your RWA portfolio.',
       default: 'Processing...',
     },
+    rwa: {
+      after_preview_prompt: 'Interested? Register your purchase intent below (free and non-binding):',
+      quick_buy_prompt: 'Register your interest in {{name}}',
+    },
   },
   chat: {
     rwaTicker: {
