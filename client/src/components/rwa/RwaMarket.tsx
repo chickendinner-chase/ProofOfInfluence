@@ -93,6 +93,10 @@ export function RwaMarket() {
 
             <div className="mt-auto space-y-3 pt-4 border-t border-slate-200/10">
               <div className="flex justify-between text-sm">
+                <span className="opacity-60">Region</span>
+                <span className="font-medium">{item.region}</span>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span className="opacity-60">{t("rwa.item.field.chain")}</span>
                 <span className="font-medium">{item.chain ?? dash}</span>
               </div>

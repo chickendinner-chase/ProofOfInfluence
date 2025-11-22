@@ -14,6 +14,7 @@ export interface ImmortalityFlowContext {
   socialConnected: boolean;
   badgeMinted: boolean;
   questionsAnswered: number;
+  rwaItemId?: string; // Selected RWA item ID
 }
 
 export interface ImmortalityFlowState {

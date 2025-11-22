@@ -366,3 +366,28 @@
   background-color: #ffffff;
   color: #0f172a;
 }
+
+/* RWA Ticker Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.rwa-ticker__marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.rwa-ticker__marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Duplicate content for seamless loop */
+.rwa-ticker__marquee::after {
+  content: '';
+  display: inline-block;
+  width: 100%;
+}

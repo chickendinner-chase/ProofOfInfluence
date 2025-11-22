@@ -34,25 +34,28 @@ export function RwaTicker({ onSelectItem }: RwaTickerProps) {
   return (
     <div className="rwa-ticker border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
       <div className="px-3 py-1 flex items-center gap-3 overflow-hidden">
-        <span className="text-xs font-medium text-slate-300">
+        <span className="text-xs font-medium text-slate-300 whitespace-nowrap flex-shrink-0">
           {t('market.ticker.title')}
         </span>
-        <div className="rwa-ticker__marquee flex gap-4 whitespace-nowrap animate-marquee">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="rwa-ticker__item text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1"
-              onClick={() => onSelectItem?.(item)}
-            >
-              <span className="font-semibold">{prefix}</span>
-              <span>{item.name}</span>
-              <span>·</span>
-              <span className={`uppercase`}>
-                {statusLabel(item.status)}
-              </span>
-            </button>
-          ))}
+        <div className="flex-1 overflow-hidden">
+          <div className="rwa-ticker__marquee flex gap-4 whitespace-nowrap">
+            {/* Duplicate items for seamless loop */}
+            {[...items, ...items].map((item, idx) => (
+              <button
+                key={`${item.id}-${idx}`}
+                type="button"
+                className="rwa-ticker__item text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1 px-2"
+                onClick={() => onSelectItem?.(item)}
+              >
+                <span className="font-semibold">{prefix}</span>
+                <span>{item.name}</span>
+                <span>·</span>
+                <span className="uppercase">
+                  {statusLabel(item.status)}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
