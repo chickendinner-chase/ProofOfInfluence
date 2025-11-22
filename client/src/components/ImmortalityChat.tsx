@@ -526,6 +526,7 @@ export function ImmortalityChat() {
           )}
         </ThemedButton>
       </div>
+      </div>
     </ThemedCard>
   );
 }
